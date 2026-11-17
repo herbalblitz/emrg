@@ -15,6 +15,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,18 +42,9 @@ fun ChatScreen(
     val effectiveCwd = cwd.takeIf { it.isNotBlank() } ?: repository.currentWorkspace()
     val frames = repository.frames
 
-    val __frameList = remember { mutableStateOf(emptyList<JsonObject>()) }
-    var frameList: List<JsonObject>
-        get() = __frameList.value
-        set(value) { __frameList.value = value }
-    val __input = remember { mutableStateOf("") }
-    var input: String
-        get() = __input.value
-        set(value) { __input.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var frameList by remember { mutableStateOf(emptyList<JsonObject>()) }
+    var input by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
 
     // Tích lũy khung hình từ dòng(stream) vào danh sách hiển thị.
     LaunchedEffect(Unit) {

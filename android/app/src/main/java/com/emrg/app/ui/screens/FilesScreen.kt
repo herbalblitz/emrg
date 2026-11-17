@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -25,22 +26,10 @@ fun FilesScreen(
     path: String = "/",
 ) {
     val scope = rememberCoroutineScope()
-    val __current = remember { mutableStateOf(path) }
-    var current: String
-        get() = __current.value
-        set(value) { __current.value = value }
-    val __entries = remember { mutableStateOf<List<Triple<String, String, String>>>(emptyList()) }
-    var entries: String
-        get() = __entries.value
-        set(value) { __entries.value = value }
-    val __loading = remember { mutableStateOf(false) }
-    var loading: Boolean
-        get() = __loading.value
-        set(value) { __loading.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var current by remember { mutableStateOf(path) }
+    var entries by remember { mutableStateOf<List<Triple<String, String, String>>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun refresh() {
         loading = true
@@ -93,18 +82,9 @@ fun EditorScreen(
     sessionId: String = "",
 ) {
     val scope = rememberCoroutineScope()
-    val __content = remember { mutableStateOf("") }
-    var content: String
-        get() = __content.value
-        set(value) { __content.value = value }
-    val __saving = remember { mutableStateOf(false) }
-    var saving: Boolean
-        get() = __saving.value
-        set(value) { __saving.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var content by remember { mutableStateOf("") }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Editor") }) },

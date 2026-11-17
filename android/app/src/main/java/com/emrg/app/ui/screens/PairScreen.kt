@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -22,34 +23,13 @@ fun PairScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __hostText = remember { mutableStateOf("") }
-    var hostText: String
-        get() = __hostText.value
-        set(value) { __hostText.value = value }
-    val __portText = remember { mutableStateOf("56032") }
-    var portText: String
-        get() = __portText.value
-        set(value) { __portText.value = value }
-    val __pinText = remember { mutableStateOf("") }
-    var pinText: String
-        get() = __pinText.value
-        set(value) { __pinText.value = value }
-    val __codeText = remember { mutableStateOf("") }
-    var codeText: String
-        get() = __codeText.value
-        set(value) { __codeText.value = value }
-    val __nameText = remember { mutableStateOf("") }
-    var nameText: String
-        get() = __nameText.value
-        set(value) { __nameText.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
-    val __pairing = remember { mutableStateOf(false) }
-    var pairing: Boolean
-        get() = __pairing.value
-        set(value) { __pairing.value = value }
+    var hostText by remember { mutableStateOf("") }
+    var portText by remember { mutableStateOf("56032") }
+    var pinText by remember { mutableStateOf("") }
+    var codeText by remember { mutableStateOf("") }
+    var nameText by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var pairing by remember { mutableStateOf(false) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Pair host") }) },

@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -24,18 +25,9 @@ fun MemoryScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __memories = remember { mutableStateOf<List<com.emrg.app.model.MemoryEntry>>(emptyList()) }
-    var memories: String
-        get() = __memories.value
-        set(value) { __memories.value = value }
-    val __loading = remember { mutableStateOf(false) }
-    var loading: Boolean
-        get() = __loading.value
-        set(value) { __loading.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var memories by remember { mutableStateOf<List<com.emrg.app.model.MemoryEntry>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun refresh() {
         loading = true
@@ -72,18 +64,9 @@ fun ModelsScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __current = remember { mutableStateOf("") }
-    var current: String
-        get() = __current.value
-        set(value) { __current.value = value }
-    val __models = remember { mutableStateOf<List<com.emrg.app.model.ModelInfo>>(emptyList()) }
-    var models: String
-        get() = __models.value
-        set(value) { __models.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var current by remember { mutableStateOf("") }
+    var models by remember { mutableStateOf<List<com.emrg.app.model.ModelInfo>>(emptyList()) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -120,26 +103,11 @@ fun RantScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __message = remember { mutableStateOf("") }
-    var message: String
-        get() = __message.value
-        set(value) { __message.value = value }
-    val __agent = remember { mutableStateOf("") }
-    var agent: String
-        get() = __agent.value
-        set(value) { __agent.value = value }
-    val __submitting = remember { mutableStateOf(false) }
-    var submitting: Boolean
-        get() = __submitting.value
-        set(value) { __submitting.value = value }
-    val __result = remember { mutableStateOf<Int?>(null) }
-    var result: Int?
-        get() = __result.value
-        set(value) { __result.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var message by remember { mutableStateOf("") }
+    var agent by remember { mutableStateOf("") }
+    var submitting by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<Int?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun submit() {
         val m = message.trim()

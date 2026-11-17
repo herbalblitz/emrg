@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -26,26 +27,11 @@ fun TerminalScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __command = remember { mutableStateOf("") }
-    var command: String
-        get() = __command.value
-        set(value) { __command.value = value }
-    val __running = remember { mutableStateOf(false) }
-    var running: Boolean
-        get() = __running.value
-        set(value) { __running.value = value }
-    val __output = remember { mutableStateOf("") }
-    var output: String
-        get() = __output.value
-        set(value) { __output.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
-    val __mode = remember { rememberMutableStateOf("workspace-write") }
-    var mode: String
-        get() = __mode.value
-        set(value) { __mode.value = value }
+    var command by remember { mutableStateOf("") }
+    var running by remember { mutableStateOf(false) }
+    var output by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var mode by remember { rememberMutableStateOf("workspace-write") }
 
     fun run() {
         val cmd = command.trim()
@@ -69,10 +55,7 @@ fun TerminalScreen(
         }
     }
 
-    val __expanded = remember { rememberMutableStateOf(false) }
-    var expanded: Boolean
-        get() = __expanded.value
-        set(value) { __expanded.value = value }
+    var expanded by remember { rememberMutableStateOf(false) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Terminal") }) },

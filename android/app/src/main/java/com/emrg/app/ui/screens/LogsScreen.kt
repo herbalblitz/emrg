@@ -9,6 +9,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,18 +24,9 @@ fun LogsScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __source = remember { mutableStateOf("daemon") }
-    var source: String
-        get() = __source.value
-        set(value) { __source.value = value }
-    val __lines = remember { mutableStateOf<com.emrg.app.model.LogPage?>(null) }
-    var lines: com.emrg.app.model.LogPage?
-        get() = __lines.value
-        set(value) { __lines.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var source by remember { mutableStateOf("daemon") }
+    var lines by remember { mutableStateOf<com.emrg.app.model.LogPage?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -75,14 +67,8 @@ fun AuditScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __entries = remember { mutableStateOf<List<com.emrg.app.model.AuditEntry>>(emptyList()) }
-    var entries: String
-        get() = __entries.value
-        set(value) { __entries.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var entries by remember { mutableStateOf<List<com.emrg.app.model.AuditEntry>>(emptyList()) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -117,14 +103,8 @@ fun DevicesScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __devices = remember { mutableStateOf<List<com.emrg.app.model.DeviceInfo>>(emptyList()) }
-    var devices: String
-        get() = __devices.value
-        set(value) { __devices.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var devices by remember { mutableStateOf<List<com.emrg.app.model.DeviceInfo>>(emptyList()) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -157,10 +137,7 @@ fun SettingsScreen(
     repository: GatewayRepository,
     nav: com.emrg.app.AppNavigation,
 ) {
-    val __danger = remember { mutableStateOf(false) }
-    var danger: Boolean
-        get() = __danger.value
-        set(value) { __danger.value = value }
+    var danger by remember { mutableStateOf(false) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Settings") }) },

@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -24,18 +25,9 @@ fun EvolutionScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __count = remember { mutableStateOf(0) }
-    var count: Int
-        get() = __count.value
-        set(value) { __count.value = value }
-    val __records = remember { mutableStateOf<List<com.emrg.app.model.EvolutionRecord>>(emptyList()) }
-    var records: String
-        get() = __records.value
-        set(value) { __records.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var count by remember { mutableStateOf(0) }
+    var records by remember { mutableStateOf<List<com.emrg.app.model.EvolutionRecord>>(emptyList()) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -72,18 +64,9 @@ fun TasksScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __tasks = remember { mutableStateOf<List<com.emrg.app.model.TaskInfo>>(emptyList()) }
-    var tasks: String
-        get() = __tasks.value
-        set(value) { __tasks.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
-    val __taskName = remember { mutableStateOf("") }
-    var taskName: String
-        get() = __taskName.value
-        set(value) { __taskName.value = value }
+    var tasks by remember { mutableStateOf<List<com.emrg.app.model.TaskInfo>>(emptyList()) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var taskName by remember { mutableStateOf("") }
 
     scope.launch {
         try {
@@ -137,14 +120,8 @@ fun SkillsScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __skills = remember { mutableStateOf<List<com.emrg.app.model.SkillInfo>>(emptyList()) }
-    var skills: String
-        get() = __skills.value
-        set(value) { __skills.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var skills by remember { mutableStateOf<List<com.emrg.app.model.SkillInfo>>(emptyList()) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {

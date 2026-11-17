@@ -10,6 +10,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -24,22 +25,10 @@ fun ToolMonitorScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    val __command = remember { mutableStateOf("") }
-    var command: String
-        get() = __command.value
-        set(value) { __command.value = value }
-    val __running = remember { mutableStateOf(false) }
-    var running: Boolean
-        get() = __running.value
-        set(value) { __running.value = value }
-    val __result = remember { mutableStateOf<String?>(null) }
-    var result: String?
-        get() = __result.value
-        set(value) { __result.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var command by remember { mutableStateOf("") }
+    var running by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun run() {
         val cmd = command.trim()

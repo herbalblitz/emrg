@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -28,22 +29,10 @@ fun SandboxScreen(
 ) {
     val scope = rememberCoroutineScope()
     val effectiveCwd = cwd.takeIf { it.isNotEmpty() }.orEmpty { repository.currentWorkspace() }
-    val __mode = remember { rememberMutableStateOf("workspace-write") }
-    var mode: String
-        get() = __mode.value
-        set(value) { __mode.value = value }
-    val __root = remember { mutableStateOf("") }
-    var root: String
-        get() = __root.value
-        set(value) { __root.value = value }
-    val __result = remember { mutableStateOf<String?>(null) }
-    var result: String?
-        get() = __result.value
-        set(value) { __result.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var mode by remember { rememberMutableStateOf("workspace-write") }
+    var root by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun apply() {
         error = null
@@ -71,10 +60,7 @@ fun SandboxScreen(
         }
     }
 
-    val __expanded = remember { rememberMutableStateOf(false) }
-    var expanded: Boolean
-        get() = __expanded.value
-        set(value) { __expanded.value = value }
+    var expanded by remember { rememberMutableStateOf(false) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Sandbox") }) },

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,18 +35,9 @@ fun SessionsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val cwd by repository.workspace.collectAsState()
-    val __sessions = remember { mutableStateOf<List<com.emrg.app.model.SessionSummary>>(emptyList()) }
-    var sessions: String
-        get() = __sessions.value
-        set(value) { __sessions.value = value }
-    val __loading = remember { mutableStateOf(false) }
-    var loading: Boolean
-        get() = __loading.value
-        set(value) { __loading.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
+    var sessions by remember { mutableStateOf<List<com.emrg.app.model.SessionSummary>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     if (cwd.isBlank()) {
         androidx.compose.material3.Scaffold(
