@@ -807,6 +807,6 @@ private fun JsonElement?.asString(): String? = (this as? kotlinx.serialization.j
  */
 class GatewayRequestException(
     val code: String,
-    val message: String,
+    message: String,
     val retryable: Boolean = false,
 ) : Exception(message)

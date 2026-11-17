@@ -34,9 +34,18 @@ fun SessionsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val cwd by repository.workspace.collectAsState()
-    var sessions by remember { mutableStateOf<List<com.emrg.app.model.SessionSummary>>(emptyList()) }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    val __sessions = remember { mutableStateOf<List<com.emrg.app.model.SessionSummary>>(emptyList()) }
+    var sessions: String
+        get() = __sessions.value
+        set(value) { __sessions.value = value }
+    val __loading = remember { mutableStateOf(false) }
+    var loading: Boolean
+        get() = __loading.value
+        set(value) { __loading.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     if (cwd.isBlank()) {
         androidx.compose.material3.Scaffold(

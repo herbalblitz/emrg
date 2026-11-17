@@ -24,10 +24,22 @@ fun ToolMonitorScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    var command by remember { mutableStateOf("") }
-    var running by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<String?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    val __command = remember { mutableStateOf("") }
+    var command: String
+        get() = __command.value
+        set(value) { __command.value = value }
+    val __running = remember { mutableStateOf(false) }
+    var running: Boolean
+        get() = __running.value
+        set(value) { __running.value = value }
+    val __result = remember { mutableStateOf<String?>(null) }
+    var result: String?
+        get() = __result.value
+        set(value) { __result.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     fun run() {
         val cmd = command.trim()

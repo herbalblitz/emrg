@@ -26,11 +26,26 @@ fun TerminalScreen(
     nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    var command by remember { mutableStateOf("") }
-    var running by remember { mutableStateOf(false) }
-    var output by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var mode by remember { rememberMutableStateOf("workspace-write") }
+    val __command = remember { mutableStateOf("") }
+    var command: String
+        get() = __command.value
+        set(value) { __command.value = value }
+    val __running = remember { mutableStateOf(false) }
+    var running: Boolean
+        get() = __running.value
+        set(value) { __running.value = value }
+    val __output = remember { mutableStateOf("") }
+    var output: String
+        get() = __output.value
+        set(value) { __output.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
+    val __mode = remember { rememberMutableStateOf("workspace-write") }
+    var mode: String
+        get() = __mode.value
+        set(value) { __mode.value = value }
 
     fun run() {
         val cmd = command.trim()
@@ -54,7 +69,10 @@ fun TerminalScreen(
         }
     }
 
-    var expanded by remember { rememberMutableStateOf(false) }
+    val __expanded = remember { rememberMutableStateOf(false) }
+    var expanded: Boolean
+        get() = __expanded.value
+        set(value) { __expanded.value = value }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Terminal") }) },
