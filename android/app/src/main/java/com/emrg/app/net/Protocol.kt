@@ -85,6 +85,8 @@ fun JsonObject.int(key: String): Int? = this[key]?.jsonPrimitive?.intOrNull
 fun JsonObject.long(key: String): Long? = this[key]?.jsonPrimitive?.longOrNull
 fun JsonObject.has(key: String): Boolean = this[key] != null && this[key] !is JsonNull
 
+fun JsonPrimitive.contentOrNull(): String? = content
+
 fun field(key: String, value: String?): Pair<String, JsonElement> = key to JsonPrimitive(value)
 fun field(key: String, value: Number?): Pair<String, JsonElement> = key to JsonPrimitive(value)
 fun field(key: String, value: Boolean): Pair<String, JsonElement> = key to JsonPrimitive(value)

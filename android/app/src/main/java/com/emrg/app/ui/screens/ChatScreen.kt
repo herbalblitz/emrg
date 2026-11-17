@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -24,10 +25,9 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
-import com.emrg.app.net.EmrgJson
-import com.emrg.app.net.JsonObject
 import com.emrg.app.net.str
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
 
 @Composable
 fun ChatScreen(

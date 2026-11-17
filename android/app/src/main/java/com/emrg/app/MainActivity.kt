@@ -9,10 +9,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.navArgument
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import com.emrg.app.ui.theme.EmrgTheme
@@ -39,14 +37,14 @@ class MainActivity : ComponentActivity() {
  * tham số tạm (session_id, cwd, path…) trước khi chuyển.
  */
 class AppNavigation(private val navigateTo: (String) -> Unit) {
-    var route by mutableStateOf<String>(Route.Hosts)
-    var chatSessionId by mutableStateOf("")
-    var chatCwd by mutableStateOf("")
-    var filePath by mutableStateOf("/")
-    var editorPath by mutableStateOf("")
-    var editorSessionId by mutableStateOf("")
-    var sandboxSessionId by mutableStateOf("")
-    var sandboxCwd by mutableStateOf("")
+    var route: String = Route.Hosts
+    var chatSessionId: String = ""
+    var chatCwd: String = ""
+    var filePath: String = "/"
+    var editorPath: String = ""
+    var editorSessionId: String = ""
+    var sandboxSessionId: String = ""
+    var sandboxCwd: String = ""
 
     fun goTo(route: String) {
         this.route = route

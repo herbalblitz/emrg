@@ -20,6 +20,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonObject
+
+import com.emrg.app.data.GatewayRequestException
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -45,13 +47,6 @@ sealed interface LinkState {
 
     data class Offline(val reason: String, val retryInMs: Long = 0) : LinkState
 }
-
-/** A refusal the app can render without a stack trace. */
-class GatewayRequestException(
-    val code: String,
-    message: String,
-    val retryable: Boolean = false,
-) : Exception(message)
 
 /**
  * The phone's side of the gateway protocol.

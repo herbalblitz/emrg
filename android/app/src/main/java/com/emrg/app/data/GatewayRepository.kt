@@ -20,7 +20,6 @@ import com.emrg.app.model.TaskTemplate
 import com.emrg.app.model.Workspace
 import com.emrg.app.net.GatewayClient
 import com.emrg.app.net.GatewayProtocol
-import com.emrg.app.net.GatewayRequestException
 import com.emrg.app.net.LinkState
 import com.emrg.app.net.Pairing
 import com.emrg.app.net.arr
@@ -800,3 +799,14 @@ class GatewayRepository(context: Context) {
 }
 
 private fun JsonElement?.asString(): String? = (this as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+
+/**
+ * Lỗi do gateway trả về (mã kết quả, thông báo, có thể retry).
+ * Định nghĩa ở gói `data` để cả repository lẫn client (net) đều dùng được
+ * mà không cần import chéo gói.
+ */
+class GatewayRequestException(
+    val code: String,
+    val message: String,
+    val retryable: Boolean = false,
+) : Exception(message)
