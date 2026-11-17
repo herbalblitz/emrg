@@ -10,28 +10,31 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.*
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberMutableState
+
+
+
+
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardOptions
 
 @Composable
 fun TerminalScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     var command by remember { mutableStateOf("") }
     var running by remember { mutableStateOf(false) }
     var output by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    var mode by remember { rememberMutableStateOf("workspace-write") }
+    var mode by remember { mutableStateOf("workspace-write") }
 
     fun run() {
         val cmd = command.trim()
@@ -55,7 +58,7 @@ fun TerminalScreen(
         }
     }
 
-    var expanded by remember { rememberMutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Terminal") }) },
@@ -101,7 +104,7 @@ fun TerminalScreen(
                     imeOptions = androidx.compose.ui.text.input.ImeAction.Send,
                     keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
                 )
-                Button(onClick = run, enabled = !running) {
+                Button(onClick = { run() }, enabled = !running) {
                     Text(text = if (running) "Running…" else "Run")
                 }
             }

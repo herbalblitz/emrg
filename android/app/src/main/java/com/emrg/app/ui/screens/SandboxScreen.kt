@@ -9,27 +9,27 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.*
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberMutableState
+
+
+
+
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.fillMaxWidth
 
 @Composable
 fun SandboxScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
     sessionId: String = "",
     cwd: String = "",
 ) {
     val scope = rememberCoroutineScope()
-    val effectiveCwd = cwd.takeIf { it.isNotEmpty() }.orEmpty { repository.currentWorkspace() }
-    var mode by remember { rememberMutableStateOf("workspace-write") }
+    val effectiveCwd = cwd.takeIf { it.isNotEmpty() }.orElse { repository.currentWorkspace() }
+    var mode by remember { mutableStateOf("workspace-write") }
     var root by remember { mutableStateOf("") }
     var result by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -60,7 +60,7 @@ fun SandboxScreen(
         }
     }
 
-    var expanded by remember { rememberMutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Sandbox") }) },
@@ -83,9 +83,9 @@ fun SandboxScreen(
                     }
                 }
             }
-            androidx.compose.material3.Button(onClick = apply) { Text(text = "Apply mode") }
+            androidx.compose.material3.Button(onClick = { apply() }) { Text(text = "Apply mode") }
             TextField(value = root, onValueChange = { root = it }, label = { Text(text = "Writable root (absolute path)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            Button(onClick = addRoot) { Text(text = "Add root") }
+            Button(onClick = { addRoot() }) { Text(text = "Add root") }
         }
     }
 }

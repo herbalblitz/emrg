@@ -9,20 +9,20 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.*
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+
+
+
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.fillMaxWidth
 
 @Composable
 fun MemoryScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     var memories by remember { mutableStateOf<List<com.emrg.app.model.MemoryEntry>>(emptyList()) }
@@ -48,7 +48,7 @@ fun MemoryScreen(
             error?.let { e ->
                 androidx.compose.material3.Text(text = e, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
             }
-            Button(onClick = refresh) { Text(text = "Refresh") }
+            Button(onClick = { refresh() }) { Text(text = "Refresh") }
             LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = padding) {
                 items(memories, key = { it.id }) { m ->
                     androidx.compose.material3.Text(text = m.title)
@@ -61,7 +61,7 @@ fun MemoryScreen(
 @Composable
 fun ModelsScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     var current by remember { mutableStateOf("") }
@@ -100,7 +100,7 @@ fun ModelsScreen(
 @Composable
 fun RantScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf("") }
@@ -147,7 +147,7 @@ fun RantScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(onClick = submit, enabled = !submitting) {
+            Button(onClick = { submit() }, enabled = !submitting) {
                 Text(text = if (submitting) "Sending…" else "Send rant")
             }
             result?.let { r -> androidx.compose.material3.Text(text = "Recorded ($r total)") }

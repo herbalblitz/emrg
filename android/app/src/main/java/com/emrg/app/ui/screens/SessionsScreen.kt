@@ -15,11 +15,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.*
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+
+
+
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
@@ -27,11 +25,12 @@ import com.emrg.app.ui.components.EmptyContent
 import com.emrg.app.ui.components.LoadingContent
 import com.emrg.app.ui.components.SessionListItem
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.*
 
 @Composable
 fun SessionsScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     val cwd by repository.workspace.collectAsState()
@@ -112,9 +111,7 @@ fun SessionsScreen(
                         SessionListItem(
                             session = session,
                             onClick = {
-                                nav.chatSessionId = session.id
-                                nav.chatCwd = session.cwd
-                                nav.goTo("chat")
+                                navController.navigate("chat?session_id=${session.id}&cwd=${session.cwd}")
                             },
                         )
                     }

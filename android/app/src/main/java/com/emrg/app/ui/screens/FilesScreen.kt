@@ -9,20 +9,21 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.*
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+
+
+
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun FilesScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
     path: String = "/",
 ) {
     val scope = rememberCoroutineScope()
@@ -77,7 +78,7 @@ fun FilesScreen(
 @Composable
 fun EditorScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
     path: String = "",
     sessionId: String = "",
 ) {

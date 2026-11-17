@@ -8,20 +8,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.*
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+
+
+
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 
 @Composable
 fun LogsScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     var source by remember { mutableStateOf("daemon") }
@@ -64,7 +65,7 @@ fun LogsScreen(
 @Composable
 fun AuditScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     var entries by remember { mutableStateOf<List<com.emrg.app.model.AuditEntry>>(emptyList()) }
@@ -100,7 +101,7 @@ fun AuditScreen(
 @Composable
 fun DevicesScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     var devices by remember { mutableStateOf<List<com.emrg.app.model.DeviceInfo>>(emptyList()) }
@@ -135,7 +136,7 @@ fun DevicesScreen(
 @Composable
 fun SettingsScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     var danger by remember { mutableStateOf(false) }
 
@@ -157,7 +158,7 @@ fun SettingsScreen(
 
 @Composable
 fun AboutScreen(
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "About") }) },

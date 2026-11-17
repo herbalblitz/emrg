@@ -9,20 +9,20 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.*
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+
+
+
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.fillMaxWidth
 
 @Composable
 fun EvolutionScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     var count by remember { mutableStateOf(0) }
@@ -61,7 +61,7 @@ fun EvolutionScreen(
 @Composable
 fun TasksScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     var tasks by remember { mutableStateOf<List<com.emrg.app.model.TaskInfo>>(emptyList()) }
@@ -102,7 +102,7 @@ fun TasksScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(onClick = trigger) { Text(text = "Trigger") }
+            Button(onClick = { trigger() }) { Text(text = "Trigger") }
             LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = padding) {
                 items(tasks, key = { it.name }) { t ->
                     androidx.compose.material3.Text(
@@ -117,7 +117,7 @@ fun TasksScreen(
 @Composable
 fun SkillsScreen(
     repository: GatewayRepository,
-    nav: com.emrg.app.AppNavigation,
+    navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
     var skills by remember { mutableStateOf<List<com.emrg.app.model.SkillInfo>>(emptyList()) }
