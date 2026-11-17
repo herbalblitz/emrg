@@ -7,17 +7,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-
-
-
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.*
-import androidx.compose.foundation.layout.fillMaxWidth
 
 @Composable
 fun EvolutionScreen(
@@ -26,7 +24,7 @@ fun EvolutionScreen(
 ) {
     val scope = rememberCoroutineScope()
     var count by remember { mutableStateOf(0) }
-    var records by remember { mutableStateOf<List<com.emrg.app.model.EvolutionRecord>>(emptyList()) }
+    var records by remember { mutableStateOf(emptyList<com.emrg.app.model.EvolutionRecord>()) }
     var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
@@ -64,7 +62,7 @@ fun TasksScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var tasks by remember { mutableStateOf<List<com.emrg.app.model.TaskInfo>>(emptyList()) }
+    var tasks by remember { mutableStateOf(emptyList<com.emrg.app.model.TaskInfo>()) }
     var error by remember { mutableStateOf<String?>(null) }
     var taskName by remember { mutableStateOf("") }
 
@@ -120,7 +118,7 @@ fun SkillsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var skills by remember { mutableStateOf<List<com.emrg.app.model.SkillInfo>>(emptyList()) }
+    var skills by remember { mutableStateOf(emptyList<com.emrg.app.model.SkillInfo>()) }
     var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {

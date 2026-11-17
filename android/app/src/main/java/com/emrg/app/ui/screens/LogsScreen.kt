@@ -7,17 +7,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-
-
-
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.*
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Row
 
 @Composable
 fun LogsScreen(
@@ -68,7 +67,7 @@ fun AuditScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var entries by remember { mutableStateOf<List<com.emrg.app.model.AuditEntry>>(emptyList()) }
+    var entries by remember { mutableStateOf(emptyList<com.emrg.app.model.AuditEntry>()) }
     var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
@@ -104,7 +103,7 @@ fun DevicesScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var devices by remember { mutableStateOf<List<com.emrg.app.model.DeviceInfo>>(emptyList()) }
+    var devices by remember { mutableStateOf(emptyList<com.emrg.app.model.DeviceInfo>()) }
     var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {

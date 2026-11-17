@@ -9,15 +9,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-
-
-
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.*
-import androidx.compose.foundation.layout.fillMaxWidth
 
 @Composable
 fun MemoryScreen(
@@ -25,7 +24,7 @@ fun MemoryScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var memories by remember { mutableStateOf<List<com.emrg.app.model.MemoryEntry>>(emptyList()) }
+    var memories by remember { mutableStateOf(emptyList<com.emrg.app.model.MemoryEntry>()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -65,7 +64,7 @@ fun ModelsScreen(
 ) {
     val scope = rememberCoroutineScope()
     var current by remember { mutableStateOf("") }
-    var models by remember { mutableStateOf<List<com.emrg.app.model.ModelInfo>>(emptyList()) }
+    var models by remember { mutableStateOf(emptyList<com.emrg.app.model.ModelInfo>()) }
     var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {

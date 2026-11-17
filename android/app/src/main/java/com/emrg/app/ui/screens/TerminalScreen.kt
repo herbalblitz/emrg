@@ -10,19 +10,15 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-
-
-
-
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberMutableStateOf
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.*
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Row
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.input.KeyboardOptions
 
 @Composable
 fun TerminalScreen(
@@ -34,7 +30,7 @@ fun TerminalScreen(
     var running by remember { mutableStateOf(false) }
     var output by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    var mode by remember { mutableStateOf("workspace-write") }
+    var mode by remember { rememberMutableStateOf("workspace-write") }
 
     fun run() {
         val cmd = command.trim()
@@ -47,7 +43,7 @@ fun TerminalScreen(
                     command = cmd,
                     cwd = repository.currentWorkspace(),
                     sessionId = "",
-                    mode = mode,
+                    mode = mode.value,
                     timeout = 60,
                 )
                 output += "\n$ $cmd\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\n${outcome.stderr}" else ""}\n(exit ${outcome.exitCode})"
@@ -58,7 +54,7 @@ fun TerminalScreen(
         }
     }
 
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { rememberMutableStateOf(false) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Terminal") }) },
@@ -68,17 +64,17 @@ fun TerminalScreen(
                 androidx.compose.material3.Text(text = e, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
             }
             androidx.compose.material3.Text(
-                text = "Sandbox mode: $mode",
+                text = "Sandbox mode: ${mode.value}",
                 style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
             )
-            androidx.compose.material3.Button(onClick = { expanded = !expanded }) {
+            androidx.compose.material3.Button(onClick = { expanded.value = !expanded.value }) {
                 Text(text = "Change mode")
             }
-            if (expanded) {
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(text = { Text(text = "read-only") }, onClick = { mode = "read-only"; expanded = false })
-                    DropdownMenuItem(text = { Text(text = "workspace-write") }, onClick = { mode = "workspace-write"; expanded = false })
-                    DropdownMenuItem(text = { Text(text = "danger-full-access") }, onClick = { mode = "danger-full-access"; expanded = false })
+            if (expanded.value) {
+                DropdownMenu(expanded = expanded.value, onDismissRequest = { expanded.value = false }) {
+                    DropdownMenuItem(text = { Text(text = "read-only") }, onClick = { mode.value = "read-only"; expanded.value = false })
+                    DropdownMenuItem(text = { Text(text = "workspace-write") }, onClick = { mode.value = "workspace-write"; expanded.value = false })
+                    DropdownMenuItem(text = { Text(text = "danger-full-access") }, onClick = { mode.value = "danger-full-access"; expanded.value = false })
                 }
             }
             androidx.compose.material3.TextField(

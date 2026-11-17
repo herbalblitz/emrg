@@ -6,19 +6,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-
-
-
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.*
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun FilesScreen(
@@ -28,7 +28,7 @@ fun FilesScreen(
 ) {
     val scope = rememberCoroutineScope()
     var current by remember { mutableStateOf(path) }
-    var entries by remember { mutableStateOf<List<Triple<String, String, String>>>(emptyList()) }
+    var entries by remember { mutableStateOf(emptyList<Triple<String, String, String>>()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
