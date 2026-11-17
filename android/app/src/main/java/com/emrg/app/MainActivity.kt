@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.navigation.NavHostController
@@ -32,122 +33,112 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Trạng thái điều hướng đơn giản, dùng thay cho route arguments của Navigation Compose.
+ * Mọi màn hình cùng nhận đối tượng này, đọc/ghi `route` để chuyển màn hình và lưu
+ * tham số tạm (session_id, cwd, path…) trước khi chuyển.
+ */
+class AppNavigation(private val navigateTo: (String) -> Unit) {
+    var route by mutableStateOf<String>(Route.Hosts)
+    var chatSessionId by mutableStateOf("")
+    var chatCwd by mutableStateOf("")
+    var filePath by mutableStateOf("/")
+    var editorPath by mutableStateOf("")
+    var editorSessionId by mutableStateOf("")
+    var sandboxSessionId by mutableStateOf("")
+    var sandboxCwd by mutableStateOf("")
+
+    fun goTo(route: String) {
+        this.route = route
+        navigateTo(route)
+    }
+}
+
 @Composable
 fun EmrgNavigator(repository: com.emrg.app.data.GatewayRepository) {
     val navController = rememberNavController()
+    val nav = remember { AppNavigation { navController.navigate(it) } }
+
     Scaffold {
         NavHost(navController = navController, startDestination = Route.Hosts) {
             composable(route = Route.Hosts) {
-                com.emrg.app.ui.screens.HostsScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.HostsScreen(repository = repository, nav = nav)
             }
-            composable(
-                route = Route.Pair,
-                arguments = listOf(navArgument(Route.ArgHost) { type = NavType.StringType })
-            ) {
-                val host = currentBackStackEntryAsState().value.arguments?.getString(Route.ArgHost) ?: ""
-                com.emrg.app.ui.screens.PairScreen(
-                    repository = repository,
-                    navController = navController,
-                    host = host,
-                )
+            composable(route = Route.Pair) {
+                com.emrg.app.ui.screens.PairScreen(repository = repository, nav = nav)
             }
             composable(route = Route.Sessions) {
-                com.emrg.app.ui.screens.SessionsScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.SessionsScreen(repository = repository, nav = nav)
             }
-            composable(
-                route = Route.Chat,
-                arguments = listOf(
-                    navArgument(Route.ArgSessionId) { type = NavType.StringType },
-                    navArgument(Route.ArgCwd) { type = NavType.StringType },
-                )
-            ) {
-                val entry = currentBackStackEntryAsState().value
+            composable(route = Route.Chat) {
                 com.emrg.app.ui.screens.ChatScreen(
                     repository = repository,
-                    navController = navController,
-                    sessionId = entry.arguments?.getString(Route.ArgSessionId) ?: "",
-                    cwd = entry.arguments?.getString(Route.ArgCwd) ?: repository.currentWorkspace(),
+                    nav = nav,
+                    sessionId = nav.chatSessionId,
+                    cwd = nav.chatCwd,
                 )
             }
             composable(route = Route.ToolMonitor) {
-                com.emrg.app.ui.screens.ToolMonitorScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.ToolMonitorScreen(repository = repository, nav = nav)
             }
-            composable(
-                route = Route.Files,
-                arguments = listOf(navArgument(Route.ArgPath) { type = NavType.StringType })
-            ) {
-                val entry = currentBackStackEntryAsState().value
+            composable(route = Route.Files) {
                 com.emrg.app.ui.screens.FilesScreen(
                     repository = repository,
-                    navController = navController,
-                    path = entry.arguments?.getString(Route.ArgPath) ?: "/",
+                    nav = nav,
+                    path = nav.filePath,
                 )
             }
-            composable(
-                route = Route.Editor,
-                arguments = listOf(
-                    navArgument(Route.ArgPath) { type = NavType.StringType },
-                    navArgument(Route.ArgSessionId) { type = NavType.StringType },
-                )
-            ) {
-                val entry = currentBackStackEntryAsState().value
+            composable(route = Route.Editor) {
                 com.emrg.app.ui.screens.EditorScreen(
                     repository = repository,
-                    navController = navController,
-                    path = entry.arguments?.getString(Route.ArgPath) ?: "",
-                    sessionId = entry.arguments?.getString(Route.ArgSessionId) ?: "",
+                    nav = nav,
+                    path = nav.editorPath,
+                    sessionId = nav.editorSessionId,
                 )
             }
             composable(route = Route.Terminal) {
-                com.emrg.app.ui.screens.TerminalScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.TerminalScreen(repository = repository, nav = nav)
             }
-            composable(
-                route = Route.Sandbox,
-                arguments = listOf(
-                    navArgument(Route.ArgSessionId) { type = NavType.StringType },
-                    navArgument(Route.ArgCwd) { type = NavType.StringType },
-                )
-            ) {
-                val entry = currentBackStackEntryAsState().value
+            composable(route = Route.Sandbox) {
                 com.emrg.app.ui.screens.SandboxScreen(
                     repository = repository,
-                    navController = navController,
-                    sessionId = entry.arguments?.getString(Route.ArgSessionId) ?: "",
-                    cwd = entry.arguments?.getString(Route.ArgCwd) ?: repository.currentWorkspace(),
+                    nav = nav,
+                    sessionId = nav.sandboxSessionId,
+                    cwd = nav.sandboxCwd,
                 )
             }
             composable(route = Route.Memory) {
-                com.emrg.app.ui.screens.MemoryScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.MemoryScreen(repository = repository, nav = nav)
             }
             composable(route = Route.Models) {
-                com.emrg.app.ui.screens.ModelsScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.ModelsScreen(repository = repository, nav = nav)
             }
             composable(route = Route.Rant) {
-                com.emrg.app.ui.screens.RantScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.RantScreen(repository = repository, nav = nav)
             }
             composable(route = Route.Evolution) {
-                com.emrg.app.ui.screens.EvolutionScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.EvolutionScreen(repository = repository, nav = nav)
             }
             composable(route = Route.Tasks) {
-                com.emrg.app.ui.screens.TasksScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.TasksScreen(repository = repository, nav = nav)
             }
             composable(route = Route.Skills) {
-                com.emrg.app.ui.screens.SkillsScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.SkillsScreen(repository = repository, nav = nav)
             }
             composable(route = Route.Logs) {
-                com.emrg.app.ui.screens.LogsScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.LogsScreen(repository = repository, nav = nav)
             }
             composable(route = Route.Audit) {
-                com.emrg.app.ui.screens.AuditScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.AuditScreen(repository = repository, nav = nav)
             }
             composable(route = Route.Devices) {
-                com.emrg.app.ui.screens.DevicesScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.DevicesScreen(repository = repository, nav = nav)
             }
             composable(route = Route.Settings) {
-                com.emrg.app.ui.screens.SettingsScreen(repository = repository, navController = navController)
+                com.emrg.app.ui.screens.SettingsScreen(repository = repository, nav = nav)
             }
             composable(route = Route.About) {
-                com.emrg.app.ui.screens.AboutScreen(navController = navController)
+                com.emrg.app.ui.screens.AboutScreen(nav = nav)
             }
         }
     }
@@ -174,9 +165,4 @@ object Route {
     const val Devices = "devices"
     const val Settings = "settings"
     const val About = "about"
-
-    const val ArgHost = "host"
-    const val ArgSessionId = "session_id"
-    const val ArgCwd = "cwd"
-    const val ArgPath = "path"
 }

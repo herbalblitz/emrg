@@ -15,7 +15,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -24,24 +24,35 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
+import com.emrg.app.net.EmrgJson
+import com.emrg.app.net.JsonObject
 import com.emrg.app.net.str
 import kotlinx.coroutines.launch
 
 @Composable
 fun ChatScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
     sessionId: String = "",
     cwd: String = "",
 ) {
     val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val effectiveCwd = cwd.takeIf { it.isNotBlank() } ?: repository.currentWorkspace()
-    val frames by repository.frames
-        .collectAsStateWithLifecycle(lifecycle)
+    val frames = repository.frames
 
+    var frameList by remember { mutableStateOf(emptyList<JsonObject>()) }
     var input by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+
+    // Tích lũy khung hình từ dòng(stream) vào danh sách hiển thị.
+    LaunchedEffect(Unit) {
+        scope.launch {
+            frames.collect { frame ->
+                frameList = frameList + frame
+            }
+        }
+    }
 
     fun sendPrompt() {
         val text = input.trim()
@@ -73,9 +84,9 @@ fun ChatScreen(
                 modifier = Modifier.weight(1f).fillMaxSize(),
                 contentPadding = padding,
             ) {
-                items(frames, key = { it.toString() }) { frame ->
-                    val type = frame.str("type").orEmpty()
-                    val content = frame.str("content").orEmpty()
+                items(frameList, key = { it.toString() }) { frame ->
+                    val type = frame.str("type") ?: ""
+                    val content = frame.str("content") ?: ""
                     androidx.compose.material3.Text(
                         text = if (content.isNotBlank()) content else "[$type]",
                     )

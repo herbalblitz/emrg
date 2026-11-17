@@ -209,7 +209,7 @@ class GatewayClient {
         match: (JsonObject) -> Boolean,
         timeoutMs: Long,
         timeoutMessage: String,
-        action: () -> Unit,
+        action: () -> Boolean,
     ): JsonObject {
         val waiter = Waiter(match, CompletableDeferred())
         pending.add(waiter)

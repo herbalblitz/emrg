@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MemoryScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     var memories by remember { mutableStateOf<List<com.emrg.app.model.MemoryEntry>>(emptyList()) }
@@ -59,7 +59,7 @@ fun MemoryScreen(
 @Composable
 fun ModelsScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     var current by remember { mutableStateOf("") }
@@ -98,7 +98,7 @@ fun ModelsScreen(
 @Composable
 fun RantScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf("") }

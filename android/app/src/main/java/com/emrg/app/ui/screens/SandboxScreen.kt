@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SandboxScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
     sessionId: String = "",
     cwd: String = "",
 ) {

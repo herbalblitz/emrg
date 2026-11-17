@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun EvolutionScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     var count by remember { mutableStateOf(0) }
@@ -59,7 +59,7 @@ fun EvolutionScreen(
 @Composable
 fun TasksScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     var tasks by remember { mutableStateOf<List<com.emrg.app.model.TaskInfo>>(emptyList()) }
@@ -115,7 +115,7 @@ fun TasksScreen(
 @Composable
 fun SkillsScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     var skills by remember { mutableStateOf<List<com.emrg.app.model.SkillInfo>>(emptyList()) }

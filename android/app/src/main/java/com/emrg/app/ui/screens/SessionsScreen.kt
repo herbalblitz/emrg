@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SessionsScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     val cwd by repository.workspace.collectAsState()
@@ -110,7 +110,9 @@ fun SessionsScreen(
                         SessionListItem(
                             session = session,
                             onClick = {
-                                navController.navigate("chat?session_id=${session.id}&cwd=${session.cwd}")
+                                nav.chatSessionId = session.id
+                                nav.chatCwd = session.cwd
+                                nav.goTo("chat")
                             },
                         )
                     }

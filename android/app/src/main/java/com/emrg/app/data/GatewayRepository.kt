@@ -27,6 +27,8 @@ import com.emrg.app.net.arr
 import com.emrg.app.net.asArray
 import com.emrg.app.net.asObject
 import com.emrg.app.net.bool
+import com.emrg.app.net.contentOrNull
+import com.emrg.app.net.has
 import com.emrg.app.net.int
 import com.emrg.app.net.obj
 import com.emrg.app.net.str

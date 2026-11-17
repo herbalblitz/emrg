@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun FilesScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
     path: String = "/",
 ) {
     val scope = rememberCoroutineScope()
@@ -75,7 +75,7 @@ fun FilesScreen(
 @Composable
 fun EditorScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
     path: String = "",
     sessionId: String = "",
 ) {

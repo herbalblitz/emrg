@@ -6,44 +6,36 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.colors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.repeatOnLifecycle
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.ui.components.EmptyContent
-import com.emrg.app.ui.components.ErrorContent
 import com.emrg.app.ui.components.HostListItem
 import com.emrg.app.ui.components.LoadingContent
-import kotlinx.coroutines.launch
 
 @Composable
 fun HostsScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
-    val scope = rememberCoroutineScope()
     val hosts by repository.hosts.collectAsState()
     val state by repository.state.collectAsState()
 
     val connected = state is com.emrg.app.net.LinkState.Online
 
     androidx.compose.material3.Scaffold(
-        topBar = { TopAppBar(title = { Text(text = "Hosts") }) },
+        topBar = { androidx.compose.material3.TopAppBar(title = { Text(text = "Hosts") }) },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate("pair") },
+                onClick = { nav.goTo("pair") },
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -56,9 +48,9 @@ fun HostsScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             when (state) {
                 is com.emrg.app.net.LinkState.Offline -> {
-                    ErrorContent(
-                        message = state.reason,
-                        onRetry = {},
+                    androidx.compose.material3.Text(
+                        text = state.reason,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.error,
                     )
                 }
                 is com.emrg.app.net.LinkState.Idle,
@@ -75,7 +67,7 @@ fun HostsScreen(
                                 HostListItem(
                                     host = host,
                                     connected = connected,
-                                    onClick = { navController.navigate("sessions") },
+                                    onClick = { nav.goTo("sessions") },
                                 )
                             }
                         }

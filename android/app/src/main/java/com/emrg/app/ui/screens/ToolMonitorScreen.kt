@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ToolMonitorScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     var command by remember { mutableStateOf("") }

@@ -18,11 +18,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun PairScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
-    host: String = "",
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
-    var hostText by remember { mutableStateOf(host) }
+    var hostText by remember { mutableStateOf("") }
     var portText by remember { mutableStateOf("56032") }
     var pinText by remember { mutableStateOf("") }
     var codeText by remember { mutableStateOf("") }
@@ -91,7 +90,7 @@ fun PairScreen(
                                 code = codeText,
                                 deviceName = nameText,
                             )
-                            navController.navigate("sessions")
+                            nav.goTo("sessions")
                         } catch (e: GatewayRequestException) {
                             error = e.message
                         }

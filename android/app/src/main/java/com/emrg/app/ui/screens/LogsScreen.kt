@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LogsScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     var source by remember { mutableStateOf("daemon") }
@@ -62,7 +62,7 @@ fun LogsScreen(
 @Composable
 fun AuditScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     var entries by remember { mutableStateOf<List<com.emrg.app.model.AuditEntry>>(emptyList()) }
@@ -98,7 +98,7 @@ fun AuditScreen(
 @Composable
 fun DevicesScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     val scope = rememberCoroutineScope()
     var devices by remember { mutableStateOf<List<com.emrg.app.model.DeviceInfo>>(emptyList()) }
@@ -133,7 +133,7 @@ fun DevicesScreen(
 @Composable
 fun SettingsScreen(
     repository: GatewayRepository,
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     var danger by remember { mutableStateOf(false) }
 
@@ -155,7 +155,7 @@ fun SettingsScreen(
 
 @Composable
 fun AboutScreen(
-    navController: androidx.navigation.NavHostController,
+    nav: com.emrg.app.AppNavigation,
 ) {
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "About") }) },
