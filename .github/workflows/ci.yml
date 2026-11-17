@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [feat/cross-platform, main]
+  pull_request:
+    branches: [feat/cross-platform, main]
+
+env:
+  EMRG_VERSION: 0.3.55
+
+jobs:
+  lint-and-python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "uv"
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Sync dependencies (gateway extra)
+        run: uv sync --extra gateway --frozen
+      - name: Lint the gateway (unchanged core must stay 0-diff)
+        run: |
+          git diff --quiet upstream-v0.3.55-1682b8c -- emrg/ ':!emrg/gateway' \
+            && echo "core emrg/ unchanged" \
+            || { echo "ERROR: emrg/ outside emrg/gateway/ changed"; exit 1; }
+      - name: Run gateway tests
+        run: uv run pytest tests/gateway -q
+      - name: Run index-derived guards
+        run: |
+          git add emrg/gateway pyproject.toml tests/gateway
+          uv run pytest tests/test_the_index_derived_scans_reach_new_files.py tests/test_conflict_markers.py tests/test_cmd_crlf.py tests/test_no_duplicate_sources.py -q
+
+  android:
+    needs: lint-and-python-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 35
+          target: android-35
+          build-tools: "35.0.0"
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+      - name: Debug APK
+        run: ./gradlew :app:assembleDebug
+        working-directory: android
+      - name: Release APK / AAB
+        env:
+          EMRG_KEYSTORE_FILE: ${{ secrets.EMRG_KEYSTORE_FILE }}
+          EMRG_KEYSTORE_PASSWORD: ${{ secrets.EMRG_KEYSTORE_PASSWORD }}
+          EMRG_KEY_ALIAS: ${{ secrets.EMRG_KEY_ALIAS }}
+          EMRG_KEY_PASSWORD: ${{ secrets.EMRG_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease :app:bundleRelease
+        working-directory: android
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-artifacts
+          path: |
+            android/app/build/outputs/apk/**/*.apk
+            android/app/build/outputs/bundle/**/*.aab
+          retention-days: 30
+
+  windows:
+    needs: lint-and-python-tests
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Node (Electron)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install uv
+        shell: pwsh
+        run: |
+          iwr -useb https://astral.sh/uv/install.ps1 | iex
+      - name: Sync Python dependencies
+        shell: pwsh
+        run: uv sync --extra gateway --frozen
+      - name: Install GUI dependencies
+        shell: pwsh
+        run: |
+          cd gui
+          npm ci
+      - name: Build Windows EXE
+        shell: pwsh
+        run: |
+          cd gui
+          npm run package:win
+      - name: Publish EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: gui/dist/**/*.exe
+          retention-days: 30
