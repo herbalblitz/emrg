@@ -6,11 +6,14 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.material3.Scaffold
-import androidx.navigation.compose.NavHost
+import androidx.compose.material3.Text
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navArgument
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import androidx.navigation.compose.NavHost
 import com.emrg.app.ui.theme.EmrgTheme
 import com.emrg.app.ui.theme.SurfaceContent
 
@@ -39,7 +42,7 @@ fun EmrgNavigator(repository: com.emrg.app.data.GatewayRepository) {
             }
             composable(
                 route = Route.Pair,
-                arguments = listOf(navArgument(Route.ArgHost) { type = androidx.navigation.NavType.StringType })
+                arguments = listOf(navArgument(Route.ArgHost) { type = NavType.StringType })
             ) {
                 val host = currentBackStackEntryAsState().value.arguments?.getString(Route.ArgHost) ?: ""
                 com.emrg.app.ui.screens.PairScreen(
@@ -54,8 +57,8 @@ fun EmrgNavigator(repository: com.emrg.app.data.GatewayRepository) {
             composable(
                 route = Route.Chat,
                 arguments = listOf(
-                    navArgument(Route.ArgSessionId) { type = androidx.navigation.NavType.StringType },
-                    navArgument(Route.ArgCwd) { type = androidx.navigation.NavType.StringType },
+                    navArgument(Route.ArgSessionId) { type = NavType.StringType },
+                    navArgument(Route.ArgCwd) { type = NavType.StringType },
                 )
             ) {
                 val entry = currentBackStackEntryAsState().value
@@ -71,7 +74,7 @@ fun EmrgNavigator(repository: com.emrg.app.data.GatewayRepository) {
             }
             composable(
                 route = Route.Files,
-                arguments = listOf(navArgument(Route.ArgPath) { type = androidx.navigation.NavType.StringType })
+                arguments = listOf(navArgument(Route.ArgPath) { type = NavType.StringType })
             ) {
                 val entry = currentBackStackEntryAsState().value
                 com.emrg.app.ui.screens.FilesScreen(
@@ -83,8 +86,8 @@ fun EmrgNavigator(repository: com.emrg.app.data.GatewayRepository) {
             composable(
                 route = Route.Editor,
                 arguments = listOf(
-                    navArgument(Route.ArgPath) { type = androidx.navigation.NavType.StringType },
-                    navArgument(Route.ArgSessionId) { type = androidx.navigation.NavType.StringType },
+                    navArgument(Route.ArgPath) { type = NavType.StringType },
+                    navArgument(Route.ArgSessionId) { type = NavType.StringType },
                 )
             ) {
                 val entry = currentBackStackEntryAsState().value
@@ -101,8 +104,8 @@ fun EmrgNavigator(repository: com.emrg.app.data.GatewayRepository) {
             composable(
                 route = Route.Sandbox,
                 arguments = listOf(
-                    navArgument(Route.ArgSessionId) { type = androidx.navigation.NavType.StringType },
-                    navArgument(Route.ArgCwd) { type = androidx.navigation.NavType.StringType },
+                    navArgument(Route.ArgSessionId) { type = NavType.StringType },
+                    navArgument(Route.ArgCwd) { type = NavType.StringType },
                 )
             ) {
                 val entry = currentBackStackEntryAsState().value

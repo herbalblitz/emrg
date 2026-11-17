@@ -7,35 +7,46 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.colors
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.repeatOnLifecycle
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.ui.components.EmptyContent
 import com.emrg.app.ui.components.ErrorContent
 import com.emrg.app.ui.components.HostListItem
 import com.emrg.app.ui.components.LoadingContent
+import kotlinx.coroutines.launch
 
 @Composable
 fun HostsScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
+    val scope = rememberCoroutineScope()
     val hosts by repository.hosts.collectAsState()
     val state by repository.state.collectAsState()
+
+    val connected = state is com.emrg.app.net.LinkState.Online
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Hosts") }) },
         floatingActionButton = {
-            androidx.compose.material3.FloatingActionButton(
+            FloatingActionButton(
                 onClick = { navController.navigate("pair") },
             ) {
-                androidx.compose.material3.Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                Icon(
+                    imageVector = Icons.Default.Add,
                     contentDescription = "Add host",
                 )
             }
@@ -50,7 +61,8 @@ fun HostsScreen(
                         onRetry = {},
                     )
                 }
-                is com.emrg.app.net.LinkState.Idle, is com.emrg.app.net.LinkState.Connecting,
+                is com.emrg.app.net.LinkState.Idle,
+                is com.emrg.app.net.LinkState.Connecting,
                 is com.emrg.app.net.LinkState.Online -> {
                     if (hosts.isEmpty()) {
                         EmptyContent(message = "No paired hosts yet. Add one to connect.")
@@ -60,7 +72,6 @@ fun HostsScreen(
                             contentPadding = padding,
                         ) {
                             items(hosts, key = { it.id }) { host ->
-                                val connected = state is com.emrg.app.net.LinkState.Online
                                 HostListItem(
                                     host = host,
                                     connected = connected,

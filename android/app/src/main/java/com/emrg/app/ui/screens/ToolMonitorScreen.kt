@@ -3,6 +3,8 @@ package com.emrg.app.ui.screens
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
@@ -70,6 +72,7 @@ fun ToolMonitorScreen(
             ) {
                 Text(text = if (running) "Running…" else "Run")
             }
+            if (running) androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp))
             result?.let { r ->
                 androidx.compose.material3.Text(text = r, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
             }

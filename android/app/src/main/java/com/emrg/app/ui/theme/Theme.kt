@@ -2,10 +2,9 @@ package com.emrg.app.ui.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 
@@ -26,8 +25,6 @@ private val DarkColorScheme = darkColorScheme(
     inverseSurface = Color(0xFFE7ECF0),
     inverseOnSurface = Color(0xFF0B1220),
     inversePrimary = Color(0xFF14B8A6),
-    surfaceDisabled = Color(0xFF1F2A37),
-    onSurfaceDisabled = Color(0xFF5B6B7B),
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -47,12 +44,7 @@ private val LightColorScheme = lightColorScheme(
     inverseSurface = Color(0xFF0F172A),
     inverseOnSurface = Color(0xFFF8FAFC),
     inversePrimary = Color(0xFF5EEAD4),
-    surfaceDisabled = Color(0xFFF1F5F9),
-    onSurfaceDisabled = Color(0xFF94A3B8),
 )
-
-val EmrgColorScheme: ColorScheme
-    get() = if (MaterialTheme.colorScheme.isLight) LightColorScheme else DarkColorScheme
 
 @Composable
 fun EmrgTheme(
@@ -70,7 +62,7 @@ fun EmrgTheme(
 @Composable
 fun SurfaceContent(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = EmrgColorScheme,
+        colorScheme = DarkColorScheme,
         typography = EmrgTypography,
         content = content,
     )

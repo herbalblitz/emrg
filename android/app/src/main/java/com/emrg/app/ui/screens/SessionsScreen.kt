@@ -7,18 +7,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
+import com.emrg.app.data.GatewayRequestException
 import com.emrg.app.ui.components.EmptyContent
 import com.emrg.app.ui.components.LoadingContent
 import com.emrg.app.ui.components.SessionListItem
@@ -62,8 +64,8 @@ fun SessionsScreen(
                             loading = false
                         }
                     }) {
-                        androidx.compose.material3.Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.Refresh,
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh",
                         )
                     }
@@ -71,22 +73,19 @@ fun SessionsScreen(
             )
         },
         floatingActionButton = {
-            androidx.compose.material3.FloatingActionButton(
+            FloatingActionButton(
                 onClick = {
                     loading = true
                     error = null
                     scope.launch {
-                        val id = repository.newSessionId(cwd = cwd)
+                        repository.newSessionId(cwd = cwd)
                         sessions = repository.sessions(cwd = cwd)
                         loading = false
-                        navController.navigate("chat") {
-                            // arguments would go here; simplified
-                        }
                     }
                 },
             ) {
-                androidx.compose.material3.Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                Icon(
+                    imageVector = Icons.Default.Add,
                     contentDescription = "New session",
                 )
             }
@@ -94,7 +93,10 @@ fun SessionsScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             error?.let { e ->
-                androidx.compose.material3.Text(text = e, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
+                androidx.compose.material3.Text(
+                    text = e,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                )
             }
             if (loading) LoadingContent(message = "Loading sessions…")
             if (sessions.isEmpty() && !loading) {
@@ -108,9 +110,7 @@ fun SessionsScreen(
                         SessionListItem(
                             session = session,
                             onClick = {
-                                navController.navigate(
-                                    "chat?session_id=${session.id}&cwd=${session.cwd}"
-                                )
+                                navController.navigate("chat?session_id=${session.id}&cwd=${session.cwd}")
                             },
                         )
                     }

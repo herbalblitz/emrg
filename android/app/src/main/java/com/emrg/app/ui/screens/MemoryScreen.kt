@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -60,9 +61,20 @@ fun ModelsScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
+    val scope = rememberCoroutineScope()
     var current by remember { mutableStateOf("") }
     var models by remember { mutableStateOf<List<com.emrg.app.model.ModelInfo>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    scope.launch {
+        try {
+            val (ms, cur) = repository.models()
+            models = ms
+            current = cur
+        } catch (e: GatewayRequestException) {
+            error = e.message
+        }
+    }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Models") }) },
@@ -88,13 +100,12 @@ fun RantScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
+    val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf("") }
     var agent by remember { mutableStateOf("") }
     var submitting by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<Int?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-
-    val scope = rememberCoroutineScope()
 
     fun submit() {
         val m = message.trim()
@@ -134,7 +145,7 @@ fun RantScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(onClick = { result = null; message = message.trim(); /* submit handled by viewmodel */ }, enabled = !submitting) {
+            Button(onClick = submit, enabled = !submitting) {
                 Text(text = if (submitting) "Sending…" else "Send rant")
             }
             result?.let { r -> androidx.compose.material3.Text(text = "Recorded ($r total)") }

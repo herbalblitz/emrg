@@ -79,6 +79,7 @@ fun EditorScreen(
     path: String = "",
     sessionId: String = "",
 ) {
+    val scope = rememberCoroutineScope()
     var content by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }

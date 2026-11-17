@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -60,8 +61,30 @@ fun TasksScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
+    val scope = rememberCoroutineScope()
     var tasks by remember { mutableStateOf<List<com.emrg.app.model.TaskInfo>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
+    var taskName by remember { mutableStateOf("") }
+
+    scope.launch {
+        try {
+            tasks = repository.tasks()
+        } catch (e: GatewayRequestException) {
+            error = e.message
+        }
+    }
+
+    fun trigger() {
+        val name = taskName.trim()
+        if (name.isEmpty()) return
+        scope.launch {
+            try {
+                repository.triggerTask(name)
+            } catch (e: GatewayRequestException) {
+                error = e.message
+            }
+        }
+    }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Tasks") }) },
@@ -70,16 +93,19 @@ fun TasksScreen(
             error?.let { e ->
                 androidx.compose.material3.Text(text = e, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
             }
-            androidx.compose.material3.TextField(
-                value = "",
-                onValueChange = { },
+            TextField(
+                value = taskName,
+                onValueChange = { taskName = it },
                 label = { Text(text = "Task name to trigger") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Button(onClick = trigger) { Text(text = "Trigger") }
             LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = padding) {
                 items(tasks, key = { it.name }) { t ->
-                    androidx.compose.material3.Text(text = "${t.name}  [${t.enabled}]")
+                    androidx.compose.material3.Text(
+                        text = "${t.name}  [${if (t.enabled) "enabled" else "disabled"}]",
+                    )
                 }
             }
         }
@@ -91,8 +117,17 @@ fun SkillsScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
+    val scope = rememberCoroutineScope()
     var skills by remember { mutableStateOf<List<com.emrg.app.model.SkillInfo>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    scope.launch {
+        try {
+            skills = repository.skills()
+        } catch (e: GatewayRequestException) {
+            error = e.message
+        }
+    }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Skills") }) },

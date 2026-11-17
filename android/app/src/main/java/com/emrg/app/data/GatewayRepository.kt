@@ -23,6 +23,7 @@ import com.emrg.app.net.GatewayProtocol
 import com.emrg.app.net.GatewayRequestException
 import com.emrg.app.net.LinkState
 import com.emrg.app.net.Pairing
+import com.emrg.app.net.arr
 import com.emrg.app.net.asArray
 import com.emrg.app.net.asObject
 import com.emrg.app.net.bool

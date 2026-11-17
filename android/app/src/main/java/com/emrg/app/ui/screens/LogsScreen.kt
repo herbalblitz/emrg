@@ -7,10 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Switch
-import androidx.compose.material3.CheckedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -24,9 +21,18 @@ fun LogsScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
+    val scope = rememberCoroutineScope()
     var source by remember { mutableStateOf("daemon") }
     var lines by remember { mutableStateOf<com.emrg.app.model.LogPage?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    scope.launch {
+        try {
+            lines = repository.logs(source = source)
+        } catch (e: GatewayRequestException) {
+            error = e.message
+        }
+    }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Logs") }) },
@@ -58,8 +64,17 @@ fun AuditScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
+    val scope = rememberCoroutineScope()
     var entries by remember { mutableStateOf<List<com.emrg.app.model.AuditEntry>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    scope.launch {
+        try {
+            entries = repository.audit()
+        } catch (e: GatewayRequestException) {
+            error = e.message
+        }
+    }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Audit log") }) },
@@ -85,8 +100,17 @@ fun DevicesScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
+    val scope = rememberCoroutineScope()
     var devices by remember { mutableStateOf<List<com.emrg.app.model.DeviceInfo>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    scope.launch {
+        try {
+            devices = repository.devices()
+        } catch (e: GatewayRequestException) {
+            error = e.message
+        }
+    }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Devices") }) },
@@ -122,7 +146,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
-                Switch(checked = danger, onCheckedChange = { danger = it })
+                androidx.compose.material3.Switch(checked = danger, onCheckedChange = { danger = it })
                 androidx.compose.material3.Text(text = "Allow danger-full-access exec")
             }
         }

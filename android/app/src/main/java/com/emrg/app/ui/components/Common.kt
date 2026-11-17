@@ -3,6 +3,7 @@ package com.emrg.app.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,19 +11,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.colors
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.emrg.app.ui.theme.EmrgTheme
 
 @Composable
 fun EmrgAppBar(
@@ -35,14 +40,14 @@ fun EmrgAppBar(
         title = { Text(text = title) },
         navigationIcon = {
             IconButton(onClick = onNavigate) {
-                androidx.compose.material3.Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Navigate up",
                 )
             }
         },
         colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
-            containerColor = EmrgTheme.colors.surface,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
     )
 }
@@ -80,10 +85,10 @@ fun ErrorContent(message: String, onRetry: () -> Unit) {
     ) {
         Text(
             text = message,
-            color = EmrgTheme.colors.errorContainer,
-            style = EmrgTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyMedium,
         )
-        androidx.compose.material3.Button(onClick = onRetry) {
+        Button(onClick = onRetry) {
             Text(text = "Retry")
         }
     }
@@ -96,7 +101,7 @@ fun EmptyContent(message: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(text = message, style = EmrgTheme.typography.bodyLarge)
+        Text(text = message, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -113,27 +118,27 @@ fun HostListItem(
             .clickable(onClick = onClick),
         elevation = if (connected) 4.dp else 2.dp,
     ) {
-        androidx.compose.foundation.layout.Row(
+        Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            androidx.compose.foundation.layout.Column(
+            Column(
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
                     text = host.name,
-                    style = EmrgTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
                     text = "${host.host}:${host.port}",
-                    style = EmrgTheme.typography.bodyMedium,
-                    color = EmrgTheme.colors.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Text(
                 text = if (connected) "Online" else "Offline",
-                style = EmrgTheme.typography.labelLarge,
-                color = if (connected) EmrgTheme.colors.primary else EmrgTheme.colors.onSurfaceVariant,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (connected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -150,25 +155,25 @@ fun SessionListItem(
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clickable(onClick = onClick),
     ) {
-        androidx.compose.foundation.layout.Row(
+        Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            androidx.compose.foundation.layout.Column(
+            Column(
                 modifier = Modifier.weight(1f),
             ) {
-                Text(text = session.title, style = EmrgTheme.typography.titleMedium)
+                Text(text = session.title, style = MaterialTheme.typography.titleMedium)
                 Text(
                     text = session.cwd,
-                    style = EmrgTheme.typography.bodyMedium,
-                    color = EmrgTheme.colors.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
             }
             Text(
                 text = session.updatedAt.take(16),
-                style = EmrgTheme.typography.labelMedium,
-                color = EmrgTheme.colors.onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
