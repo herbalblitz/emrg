@@ -53,6 +53,7 @@ jobs:
           api-level: 35
           target: android-35
           build-tools: "35.0.0"
+          packages: ''  # setup-android v3 defaults to "tools platform-tools"; "tools" no longer exists
       - name: Make gradlew executable
         run: chmod +x android/gradlew
       - name: Debug APK
@@ -98,16 +99,22 @@ jobs:
       - name: Install GUI dependencies
         shell: pwsh
         run: |
-          cd gui
+          cd emrg/gui
           npm ci
+      - name: Build React renderer
+        shell: pwsh
+        run: |
+          cd emrg/gui/renderer
+          npm ci
+          npm run build
       - name: Build Windows EXE
         shell: pwsh
         run: |
-          cd gui
-          npm run package:win
+          cd emrg/gui
+          npm run dist
       - name: Publish EXE
         uses: actions/upload-artifact@v4
         with:
           name: windows-exe
-          path: gui/dist/**/*.exe
+          path: emrg/gui/dist/**/*.exe
           retention-days: 30
