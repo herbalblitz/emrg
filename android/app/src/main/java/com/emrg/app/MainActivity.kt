@@ -49,8 +49,8 @@ fun EmrgNavigator(repository: com.emrg.app.data.GatewayRepository) {
                 com.emrg.app.ui.screens.ChatScreen(
                     repository = repository,
                     navController = navController,
-                    sessionId = currentBackStackEntryAsState().value.arguments?.getString(Route.ArgSessionId) ?: "",
-                    cwd = currentBackStackEntryAsState().value.arguments?.getString(Route.ArgCwd) ?: repository.currentWorkspace(),
+                    sessionId = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgSessionId) ?: "",
+                    cwd = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgCwd) ?: repository.currentWorkspace(),
                 )
             }
             composable(route = Route.ToolMonitor) {
@@ -60,15 +60,15 @@ fun EmrgNavigator(repository: com.emrg.app.data.GatewayRepository) {
                 com.emrg.app.ui.screens.FilesScreen(
                     repository = repository,
                     navController = navController,
-                    path = currentBackStackEntryAsState().value.arguments?.getString(Route.ArgPath) ?: "/",
+                    path = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgPath) ?: "/",
                 )
             }
             composable(route = Route.Editor) {
                 com.emrg.app.ui.screens.EditorScreen(
                     repository = repository,
                     navController = navController,
-                    path = currentBackStackEntryAsState().value.arguments?.getString(Route.ArgPath) ?: "",
-                    sessionId = currentBackStackEntryAsState().value.arguments?.getString(Route.ArgSessionId) ?: "",
+                    path = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgPath) ?: "",
+                    sessionId = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgSessionId) ?: "",
                 )
             }
             composable(route = Route.Terminal) {
@@ -78,8 +78,8 @@ fun EmrgNavigator(repository: com.emrg.app.data.GatewayRepository) {
                 com.emrg.app.ui.screens.SandboxScreen(
                     repository = repository,
                     navController = navController,
-                    sessionId = currentBackStackEntryAsState().value.arguments?.getString(Route.ArgSessionId) ?: "",
-                    cwd = currentBackStackEntryAsState().value.arguments?.getString(Route.ArgCwd) ?: repository.currentWorkspace(),
+                    sessionId = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgSessionId) ?: "",
+                    cwd = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgCwd) ?: repository.currentWorkspace(),
                 )
             }
             composable(route = Route.Memory) {
