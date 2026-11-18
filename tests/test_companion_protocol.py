@@ -15,8 +15,9 @@ def test_pre_auth_rejects_invalid_envelopes(frame):
     with pytest.raises(CompanionProtocolError): validate_client_frame(frame)
 
 def test_status_requires_request_id_after_auth():
-    assert validate_client_frame('{"type":"status","request_id":"r"}',authenticated=True)["type"]=="status"
-    with pytest.raises(CompanionProtocolError): validate_client_frame('{"type":"status"}',authenticated=True)
+    assert validate_client_frame('{"type":"status","request_id":"r"}',authenticated=True,scopes=frozenset({"status"}))["type"]=="status"
+    with pytest.raises(CompanionProtocolError): validate_client_frame('{"type":"status"}',authenticated=True,scopes=frozenset({"status"}))
+    with pytest.raises(CompanionProtocolError): validate_client_frame('{"type":"status","request_id":"r"}',authenticated=True)
 
 def test_session_list_is_scope_and_workspace_bound():
     frame='{"type":"sessions.list","request_id":"r","workspace_id":"w"}'
