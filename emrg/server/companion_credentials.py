@@ -9,11 +9,11 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import secrets
+import tempfile
 from pathlib import Path
 from typing import Any
-
-from emrg.server.atomic import atomic_write_bytes
 
 REGISTRY_VERSION = 1
 TOKEN_BYTES = 32
@@ -46,8 +46,19 @@ class CredentialRegistry:
         return data
 
     def _write(self, data: dict[str, Any]) -> None:
-        atomic_write_bytes(json.dumps(data, sort_keys=True, separators=(",", ":")),
-                           self.path, mode=0o600)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=str(self.path.parent), prefix=".companion-", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                stream.write(json.dumps(data, sort_keys=True, separators=(",", ":")))
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, self.path)
+        except OSError:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise CredentialRegistryError("credential registry write failed") from None
 
     def issue(self, *, device_id: str, workspace_id: str, cwd: str,
               scopes: set[str]) -> str:
