@@ -163,3 +163,9 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Host service companion state is now **disabled by default**; pairing creation/approval/redemption and authentication are gated until explicit local `enable()`.
 - `disable()` flips the state off and invalidates all outstanding transactions; pending-list UI data is hidden while disabled. This remains a service primitive, not yet wired to host UI or a listener.
 - Tests cover default-off behavior, enable/disable, pending invalidation, redeem rejection, and the prior cap/expiry tests. CI verification pending.
+
+
+### Companion default-off + listener bind policy
+- [x] Companion host service is disabled by default; enable is explicit, disable invalidates pending pairings, and disabled state gates pairing/authentication.
+- [x] Added a transport-free listener configuration guard: IP-literal only, no wildcard/multicast/reserved bind, ports restricted to 1024-65535, and bounded connection/handshake/idle/close settings.
+- [ ] Wire this policy into an actual WSS listener; no socket is created by these primitives. CI verification pending.
