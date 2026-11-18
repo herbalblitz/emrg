@@ -31,7 +31,7 @@ jobs:
       - name: Assemble debug APK
         working-directory: android
         run: gradle --no-daemon assembleDebug
-      - name: Lint
+      - name: Unit tests\n        working-directory: android\n        run: gradle --no-daemon testDebugUnitTest\n      - name: Lint
         working-directory: android
         run: gradle --no-daemon lintDebug
       - name: Upload debug APK
