@@ -193,3 +193,5 @@ These are requirements for a future implementation, not evidence of an existing 
 - When the caller supplies an approved workspace ID or cwd, the snapshot must match exactly; mismatches fail validation.
 - Tests cover valid matching scope and invalid authorization/version, blank IDs/cursor/scope, and workspace/cwd mismatch.
 - **Not integrated into a remote reducer or transport:** callers must invoke this validator before treating a snapshot as reconciled. No host snapshot API exists yet.
+
+- Follow-up: the reconnection reducer now accepts the approved workspace ID and cwd as reconciliation context and validates them before transitioning to `READY`; tests exercise the reducer boundary for both matching and foreign snapshots.
