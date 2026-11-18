@@ -68,3 +68,7 @@ The credential registry now serializes read-modify-write issue/revoke operations
 ## Credential registry filesystem permission increment
 
 On POSIX, the registry now requests mode `0700` for a newly created containing directory and `0600` for the atomic temporary file before replacement. A test checks the effective directory/file modes. Existing directory permissions are not silently changed, and Windows ACL protection is still not implemented; do not treat this file registry as production-ready across platforms yet.
+
+## TLS host identity provisioning implementation
+
+Added `emrg/server/companion_tls_identity.py`: creates a dedicated P-256 self-signed certificate with exact SAN host coverage, server EKU/basic constraints/key usage, SHA-256 DER fingerprint, and 365-day validity. It persists across restart, validates key/certificate match and signature/usage/expiry/SAN, and never silently replaces a missing/corrupt identity; explicit reset is required for rotation. Windows private-key bytes are user-DPAPI protected; POSIX files are atomic and mode 0600 under a requested mode-0700 identity directory. A context loader uses TLS 1.2+ and opens no socket. Tests are added; execution is pending. Host UI consent, cross-process lock, Windows ACL/temp-file review and live listener remain gates.
