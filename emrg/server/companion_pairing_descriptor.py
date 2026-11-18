@@ -34,7 +34,9 @@ def _normalize_endpoint_host(endpoint: str) -> tuple[str, str]:
             normalized_host = str(ipaddress.ip_address(host))
         except ValueError:
             normalized_host = host.encode("idna").decode("ascii").lower()
-        normalized_endpoint = endpoint.rstrip("/")
+        authority_host = f"[{normalized_host}]" if ":" in normalized_host else normalized_host
+        authority = f"{authority_host}:{port}" if port is not None else authority_host
+        normalized_endpoint = f"wss://{authority}"
         return normalized_host, normalized_endpoint
     except (ValueError, UnicodeError):
         raise CompanionTlsError("invalid pairing endpoint") from None
