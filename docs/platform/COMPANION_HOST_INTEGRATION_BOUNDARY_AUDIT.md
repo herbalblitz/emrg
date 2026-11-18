@@ -76,3 +76,8 @@ Added `emrg/server/companion_tls_identity.py`: creates a dedicated P-256 self-si
 ## Android exact-pin TLS and nonce replay defense
 
 The Android client now installs a per-connection exact SHA-256 leaf-pin trust manager for self-signed host certs; certificate validity is checked during TLS handshake, and default hostname verification remains enabled. Host provisioner fingerprint format is colon-delimited uppercase hex, matching Android QR parser. Unit tests cover trust pin match/mismatch/missing chain/invalid pin. Host auth now rejects nonce values under 16 bytes and uses a process-local 10-minute bounded, synchronized replay cache; duplicate nonce and cache saturation fail closed. Linux and Windows CI passed the host tests (70 passed on Linux; 67 passed/3 skipped on Windows). Android test CI is pending at this revision.
+
+
+## Pending pairing lifecycle hardening
+
+Pending transactions are now bounded to 32 concurrent entries. Expired entries are purged before capacity is evaluated; when capacity remains full, creation fails closed with a safe error. The host composition exposes `invalidate_pending_pairings()` as a lifecycle hook to clear all QR/pairing transactions when a future companion service is disabled or stopped. Tests cover capacity, expiry freeing capacity, and invalidation of all pending requests. This hook is not yet wired to a listener/UI lifecycle because those components do not exist.
