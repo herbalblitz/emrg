@@ -82,7 +82,6 @@ class PinnedRemoteWebSocketTest {
         val fingerprint = PinnedRemoteWebSocket.certificateFingerprint(EncodedCertificate(byteArrayOf(1, 2, 3)))
         assertEquals("03:90:58:C6:F2:C0:CB:49:2C:53:3B:0A:4D:14:EF:77:CC:0F:78:AB:CC:CE:D5:28:7D:84:A1:A2:01:1C:FB:81", fingerprint)
     }
-}
 
     private fun testCertificate(): X509Certificate {
         val stream = PinnedRemoteWebSocketTest::class.java.classLoader!!.getResourceAsStream("companion-test-cert.pem")
@@ -124,3 +123,4 @@ class PinnedRemoteWebSocketTest {
             fail("invalid pin must be rejected")
         } catch (_: IllegalArgumentException) { }
     }
+}
