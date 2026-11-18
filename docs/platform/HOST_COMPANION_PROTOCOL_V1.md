@@ -46,7 +46,7 @@ Use standard cryptographic primitives and platform TLS. Do not invent a bespoke 
 
 ## Frames and state machine
 
-Frames are JSON objects with a required `type` string. Reject non-object JSON, unknown required fields, malformed identifiers, and frames over the configured limit (proposed 256 KiB). Unknown optional fields are ignored. Unknown frame types are rejected with a generic protocol error. Use per-connection request IDs and monotonic event sequence numbers.
+Frames are JSON objects with a required `type` string. Reject non-object JSON, duplicate keys, any unknown fields, malformed identifiers, and frames over the configured limit (proposed 256 KiB). Unknown frame types are rejected with a generic protocol error. Strict field allowlists are intentional for v1; extensions require a protocol-versioned change. Use per-connection request IDs and monotonic event sequence numbers.
 
 ### First frame: auth
 
@@ -62,7 +62,7 @@ Success response:
 {"type":"auth_ok","protocol":"1.0","host_id":"<id>","connection_id":"<id>","capabilities":["status","sessions.list","chat.send","chat.stream"],"workspace_id":"<id>","cwd":"<canonical approved cwd>"}
 ```
 
-The Android client verifies host ID, protocol compatibility and exact workspace/cwd binding. Capabilities are a strict allowlist; client does not infer extra rights from unknown capabilities.
+The Android client verifies host ID, protocol compatibility and exact workspace/cwd binding. Auth requests include a protocol version and a fresh client nonce. Capabilities are a strict allowlist; client does not infer extra rights from unknown capabilities.
 
 ### Status
 
@@ -143,3 +143,7 @@ No automatic replay of chat-send requests on reconnect. A future status/snapshot
 ## Host-side parser milestone
 
 Implemented `emrg/server/companion_protocol.py` as a strict frame parser/validation boundary with tests. It limits frame/prompt sizes, requires the auth envelope before authenticated messages, restricts message types, enforces scope/workspace for session/chat operations, and normalizes chat payloads while dropping client-supplied cwd/tools/sandbox. It does **not** verify credentials, bind sockets, dispatch requests, or provide a live remote server.
+
+## Strict frame schema hardening
+
+Host-side parser tests now include duplicate JSON key rejection and unknown-field rejection for the auth, status, sessions.list and chat.send frame schemas. The Android WSS client auth envelope now includes `protocol: 1.0` and a per-connection random client nonce, matching the host validator's required auth fields. This remains a client primitive/specification boundary; a live WSS host is not yet available.
