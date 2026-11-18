@@ -53,7 +53,9 @@ internal fun isSecurePairingEndpoint(endpoint: String): Boolean = try {
     uri.scheme.equals("wss", ignoreCase = true) &&
         !uri.host.isNullOrBlank() &&
         uri.userInfo == null &&
-        uri.fragment == null
+        uri.query == null &&
+        uri.fragment == null &&
+        (uri.port == -1 || uri.port in 1..65535)
 } catch (_: Exception) {
     false
 }
