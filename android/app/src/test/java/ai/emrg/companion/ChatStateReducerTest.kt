@@ -102,7 +102,7 @@ class ChatStateReducerTest {
         val cancelled = reduceChatState(partial, ChatAction.Cancel).state
 
         assertFalse(cancelled.isSending)
-        assertEquals(ChatMessage("EMRG", "partial output\\n[Stopped]"), cancelled.messages.last())
+        assertEquals(ChatMessage("EMRG", "partial output\n[Stopped]"), cancelled.messages.last())
         assertEquals("", cancelled.streamingText)
     }
 
