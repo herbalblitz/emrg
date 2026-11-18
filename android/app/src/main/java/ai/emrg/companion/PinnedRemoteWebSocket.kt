@@ -9,6 +9,9 @@ import okio.ByteString
 import org.json.JSONObject
 import java.security.MessageDigest
 import java.security.cert.Certificate
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.X509TrustManager
 import java.util.concurrent.TimeUnit
 
 /** Events from a paired host socket. Authentication is not considered ready until host auth_ok. */
@@ -23,9 +26,10 @@ internal enum class RemoteSocketState {
 }
 
 /**
- * Client-side WSS primitive. It uses system TLS validation and then additionally verifies
- * the leaf certificate SHA-256 fingerprint from the pairing descriptor before sending
- * the device credential. It intentionally implements no reconnect or command replay.
+ * Client-side WSS primitive. A pairing descriptor's exact leaf SHA-256 pin is installed
+ * as the trust anchor for this connection, permitting a self-signed host cert. OkHttp's
+ * default hostname verifier remains enabled. The pin is checked during TLS handshake,
+ * before any credential frame can be sent. No reconnect or command replay is implemented.
  *
  * Host-side remote pairing/auth endpoints are not implemented in EMRG daemon yet.
  */
@@ -57,7 +61,8 @@ internal class PinnedRemoteWebSocket(
         listener.onState(RemoteSocketState.CONNECTING)
 
         val request = Request.Builder().url(host.endpoint).build()
-        socket = client.newWebSocket(request, object : WebSocketListener() {
+        val pinnedClient = createPinnedClient(client, host.hostFingerprintSha256)
+        socket = pinnedClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 if (attemptGeneration != generation) { webSocket.cancel(); return }
                 val peerCerts = response.handshake?.peerCertificates.orEmpty()
@@ -191,6 +196,47 @@ internal class PinnedRemoteWebSocket(
         internal fun certificateFingerprint(certificate: Certificate): String {
             val digest = MessageDigest.getInstance("SHA-256").digest(certificate.encoded)
             return digest.joinToString(":") { "%02X".format(it) }
+        }
+
+        internal fun createPinnedClient(base: OkHttpClient, expectedFingerprint: String): OkHttpClient {
+            require(isSha256Fingerprint(expectedFingerprint)) { "Host certificate fingerprint is invalid" }
+            val trustManager = ExactPinTrustManager(expectedFingerprint)
+            val context = SSLContext.getInstance("TLS")
+            context.init(null, arrayOf(trustManager), java.security.SecureRandom())
+            return base.newBuilder()
+                .sslSocketFactory(context.socketFactory, trustManager)
+                .build()
+        }
+
+        /** Trust only the exact certificate approved by QR/user confirmation. */
+        internal class ExactPinTrustManager(expectedFingerprint: String) : X509TrustManager {
+            private val expected = normalizePin(expectedFingerprint)
+
+            override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String) {
+                if (chain.isEmpty()) throw java.security.cert.CertificateException("Missing peer certificate")
+                val leaf = chain[0]
+                try {
+                    leaf.checkValidity()
+                } catch (_: Exception) {
+                    throw java.security.cert.CertificateException("Pinned certificate is expired or not yet valid")
+                }
+                val actual = MessageDigest.getInstance("SHA-256").digest(leaf.encoded)
+                if (!MessageDigest.isEqual(actual, expected)) {
+                    throw java.security.cert.CertificateException("Peer certificate pin mismatch")
+                }
+            }
+
+            override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String) {
+                throw java.security.cert.CertificateException("Client certificates are not supported")
+            }
+
+            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+
+            private fun normalizePin(value: String): ByteArray =
+                value.replace(":", "").replace(" ", "").trim().uppercase()
+                    .takeIf { it.matches(Regex("[0-9A-F]{64}")) }
+                    ?.chunked(2)?.map { it.toInt(16).toByte() }?.toByteArray()
+                    ?: throw IllegalArgumentException("Host certificate fingerprint is invalid")
         }
 
         private fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
