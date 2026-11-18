@@ -41,7 +41,7 @@ internal class SecurePairingCoordinator(
             try {
                 if (alias != null) credentialStore.delete(alias)
             } catch (_: Exception) {
-                state = state.copy(phase = PairingPhase.FAILED, pairedHost = null, errorCode = "CREDENTIAL_REVOCATION_FAILED")
+                state = state.copy(phase = PairingPhase.FAILED, errorCode = "CREDENTIAL_REVOCATION_FAILED")
                 return state
             }
         }
