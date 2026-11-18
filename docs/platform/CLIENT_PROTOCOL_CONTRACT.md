@@ -146,3 +146,18 @@ All commands below are JSON WebSocket frames sent after authentication. Command 
 - Active snapshots project streamed text and tool lifecycle into transient Compose state. Completed snapshots append the final assistant text; cancelled and failed snapshots use existing UI terminal handling and clear request binding.
 - Added reducer tests for request binding, stale correlation, active projection, completion, failure and cancellation cleanup.
 - This remains a state projection layer, not a connected event bridge: the offline demo transport does not emit protocol frames and no daemon is connected.
+
+## Reconnect and state reconciliation policy (design-only)
+
+Until a remote transport and host snapshot API exist, Android must treat a lost connection as an interruption—not as proof that the host stopped executing a task.
+
+1. **Fail active local stream presentation:** on transport loss, transition only active request streams to an interrupted/failed state, preserve already-rendered partial text, and do not rewrite terminal requests.
+2. **No automatic command replay:** never resend task creation, tool/action commands, cancellation, rewind, clear, delete, rename, or other potentially non-idempotent operations after reconnect. A user may explicitly retry after checking authoritative host state.
+3. **Reconnect backoff:** future transport should use bounded exponential backoff with jitter, reset only after a stable authenticated connection; stop retrying on explicit auth rejection, revoked credential, host identity/fingerprint change, or protocol incompatibility. Respect app lifecycle and user disconnect.
+4. **Authenticate and revalidate identity first:** reconnect only to the paired endpoint with the stored host identity and valid device credential. TLS/pin or identity failures are terminal until the user re-verifies/re-pairs; do not silently trust a changed host.
+5. **Reconcile before resuming controls:** obtain a host-authoritative snapshot containing protocol version/capabilities, device authorization status, sessions scoped to the original approved workspace/cwd, active request IDs/status, queue state, and last-event cursor if supported. If the host cannot provide this snapshot, show connection restored but state unknown; do not enable controls that could duplicate work.
+6. **Request correlation:** discard late frames for requests already locally terminal or not bound to the current connection generation. The transport must tag frames with a connection epoch so stale socket callbacks cannot mutate new connection state.
+7. **Session scope:** never silently switch cwd/project or infer remote transcript history from local session storage. Preserve explicit session IDs and require the host to validate session/cwd association.
+8. **User-visible states:** distinguish disconnected, reconnecting, authenticated-but-reconciling, connected/ready, identity/auth failure, and state-unknown. Diagnostics must redact tokens, prompts, paths and tool arguments.
+
+These are requirements for a future implementation, not evidence of an existing reconnect client, host snapshot endpoint, retry mechanism, or remote pairing.
