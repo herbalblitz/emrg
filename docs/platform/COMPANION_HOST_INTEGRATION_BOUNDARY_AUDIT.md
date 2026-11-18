@@ -49,3 +49,6 @@ No milestone above is complete until tests and CI evidence exist.
 ## TLS primitive implementation increment
 
 `emrg/server/companion_tls.py` adds transport-free helpers for SHA-256 fingerprinting over DER bytes, fingerprint normalization/validation, constant-time pin comparison, and a TLS 1.2+ server context that loads a supplied certificate/key pair fail-closed. It does not generate or persist identity material and does not create sockets. Unit coverage is in `tests/test_companion_tls.py`; CI verification is pending.
+## Strict frame-schema hardening increment
+
+The companion frame validator now rejects duplicate JSON object keys and unknown fields in every currently defined client message type (auth, status, sessions.list, chat.send). This prevents ambiguous parser interpretations and fails closed on unsupported request extensions instead of passing them to future handlers. Chat frames continue to be normalized to the narrow host-approved fields. Regression tests cover duplicate keys, extra auth/status fields, and privilege-shaped chat extensions. This remains parser-only hardening; no transport or dispatcher is implemented.
