@@ -21,6 +21,8 @@ internal const val CHAT_FAILURE_MESSAGE =
 internal suspend fun sendSafely(transport: ChatTransport, prompt: String): String =
     try {
         transport.send(prompt)
+    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        throw cancelled
     } catch (_: Exception) {
         CHAT_FAILURE_MESSAGE
     }
