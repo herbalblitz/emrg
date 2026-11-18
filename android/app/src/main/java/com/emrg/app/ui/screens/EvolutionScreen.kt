@@ -24,9 +24,18 @@ fun EvolutionScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'count', 'mutableStateOf(0)', 'Int')}
-{var_decl('    ', 'records', 'mutableStateOf(emptyList<com.emrg.app.model.EvolutionRecord>())', 'List<com.emrg.app.model.EvolutionRecord>')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+    val __count = remember { mutableStateOf(0) }
+    var count: Int
+        get() = __count.value
+        set(value) { __count.value = value }
+    val __records = remember { mutableStateOf(emptyList<com.emrg.app.model.EvolutionRecord>()) }
+    var records: List<com.emrg.app.model.EvolutionRecord>
+        get() = __records.value
+        set(value) { __records.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     scope.launch {
         try {
@@ -63,9 +72,18 @@ fun TasksScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'tasks', 'mutableStateOf(emptyList<com.emrg.app.model.TaskInfo>())', 'List<com.emrg.app.model.TaskInfo>')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
-{var_decl('    ', 'taskName', 'mutableStateOf("")', 'String')}
+    val __tasks = remember { mutableStateOf(emptyList<com.emrg.app.model.TaskInfo>()) }
+    var tasks: List<com.emrg.app.model.TaskInfo>
+        get() = __tasks.value
+        set(value) { __tasks.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
+    val __taskName = remember { mutableStateOf("") }
+    var taskName: String
+        get() = __taskName.value
+        set(value) { __taskName.value = value }
 
     scope.launch {
         try {
@@ -119,8 +137,14 @@ fun SkillsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'skills', 'mutableStateOf(emptyList<com.emrg.app.model.SkillInfo>())', 'List<com.emrg.app.model.SkillInfo>')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+    val __skills = remember { mutableStateOf(emptyList<com.emrg.app.model.SkillInfo>()) }
+    var skills: List<com.emrg.app.model.SkillInfo>
+        get() = __skills.value
+        set(value) { __skills.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     scope.launch {
         try {

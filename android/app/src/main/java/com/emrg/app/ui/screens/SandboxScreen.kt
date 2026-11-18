@@ -27,10 +27,22 @@ fun SandboxScreen(
 ) {
     val scope = rememberCoroutineScope()
     val effectiveCwd = cwd.takeIf { it.isNotEmpty() }.orElse { repository.currentWorkspace() }
-{var_decl('    ', 'mode', 'mutableStateOf("workspace-write")', 'String')}
-{var_decl('    ', 'root', 'mutableStateOf("")', 'String')}
-{var_decl('    ', 'result', 'mutableStateOf<String?>(null)', 'String?')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+    val __mode = remember { mutableStateOf("workspace-write") }
+    var mode: String
+        get() = __mode.value
+        set(value) { __mode.value = value }
+    val __root = remember { mutableStateOf("") }
+    var root: String
+        get() = __root.value
+        set(value) { __root.value = value }
+    val __result = remember { mutableStateOf<String?>(null) }
+    var result: String?
+        get() = __result.value
+        set(value) { __result.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     fun apply() {
         error = null
@@ -58,7 +70,10 @@ fun SandboxScreen(
         }
     }
 
-    var expanded by remember { mutableStateOf(false) }
+    val __expanded = remember { mutableStateOf(false) }
+    var expanded: Boolean
+        get() = __expanded.value
+        set(value) { __expanded.value = value }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Sandbox") }) },

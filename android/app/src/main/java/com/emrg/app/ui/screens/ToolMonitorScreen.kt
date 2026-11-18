@@ -24,10 +24,22 @@ fun ToolMonitorScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'command', 'mutableStateOf("")', 'String')}
-{var_decl('    ', 'running', 'mutableStateOf(false)', 'Boolean')}
-{var_decl('    ', 'result', 'mutableStateOf<String?>(null)', 'String?')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+    val __command = remember { mutableStateOf("") }
+    var command: String
+        get() = __command.value
+        set(value) { __command.value = value }
+    val __running = remember { mutableStateOf(false) }
+    var running: Boolean
+        get() = __running.value
+        set(value) { __running.value = value }
+    val __result = remember { mutableStateOf<String?>(null) }
+    var result: String?
+        get() = __result.value
+        set(value) { __result.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     fun run() {
         val cmd = command.trim()
@@ -44,7 +56,7 @@ fun ToolMonitorScreen(
                     mode = null,
                     timeout = 30,
                 )
-                result = "exit=${outcome.exitCode}\\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\\nSTDERR:\\n${outcome.stderr}" else ""}"
+                result = "exit=${outcome.exitCode}\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\nSTDERR:\n${outcome.stderr}" else ""}"
             } catch (e: GatewayRequestException) {
                 error = e.message
             }

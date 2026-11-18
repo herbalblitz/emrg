@@ -26,9 +26,18 @@ fun LogsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'source', 'mutableStateOf("daemon")', 'String')}
-{var_decl('    ', 'lines', 'mutableStateOf<com.emrg.app.model.LogPage?>(null)', 'com.emrg.app.model.LogPage?')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+    val __source = remember { mutableStateOf("daemon") }
+    var source: String
+        get() = __source.value
+        set(value) { __source.value = value }
+    val __lines = remember { mutableStateOf<com.emrg.app.model.LogPage?>(null) }
+    var lines: com.emrg.app.model.LogPage?
+        get() = __lines.value
+        set(value) { __lines.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     scope.launch {
         try {
@@ -69,8 +78,14 @@ fun AuditScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'entries', 'mutableStateOf(emptyList<com.emrg.app.model.AuditEntry>())', 'List<com.emrg.app.model.AuditEntry>')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+    val __entries = remember { mutableStateOf(emptyList<com.emrg.app.model.AuditEntry>()) }
+    var entries: List<com.emrg.app.model.AuditEntry>
+        get() = __entries.value
+        set(value) { __entries.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     scope.launch {
         try {
@@ -105,8 +120,14 @@ fun DevicesScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'devices', 'mutableStateOf(emptyList<com.emrg.app.model.DeviceInfo>())', 'List<com.emrg.app.model.DeviceInfo>')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+    val __devices = remember { mutableStateOf(emptyList<com.emrg.app.model.DeviceInfo>()) }
+    var devices: List<com.emrg.app.model.DeviceInfo>
+        get() = __devices.value
+        set(value) { __devices.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     scope.launch {
         try {
@@ -139,7 +160,10 @@ fun SettingsScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
-{var_decl('    ', 'danger', 'mutableStateOf(false)', 'Boolean')}
+    val __danger = remember { mutableStateOf(false) }
+    var danger: Boolean
+        get() = __danger.value
+        set(value) { __danger.value = value }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Settings") }) },

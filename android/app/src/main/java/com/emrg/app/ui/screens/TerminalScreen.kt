@@ -25,11 +25,26 @@ fun TerminalScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'command', 'mutableStateOf("")', 'String')}
-{var_decl('    ', 'running', 'mutableStateOf(false)', 'Boolean')}
-{var_decl('    ', 'output', 'mutableStateOf("")', 'String')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
-{var_decl('    ', 'mode', 'mutableStateOf("workspace-write")', 'String')}
+    val __command = remember { mutableStateOf("") }
+    var command: String
+        get() = __command.value
+        set(value) { __command.value = value }
+    val __running = remember { mutableStateOf(false) }
+    var running: Boolean
+        get() = __running.value
+        set(value) { __running.value = value }
+    val __output = remember { mutableStateOf("") }
+    var output: String
+        get() = __output.value
+        set(value) { __output.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
+    val __mode = remember { mutableStateOf("workspace-write") }
+    var mode: String
+        get() = __mode.value
+        set(value) { __mode.value = value }
 
     fun run() {
         val cmd = command.trim()
@@ -45,7 +60,7 @@ fun TerminalScreen(
                     mode = mode,
                     timeout = 60,
                 )
-                output += "\\n$ cmd\\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\\n${outcome.stderr}" else ""}\\n(exit ${outcome.exitCode})"
+                output += "\n$ cmd\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\n${outcome.stderr}" else ""}\n(exit ${outcome.exitCode})"
             } catch (e: GatewayRequestException) {
                 error = e.message
             }
@@ -53,7 +68,10 @@ fun TerminalScreen(
         }
     }
 
-    var expanded by remember { mutableStateOf(false) }
+    val __expanded = remember { mutableStateOf(false) }
+    var expanded: Boolean
+        get() = __expanded.value
+        set(value) { __expanded.value = value }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Terminal") }) },

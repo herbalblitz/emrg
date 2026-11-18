@@ -24,9 +24,18 @@ fun MemoryScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'memories', 'mutableStateOf(emptyList<com.emrg.app.model.MemoryEntry>())', 'List<com.emrg.app.model.MemoryEntry>')}
-{var_decl('    ', 'loading', 'mutableStateOf(false)', 'Boolean')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+    val __memories = remember { mutableStateOf(emptyList<com.emrg.app.model.MemoryEntry>()) }
+    var memories: List<com.emrg.app.model.MemoryEntry>
+        get() = __memories.value
+        set(value) { __memories.value = value }
+    val __loading = remember { mutableStateOf(false) }
+    var loading: Boolean
+        get() = __loading.value
+        set(value) { __loading.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     fun refresh() {
         loading = true
@@ -63,9 +72,18 @@ fun ModelsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'current', 'mutableStateOf("")', 'String')}
-{var_decl('    ', 'models', 'mutableStateOf(emptyList<com.emrg.app.model.ModelInfo>())', 'List<com.emrg.app.model.ModelInfo>')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+    val __current = remember { mutableStateOf("") }
+    var current: String
+        get() = __current.value
+        set(value) { __current.value = value }
+    val __models = remember { mutableStateOf(emptyList<com.emrg.app.model.ModelInfo>()) }
+    var models: List<com.emrg.app.model.ModelInfo>
+        get() = __models.value
+        set(value) { __models.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     scope.launch {
         try {
@@ -102,11 +120,26 @@ fun RantScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-{var_decl('    ', 'message', 'mutableStateOf("")', 'String')}
-{var_decl('    ', 'agent', 'mutableStateOf("")', 'String')}
-{var_decl('    ', 'submitting', 'mutableStateOf(false)', 'Boolean')}
-{var_decl('    ', 'result', 'mutableStateOf<Int?>(null)', 'Int?')}
-{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+    val __message = remember { mutableStateOf("") }
+    var message: String
+        get() = __message.value
+        set(value) { __message.value = value }
+    val __agent = remember { mutableStateOf("") }
+    var agent: String
+        get() = __agent.value
+        set(value) { __agent.value = value }
+    val __submitting = remember { mutableStateOf(false) }
+    var submitting: Boolean
+        get() = __submitting.value
+        set(value) { __submitting.value = value }
+    val __result = remember { mutableStateOf<Int?>(null) }
+    var result: Int?
+        get() = __result.value
+        set(value) { __result.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
 
     fun submit() {
         val m = message.trim()
