@@ -1,7 +1,6 @@
 package ai.emrg.companion
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -12,7 +11,6 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,13 +25,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -42,6 +39,7 @@ import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
+@OptIn(ExperimentalGetImage::class)
 @Composable
 internal fun CameraQrScannerDialog(onQrDetected: (String) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -90,40 +88,50 @@ private fun CameraPreviewScanner(modifier: Modifier, onQrDetected: (String) -> U
         )
     }
     val delivered = remember { AtomicBoolean(false) }
+    val disposed = remember { AtomicBoolean(false) }
 
     DisposableEffect(lifecycleOwner, previewView) {
         val providerFuture = ProcessCameraProvider.getInstance(context)
         val listener = Runnable {
+            if (disposed.get()) return@Runnable
             try {
                 val provider = providerFuture.get()
+                if (disposed.get()) return@Runnable
                 val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
                 val analysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                 analysis.setAnalyzer(cameraExecutor) { proxy ->
                     val mediaImage = proxy.image
-                    if (mediaImage == null || delivered.get()) {
+                    if (mediaImage == null || delivered.get() || disposed.get()) {
                         proxy.close()
                     } else {
                         val input = InputImage.fromMediaImage(mediaImage, proxy.imageInfo.rotationDegrees)
                         scanner.process(input)
                             .addOnSuccessListener { barcodes ->
                                 val value = barcodes.firstOrNull { it.format == Barcode.FORMAT_QR_CODE }?.rawValue
-                                if (!value.isNullOrBlank() && delivered.compareAndSet(false, true)) {
-                                    ContextCompat.getMainExecutor(context).execute { onQrDetected(value) }
+                                if (!disposed.get() && !value.isNullOrBlank() && delivered.compareAndSet(false, true)) {
+                                    ContextCompat.getMainExecutor(context).execute {
+                                        if (!disposed.get()) onQrDetected(value)
+                                    }
                                 }
                             }
                             .addOnCompleteListener { proxy.close() }
                     }
                 }
-                provider.unbindAll()
-                provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+                if (!disposed.get()) {
+                    provider.unbindAll()
+                    provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+                } else {
+                    analysis.clearAnalyzer()
+                }
             } catch (_: Exception) {
                 // Camera unavailable: dialog remains open and user can cancel.
             }
         }
         providerFuture.addListener(listener, ContextCompat.getMainExecutor(context))
         onDispose {
+            disposed.set(true)
             try {
                 if (providerFuture.isDone) providerFuture.get().unbindAll()
             } catch (_: Exception) { }
