@@ -10,14 +10,17 @@ internal data class ChatUiState(
         ChatMessage("EMRG", "Welcome. This is the Android UI preview using a local mock transport.")
     ),
     val draft: String = "",
-    val isSending: Boolean = false
+    val isSending: Boolean = false,
+    val streamingText: String = ""
 )
 
 internal sealed interface ChatAction {
     data class DraftChanged(val value: String) : ChatAction
     data object Submit : ChatAction
+    data class ResponseDelta(val text: String) : ChatAction
     data class ResponseReceived(val text: String) : ChatAction
     data object RequestFailed : ChatAction
+    data object Cancel : ChatAction
 }
 
 internal data class ChatTransition(val state: ChatUiState, val promptToSend: String? = null)
@@ -57,19 +60,32 @@ internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransi
                 state.copy(
                     messages = state.messages + ChatMessage("You", prompt),
                     draft = "",
-                    isSending = true
+                    isSending = true,
+                    streamingText = ""
                 ),
                 promptToSend = prompt
             )
         }
+        is ChatAction.ResponseDelta ->
+            if (!state.isSending) ChatTransition(state)
+            else ChatTransition(state.copy(streamingText = state.streamingText + action.text))
         is ChatAction.ResponseReceived ->
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(
-                state.copy(messages = state.messages + ChatMessage("EMRG", action.text), isSending = false)
+                state.copy(messages = state.messages + ChatMessage("EMRG", action.text.ifEmpty { state.streamingText }), isSending = false, streamingText = "")
+            )
+        ChatAction.Cancel ->
+            if (!state.isSending) ChatTransition(state)
+            else ChatTransition(
+                state.copy(
+                    messages = state.messages + if (state.streamingText.isNotEmpty()) ChatMessage("EMRG", state.streamingText + "\\n[Stopped]") else emptyList(),
+                    isSending = false,
+                    streamingText = ""
+                )
             )
         ChatAction.RequestFailed ->
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(
-                state.copy(messages = state.messages + ChatMessage("EMRG", CHAT_FAILURE_MESSAGE), isSending = false)
+                state.copy(messages = state.messages + ChatMessage("EMRG", if (state.streamingText.isEmpty()) CHAT_FAILURE_MESSAGE else state.streamingText + "\\n" + CHAT_FAILURE_MESSAGE), isSending = false, streamingText = "")
             )
     }
