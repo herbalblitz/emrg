@@ -206,3 +206,5 @@ These are requirements for a future implementation, not evidence of an existing 
 - The client uses a proposed `auth` frame carrying device ID and the device-scoped credential, and waits for `auth_ok` before enabling chat-task sends. It only exposes `TaskCommand` sends and checks the `SEND_CHAT` scope; arbitrary daemon command sending is not exposed.
 - This proposed companion authentication frame is **not supported by the existing daemon**. The daemon currently authenticates its desktop loopback token. No Windows host listener, device credential issuance/verification, remote pairing server, or live end-to-end connection has been implemented. This Android transport primitive must not be presented as usable against current EMRG.
 - No automatic reconnect/replay is implemented. Transport callbacks currently report safe status strings and parsed frames; integration with UI/reconciliation remains pending.
+
+- Chat pairing credentials now require an explicit approved workspace ID and cwd binding. The transport rejects chat tasks whose cwd is not an exact match for the approved cwd; host-side authorization and canonical path enforcement remain mandatory.
