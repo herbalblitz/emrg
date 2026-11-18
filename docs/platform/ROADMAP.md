@@ -37,7 +37,8 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Offline session state/store and Compose UI: bounded session list, isolated chat snapshots/drafts, select/create/rename/delete, safe last-session replacement (UI CI passed).
 - [x] Protocol frame model/parser and request-stream reducer added (unit test CI validation ongoing).
 - [ ] Navigation/state expansion.
-- [x] Add fail-closed Android pairing state model: WSS-only endpoint, SHA-256 host fingerprint confirmation, explicit host approval, host-bound scoped credential acceptance, revocation reset (unit tests added; CI pending).\n- [ ] Pairing QR scanner/UI, Android Keystore credential storage, TLS certificate pinning in a real transport, host-side approval/revoke implementation.
+- [x] Add fail-closed Android pairing state model: WSS-only endpoint, SHA-256 host fingerprint confirmation, explicit host approval, host-bound scoped credential acceptance, revocation reset (unit tests added; CI pending).\n- [ ] Pairing QR scanner/UI, TLS certificate pinning in a real transport, host-side approval/revoke implementation.
+- [x] Add Android Keystore AES-256-GCM credential store with alias-bound AAD, private encrypted-value persistence, and delete/revoke path (alias validation unit tests added; CI pending).
 
 ### M3 — Core workflows
 - [x] Chat markdown/code renderer (headings, bold, inline/fenced code and bullets; CI passed run 44241040540).
@@ -78,6 +79,7 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [x] Integrate offline session manager into Compose UI; session controls are disabled during a request to prevent cross-session response writes.
 - [x] Validate offline session UI build/lint/tests; no daemon synchronization until protocol and pairing are validated.
 - [ ] Add wrapper and confirm CI result.
+- [x] Implement host-scoped Android Keystore credential storage; does not implement pairing or network transport.
 - [x] Inspect Windows packaging and test workflow baseline; documented in `WINDOWS_PACKAGING_AUDIT.md`.
 - [ ] Run clean Windows install/upgrade/reconnect/uninstall smoke and investigate gaps.
 
