@@ -80,3 +80,10 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Add process-local per-device replay cache with 10-minute expiry, capacity bound and thread-safe atomic consume.
 - [x] Duplicate nonce and cache exhaustion reject authentication.
 - [ ] Decide restart persistence or challenge-response requirements and implement transport handshake before production listener.
+
+## Companion TLS trust and auth nonce guard
+
+- [x] Android per-connection exact leaf SHA-256 pin trust manager supports pinned self-signed host certificates; validity dates are enforced during TLS handshake and default hostname verification remains active.
+- [x] Host fingerprint string is colon-delimited uppercase bytes for Android QR/parser compatibility.
+- [x] Host auth nonce is minimum 16 bytes and consumed once per device with bounded 10-minute process-local replay cache; capacity exhaustion fails closed.
+- [ ] Android trust tests/build CI final confirmation; host listener and UI integration are still not wired.
