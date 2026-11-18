@@ -109,6 +109,20 @@ class PinnedRemoteWebSocketTest {
         } catch (_: java.security.cert.CertificateException) { }
     }
 
+    @Test fun exactPinTrustManagerRejectsExpiredPinnedCertificate() {
+        val stream = PinnedRemoteWebSocketTest::class.java.classLoader!!
+            .getResourceAsStream("companion-expired-test-cert.pem")
+            ?: throw AssertionError("expired test certificate fixture missing")
+        val certificate = stream.use {
+            CertificateFactory.getInstance("X.509").generateCertificate(it) as X509Certificate
+        }
+        val manager = ExactPinTrustManager(PinnedRemoteWebSocket.certificateFingerprint(certificate))
+        try {
+            manager.checkServerTrusted(arrayOf(certificate), "ECDSA")
+            fail("expired certificate must be rejected")
+        } catch (_: java.security.cert.CertificateException) { }
+    }
+
     @Test fun exactPinTrustManagerRejectsMissingCertificate() {
         val manager = ExactPinTrustManager("11".repeat(32))
         try {
