@@ -90,3 +90,7 @@ The Android parser accepts only the versioned credential-free descriptor allowli
 ## Endpoint validation hardening
 
 The WSS pairing endpoint validator now rejects URL user-info, query strings, fragments, non-WSS schemes, missing hosts, and invalid/zero ports. This prevents credential-like query parameters from being smuggled in the QR endpoint and catches malformed socket targets before the pairing state advances. Unit tests cover these rejection cases; the Android workflow is pending.
+
+## CI feedback for current increment
+
+The Android workflow confirmed debug APK assembly succeeds for the code under test, but its unit-test step failed on the valid QR descriptor fixture because its expiry was 1,000 seconds ahead, beyond the new 180-second cap. The fixture was corrected to 100 seconds ahead and a new workflow run was started; this failure was a test-data mismatch, not a production-code compile failure. Final test/lint status is pending.
