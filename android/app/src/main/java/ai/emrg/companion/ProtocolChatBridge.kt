@@ -19,7 +19,10 @@ internal fun reduceProtocolChatBridge(
         ProtocolStreamAction.ConnectionLost -> chatState.activeRequestId
     }
     val chatAction = when (action) {
-        is ProtocolStreamAction.Start -> ChatAction.BindRequest(action.requestId)
+        is ProtocolStreamAction.Start ->
+            if (chatState.activeRequestId == null || chatState.activeRequestId == action.requestId)
+                ChatAction.BindRequest(action.requestId)
+            else null
         else -> requestId?.let { id ->
             nextProtocol.requests[id]?.let { request -> ChatAction.ProtocolSnapshot(id, request) }
         }
