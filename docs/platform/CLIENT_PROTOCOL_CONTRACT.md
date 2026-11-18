@@ -138,3 +138,11 @@ All commands below are JSON WebSocket frames sent after authentication. Command 
 - Compose chat displays interim response text, finalizes it into history, and exposes Stop to cancel the coroutine/request state.
 - Reducer preserves partial text when cancelled and clears transient stream state on terminal completion/failure. Unit tests cover delta accumulation and cancellation.
 - **Not implemented:** incremental daemon stream, transport correlation integration, network cancellation semantics, markdown rendering, tool UI or remote connection. CI verification pending.
+
+
+## Android chat-state protocol projection (2026-11-18)
+
+- Chat UI state can bind a single active request ID and consume a protocol reducer snapshot only when the snapshot request ID matches; stale/unrelated request snapshots are ignored.
+- Active snapshots project streamed text and tool lifecycle into transient Compose state. Completed snapshots append the final assistant text; cancelled and failed snapshots use existing UI terminal handling and clear request binding.
+- Added reducer tests for request binding, stale correlation, active projection, completion, failure and cancellation cleanup.
+- This remains a state projection layer, not a connected event bridge: the offline demo transport does not emit protocol frames and no daemon is connected.
