@@ -178,3 +178,11 @@ These are requirements for a future implementation, not evidence of an existing 
 - Blank, malformed, prerelease-like, or unknown-major versions fail closed to `STATE_UNKNOWN`; the snapshot is discarded and controls must not be considered reconciled.
 - This is a client-side compatibility policy only. The daemon does not yet negotiate capabilities or expose the remote snapshot endpoint.
 - Tests cover accepted/rejected version strings and ensure a `2.0` snapshot is not retained. CI verification is pending.
+
+## Capability negotiation model milestone (2026-11-18)
+
+- Added a transport-neutral offer/result model for version and capability negotiation.
+- Known client-side capabilities describe parser/state handling only; they do **not** imply a daemon transport is available.
+- Unknown optional host capabilities are ignored. Unknown required capabilities, required capabilities omitted from the host offer, and unsupported protocol versions fail closed.
+- JVM tests cover compatible offers, optional future capabilities, unsupported major versions, unknown mandatory features and malformed offers.
+- **Not implemented:** handshake wire message, daemon capability advertisement, transport integration or remote snapshot validation.
