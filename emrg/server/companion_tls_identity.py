@@ -240,7 +240,8 @@ def _load_and_validate(directory: Path, hosts: tuple[str, ...]) -> HostTlsIdenti
     san_hosts = _san_extension(certificate)
     if set(hosts) != set(san_hosts):
         raise CompanionTlsError("stored TLS identity SAN does not match requested endpoint hosts")
-    fingerprint = hashlib.sha256(certificate.public_bytes(serialization.Encoding.DER)).hexdigest()
+    digest = hashlib.sha256(certificate.public_bytes(serialization.Encoding.DER)).digest()
+    fingerprint = ":".join(f"{byte:02X}" for byte in digest)
     return HostTlsIdentity(cert_path, fingerprint, san_hosts, certificate.not_valid_after_utc)
 
 
