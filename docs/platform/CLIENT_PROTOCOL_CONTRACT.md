@@ -22,11 +22,14 @@ Illustrative:
 ```
 
 ## Event fields observed
-- TaskResponse reader: `request_id`, `content`, `done`, `delta`; exact event envelope/type and lifecycle still need validation from emitter.
-- `tool_start`: request_id, tool_name, tool_call_id, arguments, intent; optional call_label (older frames may omit).
+- Streaming deltas: frames carry `request_id`, `content`, `done=false`, `delta=true`; desktop maps to `message_delta`. Client must preserve request correlation and ordering.
+- Terminal completion: `done=true`, final `content` and `request_id`; daemon may include `cancelled` boolean. Desktop maps to `done` and clears request stream grouping.
+- Failure: error frames include `error`; when associated with a task the daemon may also send terminal `done=true` with an error field. Client should avoid duplicate terminal rendering.
+- `tool_start`: request_id, tool_name, tool_call_id, arguments, intent; optional call_label may be absent in older frames.
 - `tool_end`: request_id, tool_name, tool_call_id, content, error.
-- `pong`: identity, uptime_seconds, evolution_count; other fields such as model may be included and ignored by typed readers.
-- Full error, cancellation, ordering, snapshots and reconnect semantics remain to be extracted and tested.
+- `pong`: identity, uptime_seconds, evolution_count; optional fields such as model may be present and must not break parsing.
+- Broadcast events source-inspected and desktop-tested: `turn_start`, `turn_end`, `task_queued`, `steer_committed`, `queued_requeue`, `queued_cancelled`, `sandbox_roots`, and `rewind_result`. Session-scoped events include `session_id`; queue frames may include `request_id`, `position`, or `request_ids`.
+- Desktop tests assert delta batching flushes before `done`, `cancelled`, `error`, and close. These are desktop regression tests, not Android integration tests.
 
 ## GUI command-to-reply map (observed, partial)
 | Command | Reply |
@@ -69,9 +72,9 @@ This table only names response types; command payload schemas, permissions and d
 - Diagnostics redact tokens, prompts, private paths and tool secrets.
 
 ## Next verification
-- [ ] Reconcile protocol.py's transport description with daemon's actual WebSocket transport.
-- [ ] Extract authoritative message schemas and event order from daemon emitters/handlers.
-- [ ] Add fixture tests for auth, optional-field semantics, streaming, tool lifecycle, cancellation, errors and reconnect.
+- [x] Reconcile protocol.py transport description with daemon's actual WebSocket transport.
+- [x] Extract session command schemas and inspect task/event lifecycle and desktop test coverage.
+- [ ] Create portable protocol fixtures shared with Android tests for authentication, optional fields, streaming, tool lifecycle, cancellation and errors.
 - [ ] Version/capability negotiation and remote-pairing threat model.
 
 
