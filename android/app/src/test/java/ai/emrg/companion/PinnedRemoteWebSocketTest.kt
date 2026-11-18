@@ -85,7 +85,7 @@ class PinnedRemoteWebSocketTest {
 }
 
     private fun testCertificate(): X509Certificate {
-        val stream = javaClass.classLoader!!.getResourceAsStream("companion-test-cert.pem")
+        val stream = PinnedRemoteWebSocketTest::class.java.classLoader!!.getResourceAsStream("companion-test-cert.pem")
             ?: throw AssertionError("test certificate fixture missing")
         return stream.use {
             CertificateFactory.getInstance("X.509").generateCertificate(it) as X509Certificate
@@ -95,7 +95,7 @@ class PinnedRemoteWebSocketTest {
     @Test fun exactPinTrustManagerAcceptsOnlyMatchingLeafCertificate() {
         val certificate = testCertificate()
         val expected = PinnedRemoteWebSocket.certificateFingerprint(certificate)
-        val manager = PinnedRemoteWebSocket.ExactPinTrustManager(expected)
+        val manager = ExactPinTrustManager(expected)
         manager.checkServerTrusted(arrayOf(certificate), "ECDSA")
         assertTrue(manager.acceptedIssuers.isEmpty())
     }
