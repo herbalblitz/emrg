@@ -1,8 +1,12 @@
 package ai.emrg.companion
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import java.security.cert.Certificate
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 
 class PinnedRemoteWebSocketTest {
     private class EncodedCertificate(private val bytes: ByteArray) : Certificate("test") {
@@ -79,3 +83,44 @@ class PinnedRemoteWebSocketTest {
         assertEquals("03:90:58:C6:F2:C0:CB:49:2C:53:3B:0A:4D:14:EF:77:CC:0F:78:AB:CC:CE:D5:28:7D:84:A1:A2:01:1C:FB:81", fingerprint)
     }
 }
+
+    private fun testCertificate(): X509Certificate {
+        val stream = javaClass.classLoader!!.getResourceAsStream("companion-test-cert.pem")
+            ?: throw AssertionError("test certificate fixture missing")
+        return stream.use {
+            CertificateFactory.getInstance("X.509").generateCertificate(it) as X509Certificate
+        }
+    }
+
+    @Test fun exactPinTrustManagerAcceptsOnlyMatchingLeafCertificate() {
+        val certificate = testCertificate()
+        val expected = PinnedRemoteWebSocket.certificateFingerprint(certificate)
+        val manager = PinnedRemoteWebSocket.ExactPinTrustManager(expected)
+        manager.checkServerTrusted(arrayOf(certificate), "ECDSA")
+        assertTrue(manager.acceptedIssuers.isEmpty())
+    }
+
+    @Test fun exactPinTrustManagerRejectsWrongFingerprint() {
+        val certificate = testCertificate()
+        val wrongPin = "00".repeat(32)
+        val manager = PinnedRemoteWebSocket.ExactPinTrustManager(wrongPin)
+        try {
+            manager.checkServerTrusted(arrayOf(certificate), "ECDSA")
+            fail("pin mismatch must fail TLS trust")
+        } catch (_: java.security.cert.CertificateException) { }
+    }
+
+    @Test fun exactPinTrustManagerRejectsMissingCertificate() {
+        val manager = PinnedRemoteWebSocket.ExactPinTrustManager("11".repeat(32))
+        try {
+            manager.checkServerTrusted(emptyArray(), "ECDSA")
+            fail("missing cert must fail")
+        } catch (_: java.security.cert.CertificateException) { }
+    }
+
+    @Test fun pinManagerRejectsMalformedFingerprint() {
+        try {
+            PinnedRemoteWebSocket.ExactPinTrustManager("not-a-pin")
+            fail("invalid pin must be rejected")
+        } catch (_: IllegalArgumentException) { }
+    }
