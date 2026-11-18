@@ -112,4 +112,16 @@ class ProtocolStreamReducerTest {
         assertEquals("legacy", s.requests["r"]!!.text)
     }
 
+    @Test fun duplicateRequestIdCannotRestartTerminalRequestOrReplay() {
+        var s = reduceProtocolStreams(ProtocolStreamState(), start("stable-id"))
+        s = reduceProtocolStreams(s, frame("""{"request_id":"stable-id","content":"partial","delta":true}"""))
+        s = reduceProtocolStreams(s, ProtocolStreamAction.ConnectionLost)
+        val interrupted = s.requests["stable-id"]
+        s = reduceProtocolStreams(s, start("stable-id", "other-session"))
+        assertEquals(interrupted, s.requests["stable-id"])
+        assertEquals(StreamStatus.FAILED, s.requests["stable-id"]!!.status)
+        assertEquals("partial", s.requests["stable-id"]!!.text)
+    }
+
+
 }
