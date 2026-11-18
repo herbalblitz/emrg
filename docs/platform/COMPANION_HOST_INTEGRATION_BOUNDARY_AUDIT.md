@@ -56,3 +56,7 @@ The companion frame validator now rejects duplicate JSON object keys and unknown
 ## Android companion frame-construction hardening
 
 The Android WSS primitive now emits the v1 auth envelope with protocol version and a per-connect client nonce. Chat submission converts the legacy local TaskCommand into the narrow companion `chat.send` frame (request ID, approved workspace ID, prompt, optional session ID); it does not forward cwd, tools, timestamp or desktop `task` command fields. Client-side UTF-8 size/identifier bounds mirror the host parser. JVM regression tests were added; execution is pending CI.
+
+## Host parser malformed-Unicode handling
+
+The Python frame parser now converts invalid UTF-8 / lone-surrogate encoding failures into the same safe protocol rejection rather than allowing an encoding exception to escape. Tests exercise malformed raw string input and JSON-escaped surrogate data in validated fields. No raw frame or credential is included in the error.
