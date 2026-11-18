@@ -23,9 +23,10 @@ Target: preserve all original EMRG features while delivering robust Android and 
 
 ### M2 — Android foundation
 - [x] Kotlin/Compose starter and CI workflow committed.
-- [x] Fix Java/Kotlin JVM target mismatch found by first CI build (Java 8 vs Kotlin 17); follow-up CI verification pending.
+- [x] Fix Java/Kotlin JVM target mismatch found by first CI build (Java 8 vs Kotlin 17); follow-up CI build and lint passed.
 - [ ] Gradle wrapper/reproducible build.
 - [x] Initial chat state/UI and mock transport (offline-only; no network).
+- [x] Extract mock transport into a testable source unit and add a deterministic unit test (CI verification pending).
 - [ ] Navigation/state expansion, protocol fixtures.
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke.
 
@@ -62,6 +63,6 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [ ] Inspect Windows packaging/test evidence for concrete defects.
 
 Execution branch: `feat/android-windows-platform-audit`; do not work on `master`.
-CI first attempt (commit `34e23d1`) failed at Kotlin compile because Java compile target defaulted to 1.8 while Kotlin targeted 17. Fixed by setting both Java compatibility and Kotlin JVM target to 17 in `android/app/build.gradle.kts` (commit `9d74a53`); verify a fresh CI run before calling this resolved.
-Commit `5bd51cc` adds a local mock chat screen behind a transport interface; no real host connection or tool execution. CI run after JVM target fix was pending at last check; subsequent UI commits also require CI validation.
+CI first attempt (commit `34e23d1`) failed at Kotlin compile because Java compile target defaulted to 1.8 while Kotlin targeted 17. Fixed by setting both Java compatibility and Kotlin JVM target to 17 in `android/app/build.gradle.kts` (commit `9d74a53`); later CI runs for the fix and mock-chat UI both completed successfully.
+Commit `5bd51cc` adds local mock chat UI; no host connection or tool execution. The mock transport is now isolated in `ChatTransport.kt` with a unit test added; this latest change awaits CI.
 Source review does not imply builds/tests ran.
