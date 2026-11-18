@@ -97,13 +97,10 @@ class CredentialRegistry:
 
     def verify(self, *, device_id: str, credential: str) -> dict[str, Any] | None:
         """Verify a presented token. Return scope-bound metadata, not verifier data."""
-        if not isinstance(device_id, str) or not device_id or len(device_id) > 128:
-            return None
-        if not isinstance(credential, str) or not credential or len(credential) > 512:
-            return None
         try:
-            _token_hash(credential, "validation-salt")
-        except UnicodeEncodeError:
+            device_id = _bounded_text(device_id, 128, "invalid device")
+            credential = _bounded_text(credential, 512, "invalid credential")
+        except CredentialRegistryError:
             return None
         with self._lock:
             record = self._read()["devices"].get(device_id)
