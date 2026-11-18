@@ -64,7 +64,7 @@ internal fun CameraQrScannerDialog(onQrDetected: (String) -> Unit, onDismiss: ()
                     )
                     Text("Keep the QR code inside the camera frame.", style = MaterialTheme.typography.bodySmall)
                 } else {
-                    Text("Camera access is used only while scanning a pairing QR code.")
+                    Text("Camera access is required only while scanning a pairing QR code.")
                     Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
                         Text("Allow camera")
                     }
@@ -89,6 +89,7 @@ private fun CameraPreviewScanner(modifier: Modifier, onQrDetected: (String) -> U
     }
     val delivered = remember { AtomicBoolean(false) }
     val disposed = remember { AtomicBoolean(false) }
+    var cameraError by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner, previewView) {
         val providerFuture = ProcessCameraProvider.getInstance(context)
@@ -126,7 +127,7 @@ private fun CameraPreviewScanner(modifier: Modifier, onQrDetected: (String) -> U
                     analysis.clearAnalyzer()
                 }
             } catch (_: Exception) {
-                // Camera unavailable: dialog remains open and user can cancel.
+                if (!disposed.get()) cameraError = true
             }
         }
         providerFuture.addListener(listener, ContextCompat.getMainExecutor(context))
@@ -140,5 +141,14 @@ private fun CameraPreviewScanner(modifier: Modifier, onQrDetected: (String) -> U
         }
     }
 
-    AndroidView(factory = { previewView }, modifier = modifier)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        AndroidView(factory = { previewView }, modifier = modifier)
+        if (cameraError) {
+            Text(
+                "Camera could not start. Check that another app is not using it, then try again.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
 }
