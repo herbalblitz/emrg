@@ -21,7 +21,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Android protocol JSON fixtures + Kotlin frame parser tests for malformed/optional/unknown frames, streaming, tool lifecycle and terminal events (CI passed run 44239121243).
 - [x] Request stream reducer tracks request/session IDs, interleaved deltas, tool events, terminal/cancel/error and connection-loss transitions (CI passed run 44239121243).
 - [x] Validated task/session command JSON builders and tests; tools omitted vs empty allowlist explicitly distinguished.
-- [ ] Reconnect policy and protocol negotiation/transport integration.
+- [ ] Reconnect policy and protocol negotiation/transport integration.\n- [x] Document safe reconnect/reconciliation constraints: never replay non-idempotent commands; mark active streams interrupted and require authoritative host snapshot before resuming UI state (design-only).
 - [x] Add Android protocol-event-to-chat bridge with request binding and mismatch isolation (CI passed run 44260106387).
 - [ ] Review pairing design without weakening local endpoint.
 
@@ -40,7 +40,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [ ] Navigation/state expansion.
 - [x] Fail-closed Android pairing state model: WSS-only endpoint, SHA-256 host fingerprint confirmation, explicit host approval, host-bound scoped credential acceptance, revocation reset.
 - [x] Versioned QR descriptor parser and paste-validation UI (credential-free, WSS + fingerprint, expiry, strict field allowlist).
-- [x] Camera QR scanning with CameraX + ML Kit, runtime permission flow, one-shot QR callback, lifecycle cleanup/race guard (APK build, unit tests, lint and artifact upload all passed CI #121).
+- [x] Camera QR scanning with CameraX + ML Kit, runtime permission flow, one-shot QR callback, lifecycle cleanup/race guard and user-visible startup failure state (APK build, unit tests, lint and artifact upload all passed CI #122).
 - [ ] TLS certificate pinning in real transport; host-side pairing approval/revoke.
 - [x] Android Keystore AES-256-GCM credential store with alias-bound AAD, private encrypted-value persistence and delete/revoke path (unit tests passed).
 
@@ -87,7 +87,7 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [ ] Windows clean-machine install/upgrade/reconnect/uninstall smoke.
 
 ## CI evidence
-- Run #121, commit `02b3145927568a41ec58c6c28fdfb2fd5746dcf0`: Android debug APK assembly, JVM unit tests, lint and APK artifact upload all succeeded. It validates the current scanner UI and the parser/reducer test suite; it is not an Android instrumentation or live daemon pairing test.
+- Run #122, commit `9c9922f43ce325f3292ee82674be91a18f6e18e9`: Android debug APK assembly, JVM unit tests, lint and APK artifact upload all succeeded. It validates scanner startup error UI plus parser/reducer tests; it is not an Android instrumentation or live daemon pairing test.\n- Run #121, commit `02b3145927568a41ec58c6c28fdfb2fd5746dcf0`: same pipeline passed for scanner call-site opt-in fix.
 - Earlier CI runs: mock/session/streaming integration runs documented in the historical notes below.
 
 Execution branch: `feat/android-windows-platform-audit`; do not work on `master`.
