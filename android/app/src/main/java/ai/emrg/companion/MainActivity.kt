@@ -127,10 +127,17 @@ private fun CompanionChatScreen() {
                     messages.add(ChatMessage("You", prompt))
                     busy = true
                     scope.launch {
-                        val response = transport.send(prompt)
-                        messages.add(ChatMessage("EMRG", response))
-                        busy = false
-                        listState.animateScrollToItem(messages.lastIndex)
+                        try {
+                            val response = transport.send(prompt)
+                            messages.add(ChatMessage("EMRG", response))
+                        } catch (_: Exception) {
+                            messages.add(ChatMessage("EMRG", "Unable to complete the request. Please try again."))
+                        } finally {
+                            busy = false
+                            if (messages.isNotEmpty()) {
+                                listState.animateScrollToItem(messages.lastIndex)
+                            }
+                        }
                     }
                 }
             ) { Text(if (busy) "…" else "Send") }
