@@ -18,6 +18,15 @@ internal interface ChatTransport {
 internal class DemoTransport : ChatTransport {
     override suspend fun send(prompt: String): String =
         "Demo response received. Host connection and real agent execution are not yet enabled."
+
+    override suspend fun stream(prompt: String, onDelta: (String) -> Unit): String {
+        val response = send(prompt)
+        response.split(" ").forEachIndexed { index, token ->
+            kotlinx.coroutines.delay(35)
+            onDelta(token + if (index == response.split(" ").lastIndex) "" else " ")
+        }
+        return response
+    }
 }
 
 internal const val CHAT_FAILURE_MESSAGE =
