@@ -19,8 +19,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: companion-security-${{ github.ref }}
-  cancel-in-progress: true
+  group: companion-security-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
