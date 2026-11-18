@@ -66,7 +66,7 @@ internal fun reduceProtocolStreams(
             }
             frame.isDelta -> existing.copy(text = existing.text + (frame.content ?: ""))
             frame.type == "error" || frame.error != null -> existing.copy(status = StreamStatus.FAILED, error = frame.error ?: frame.content)
-            frame.done == true -> existing.copy(status = if (frame.cancelled == true) StreamStatus.CANCELLED else StreamStatus.COMPLETED, text = frame.content ?: existing.text)
+            frame.done == true -> existing.copy(status = if (frame.cancelled == true) StreamStatus.CANCELLED else StreamStatus.COMPLETED, text = frame.content?.takeIf { it.isNotEmpty() } ?: existing.text)
             else -> existing
         }
         state.copy(requests = state.requests + (id to updated))
