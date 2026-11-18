@@ -154,8 +154,12 @@ The host identity provisioner currently creates self-signed certificates. Androi
 
 ## Nonce security caveat
 
-The client currently generates a fresh `client_nonce` and the host parser validates its presence/length, but the transport-independent authenticator does not yet use it for replay detection or a challenge-response. Treat it as a protocol field only—not replay protection. Before live WSS deployment, define a server challenge or a bounded per-device nonce/replay cache and test replay rejection.
+The client generates a fresh `client_nonce`; the host now requires at least 16 UTF-8 bytes and the authenticator consumes each nonce once per device using a bounded, 10-minute replay cache. Duplicate nonces and cache-capacity exhaustion fail closed; cache updates are synchronized for concurrent requests. This is replay protection for a single host process, not a cryptographic challenge-response, and nonce cache state is not persisted across host restarts. Before live WSS deployment, decide whether persistent replay tracking or challenge-response is required for the threat model.
 
 ## Android exact-pin TLS trust implementation
 
 Android now creates a per-connection OkHttp client whose trust manager validates the pairing descriptor's exact SHA-256 leaf certificate pin during the TLS handshake, before the credential auth frame is sent. This supports self-signed certificates provisioned by the host identity module. The default OkHttp hostname verifier is retained, and the leaf certificate validity dates are checked. System CA trust is not required for the pinned certificate. Unit tests cover matching pins, mismatches, missing certificates and malformed pin strings. This remains client primitive code only; the host listener and UI flow are not connected.
+
+## Host authentication replay guard
+
+`CompanionAuthenticator` verifies the credential first, then atomically records the device/nonce pair. A repeated pair is rejected; expired cache entries are pruned; if the bounded cache is full, new auth is denied rather than evicting an unexpired nonce. Tests cover reuse, TTL expiration, capacity exhaustion, and simultaneous duplicate requests. Client nonce minimum length is 16 bytes. This guard is process-local and does not replace a handshake challenge.
