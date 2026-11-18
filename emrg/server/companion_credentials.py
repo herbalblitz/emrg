@@ -12,6 +12,7 @@ import json
 import os
 import secrets
 import tempfile
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,7 @@ class CredentialRegistry:
 
     def __init__(self, path: Path):
         self.path = Path(path)
+        self._lock = threading.RLock()
 
     def _read(self) -> dict[str, Any]:
         try:
@@ -74,20 +76,22 @@ class CredentialRegistry:
             raise CredentialRegistryError("invalid scopes")
         token = secrets.token_urlsafe(TOKEN_BYTES)
         salt = secrets.token_hex(16)
-        data = self._read()
-        data["devices"][device_id] = {
+        with self._lock:
+            data = self._read()
+            data["devices"][device_id] = {
             "salt": salt, "verifier": _token_hash(token, salt),
             "workspace_id": workspace_id, "cwd": cwd,
-            "scopes": sorted(scopes), "revoked": False,
-        }
-        self._write(data)
+                "scopes": sorted(scopes), "revoked": False,
+            }
+            self._write(data)
         return token
 
     def verify(self, *, device_id: str, credential: str) -> dict[str, Any] | None:
         """Verify a presented token. Return scope-bound metadata, not verifier data."""
         if not isinstance(credential, str) or not credential:
             return None
-        record = self._read()["devices"].get(device_id)
+        with self._lock:
+            record = self._read()["devices"].get(device_id)
         if not isinstance(record, dict) or record.get("revoked"):
             return None
         salt, verifier = record.get("salt"), record.get("verifier")
@@ -104,17 +108,19 @@ class CredentialRegistry:
 
     def revoke(self, device_id: str) -> bool:
         """Revoke a device credential; return False if it was not registered."""
-        data = self._read()
-        record = data["devices"].get(device_id)
-        if not isinstance(record, dict):
-            return False
-        record["revoked"] = True
-        self._write(data)
-        return True
+        with self._lock:
+            data = self._read()
+            record = data["devices"].get(device_id)
+            if not isinstance(record, dict):
+                return False
+            record["revoked"] = True
+            self._write(data)
+            return True
 
     def list_devices(self) -> list[dict[str, Any]]:
         """Return safe metadata only; never expose salts, verifiers, or tokens."""
-        data = self._read()
+        with self._lock:
+            data = self._read()
         return [{"device_id": device_id,
                  "workspace_id": rec.get("workspace_id"),
                  "scopes": rec.get("scopes", []),
