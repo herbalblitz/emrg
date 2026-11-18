@@ -37,7 +37,9 @@ internal class PinnedRemoteWebSocket(
     @Volatile private var socket: WebSocket? = null
     @Volatile private var pairedHost: PairedHost? = null
     @Volatile private var authenticated = false
+    @Volatile private var generation = 0L
 
+    @Synchronized
     fun connect(host: PairedHost) {
         close()
         require(isSecurePairingEndpoint(host.endpoint)) { "Only secure WSS endpoints are allowed" }
@@ -49,11 +51,13 @@ internal class PinnedRemoteWebSocket(
         require(credential.isNotBlank()) { "Paired credential is blank" }
         pairedHost = host
         authenticated = false
+        val attemptGeneration = generation
         listener.onState(RemoteSocketState.CONNECTING)
 
         val request = Request.Builder().url(host.endpoint).build()
         socket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
+                if (attemptGeneration != generation) { webSocket.cancel(); return }
                 val peerCerts = response.handshake?.peerCertificates.orEmpty()
                 val actual = peerCerts.firstOrNull()?.let(::certificateFingerprint)
                 if (actual == null || !actual.equals(host.hostFingerprintSha256, ignoreCase = true)) {
@@ -78,6 +82,7 @@ internal class PinnedRemoteWebSocket(
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
+                if (attemptGeneration != generation) return
                 val frame = try { ProtocolFrame.parse(text) } catch (_: Exception) {
                     listener.onState(RemoteSocketState.FAILED, "Invalid host frame")
                     webSocket.close(1007, "invalid frame")
@@ -98,17 +103,20 @@ internal class PinnedRemoteWebSocket(
             }
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                if (attemptGeneration != generation) return
                 listener.onState(RemoteSocketState.FAILED, "Binary frames are unsupported")
                 webSocket.close(1003, "text frames only")
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                if (attemptGeneration != generation) return
                 authenticated = false
                 listener.onState(RemoteSocketState.CLOSED)
                 webSocket.close(code, null)
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                if (attemptGeneration != generation) return
                 authenticated = false
                 socket = null
                 listener.onState(RemoteSocketState.FAILED, "Secure host connection failed")
@@ -124,7 +132,9 @@ internal class PinnedRemoteWebSocket(
         return socket?.send(command.toJson().toString()) == true
     }
 
+    @Synchronized
     fun close() {
+        generation += 1
         authenticated = false
         pairedHost = null
         socket?.close(1000, "client disconnect")
