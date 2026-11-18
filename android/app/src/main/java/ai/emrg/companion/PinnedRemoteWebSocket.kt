@@ -135,6 +135,8 @@ internal class PinnedRemoteWebSocket(
     fun sendTask(command: TaskCommand): Boolean {
         val host = pairedHost ?: return false
         if (!authenticated || PairingScope.SEND_CHAT !in host.scopes) return false
+        val approvedCwd = host.approvedCwd ?: return false
+        if (command.cwd != approvedCwd) return false
         if (command.cwd.isBlank() || command.prompt.isBlank() || command.id.isBlank()) return false
         return socket?.send(command.toJson().toString()) == true
     }
