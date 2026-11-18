@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 from cryptography import x509
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from emrg.server.companion_tls import CompanionTlsError
 from emrg.server.companion_tls_identity import (
@@ -95,4 +97,17 @@ def test_symlink_identity_file_rejected(tmp_path):
     target.write_text("not a certificate", encoding="utf-8")
     (directory / CERT_FILENAME).symlink_to(target)
     with pytest.raises(CompanionTlsError, match="symlinks"):
+        provision_host_identity(directory, ["localhost"])
+
+
+def test_identity_rejects_certificate_key_mismatch(tmp_path):
+    directory = tmp_path / "identity"
+    provision_host_identity(directory, ["localhost"])
+    replacement_key = ec.generate_private_key(ec.SECP256R1()).private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption(),
+    )
+    _key_path(directory).write_bytes(replacement_key)
+    with pytest.raises(CompanionTlsError, match="do not match"):
         provision_host_identity(directory, ["localhost"])
