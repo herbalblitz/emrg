@@ -33,7 +33,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] Device-local private SharedPreferences snapshot persists chat history/draft across app restarts; malformed snapshot falls back to fresh preview state (CI passed).
 - [x] Safe chat error fallback preserves coroutine cancellation (tests added; CI passed)
 - [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for the latest verified run (session UI commit `1132f69` / run `44232157705`)
-- [ ] Pair/revoke; secure transport; diagnostics/reconnect
+- [ ] Pair/revoke; secure transport; diagnostics/reconnect (proposal only documented)
 - [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
 - [ ] Chat/stream/cancel; daemon session synchronization; tool activity/approvals
 - [ ] SAF workspace; memory; skills; tasks; evolution
@@ -47,6 +47,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - `NEXT_GENERATION_REBUILD_POLICY.md`
 - `CLIENT_PROTOCOL_CONTRACT.md`
 - `WINDOWS_PACKAGING_AUDIT.md`
+- `ANDROID_REMOTE_PAIRING_SECURITY_DESIGN.md`
 
 - [x] Source-verified session command/reply schemas documented; protocol transport mismatch corrected in module header.
 
