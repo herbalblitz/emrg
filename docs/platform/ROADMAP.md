@@ -28,7 +28,10 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Initial chat state/UI and mock transport (offline-only; no network).
 - [x] Chat UI resets busy state and displays safe fallback when transport throws.
 - [x] Extract mock transport into a testable source unit and add deterministic unit tests for demo response and safe transport-failure fallback (CI verified).
-- [x] Pure chat state reducer: blank/duplicate submissions, response/failure transitions, draft lock while sending (tests added; latest integration CI pending).\n- [x] Activity saved-state restore for chat history and draft; bounded snapshot (60 messages), reset in-flight flag after recreation.\n- [x] Private local SharedPreferences JSON snapshot for messages/draft; bounded to 60 messages, corrupt snapshot falls back safely (integration CI pending).
+- [x] Pure chat state reducer: blank/duplicate submissions, response/failure transitions, draft lock while sending (tests added; latest integration CI pending).
+- [x] Activity saved-state restore for chat history and draft; bounded snapshot (60 messages), reset in-flight flag after recreation.
+- [x] Private local SharedPreferences JSON snapshot for messages/draft; bounded to 60 messages, corrupt snapshot falls back safely (integration CI pending).
+- [x] Offline session state/store foundation: bounded session list, isolated chat snapshots/drafts, active selection, rename/delete and safe last-session replacement (UI integration and CI pending).
 - [ ] Navigation/state expansion, protocol fixtures.
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke.
 
@@ -60,11 +63,12 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [ ] Extract remaining protocol payload schemas and terminal/cancellation order.
 - [ ] Resolve transport mismatch in source documentation.
 - [ ] Test tools allowlist omission vs empty.
-- [ ] Confirm Android persistence integration CI result and resolve any build/lint/test failures before adding features.\n- [ ] Design Android session state/store using original daemon session commands; offline mode must not imply daemon synchronization.
+- [ ] Confirm Android persistence integration CI result and resolve any build/lint/test failures before adding features.
+- [ ] Integrate offline session manager into Compose UI; no daemon synchronization until protocol and pairing are validated.
 - [ ] Add wrapper and confirm CI result.
 - [ ] Inspect Windows packaging/test evidence for concrete defects.
 
 Execution branch: `feat/android-windows-platform-audit`; do not work on `master`.
 CI first attempt (commit `34e23d1`) failed at Kotlin compile because Java compile target defaulted to 1.8 while Kotlin targeted 17. Fixed by setting both Java compatibility and Kotlin JVM target to 17 in `android/app/build.gradle.kts` (commit `9d74a53`); later CI runs for the fix and mock-chat UI both completed successfully.
-Commit `5bd51cc` adds local mock chat UI; no host connection or tool execution. The mock transport is isolated in `ChatTransport.kt`; unit tests cover its explicit demo response and transport-error fallback. Earlier CI passed the mock transport and reducer baseline. Latest persistence integration CI is still pending; the most recent run failed on Compose context access, fixed in commit `f6a0b6c`. Do not mark the integration green until its run completes.
+Commit `5bd51cc` adds local mock chat UI; no host connection or tool execution. The mock transport is isolated in `ChatTransport.kt`; unit tests cover its explicit demo response and transport-error fallback. Earlier CI passed the mock transport and reducer baseline. Persistence integration run `44229919552` passed after the Compose context fix (`f6a0b6c`). The new offline session store/state tests are running in CI; UI integration remains pending.
 Source review does not imply builds/tests ran.
