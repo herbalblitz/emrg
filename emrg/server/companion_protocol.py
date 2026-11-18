@@ -73,6 +73,8 @@ def validate_client_frame(
         return frame
 
     if kind == "status":
+        if "status" not in scopes:
+            raise CompanionProtocolError("permission denied")
         _required_string(frame, "request_id", max_bytes=128)
         return frame
 
