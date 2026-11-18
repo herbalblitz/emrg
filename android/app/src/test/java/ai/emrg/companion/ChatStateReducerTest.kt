@@ -60,6 +60,29 @@ class ChatStateReducerTest {
     }
 
     @Test
+    fun savedStateRestoresMessagesAndDraftButNotInFlightFlag() {
+        val state = ChatUiState(
+            messages = listOf(ChatMessage("You", "question"), ChatMessage("EMRG", "answer")),
+            draft = "unfinished",
+            isSending = true
+        )
+        val restored = ChatUiStateSaver.restore(ChatUiStateSaver.save(state)!!)
+
+        assertEquals(state.messages, restored.messages)
+        assertEquals(state.draft, restored.draft)
+        assertFalse(restored.isSending)
+    }
+
+    @Test
+    fun savedStateLimitsHistoryAndRestoresLatestMessages() {
+        val history = (0..MAX_SAVED_MESSAGES).map { ChatMessage("You", "message-$it") }
+        val restored = ChatUiStateSaver.restore(ChatUiStateSaver.save(ChatUiState(messages = history))!!)
+
+        assertEquals(MAX_SAVED_MESSAGES, restored.messages.size)
+        assertEquals("message-$MAX_SAVED_MESSAGES", restored.messages.last().text)
+    }
+
+    @Test
     fun staleResponseWhenNotSendingIsIgnored() {
         val initial = ChatUiState()
         assertEquals(initial, reduceChatState(initial, ChatAction.ResponseReceived("stale")).state)
