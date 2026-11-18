@@ -59,6 +59,7 @@ private fun CompanionChatScreen() {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var activeRequestJob by remember { mutableStateOf<Job?>(null) }
+    val connectionState = remember { ReconnectionState() }
     val transport = remember { DemoTransport() }
 
     fun persistChat(state: ChatUiState) {
@@ -147,7 +148,7 @@ private fun CompanionChatScreen() {
         }
 
 
-        SecurePairingPanel()
+        ConnectionStatusPanel(connectionState)\n\n        SecurePairingPanel()
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Sessions", style = MaterialTheme.typography.titleMedium)
