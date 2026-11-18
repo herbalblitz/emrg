@@ -1,0 +1,48 @@
+name: Companion security tests
+
+on:
+  push:
+    branches: ["feat/**"]
+    paths:
+      - "emrg/server/companion_*.py"
+      - "tests/test_companion_*.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/companion-security.yml"
+  pull_request:
+    paths:
+      - "emrg/server/companion_*.py"
+      - "tests/test_companion_*.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/companion-security.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: companion-security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  companion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+      - name: Sync project dependencies
+        run: uv sync
+      - name: Companion host security tests
+        run: |
+          uv run pytest -v \
+            tests/test_companion_auth.py \
+            tests/test_companion_credentials.py \
+            tests/test_companion_host_service.py \
+            tests/test_companion_pairing.py \
+            tests/test_companion_protocol.py \
+            tests/test_companion_tls.py \
+            tests/test_companion_tls_identity.py
