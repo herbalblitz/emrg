@@ -52,3 +52,7 @@ No milestone above is complete until tests and CI evidence exist.
 ## Strict frame-schema hardening increment
 
 The companion frame validator now rejects duplicate JSON object keys and unknown fields in every currently defined client message type (auth, status, sessions.list, chat.send). This prevents ambiguous parser interpretations and fails closed on unsupported request extensions instead of passing them to future handlers. Chat frames continue to be normalized to the narrow host-approved fields. Regression tests cover duplicate keys, extra auth/status fields, and privilege-shaped chat extensions. This remains parser-only hardening; no transport or dispatcher is implemented.
+
+## Android companion frame-construction hardening
+
+The Android WSS primitive now emits the v1 auth envelope with protocol version and a per-connect client nonce. Chat submission converts the legacy local TaskCommand into the narrow companion `chat.send` frame (request ID, approved workspace ID, prompt, optional session ID); it does not forward cwd, tools, timestamp or desktop `task` command fields. Client-side UTF-8 size/identifier bounds mirror the host parser. JVM regression tests were added; execution is pending CI.
