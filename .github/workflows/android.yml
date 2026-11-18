@@ -33,7 +33,8 @@ jobs:
         run: gradle --no-daemon assembleDebug
       - name: Unit tests
         working-directory: android
-        run: gradle --no-daemon testDebugUnitTest\n      - name: Lint
+        run: gradle --no-daemon testDebugUnitTest
+      - name: Lint
         working-directory: android
         run: gradle --no-daemon lintDebug
       - name: Upload debug APK
