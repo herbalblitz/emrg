@@ -7,7 +7,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] Daemon WebSocket transport/local auth inspected
 - [ ] Lifecycle/reconnect end-to-end tests
 - [x] Protocol dataclasses and GUI response-type map partially reviewed
-- [ ] Full command schemas/stream lifecycle fixtures and tests (session command schemas documented; runtime fixtures still missing)
+- [x] Android protocol fixtures and frame parser added; request-stream reducer implemented (latest CI validation pending). Session command schemas documented; Android transport not connected.
 - [ ] Sessions, tools, approvals, workspace, sandbox
 - [ ] Memory, skills, subagents, scheduler, evolution
 - [ ] Logs/diagnostics, CLI/TUI
@@ -35,7 +35,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for the latest verified run (session UI commit `1132f69` / run `44232157705`)
 - [ ] Pair/revoke; secure transport; diagnostics/reconnect (proposal only documented)
 - [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
-- [ ] Chat/stream/cancel; daemon session synchronization; tool activity/approvals
+- [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI pending); no real daemon transport yet.\n- [ ] UI integration for chat streaming/cancel; daemon session synchronization; tool approval UI
 - [ ] SAF workspace; memory; skills; tasks; evolution
 - [ ] Opt-in notifications; settings/export; accessibility/offline states
 
