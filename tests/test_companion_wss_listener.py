@@ -59,24 +59,25 @@ def test_listener_start_is_explicit_and_context_loaded_before_bind(tmp_path, mon
     assert not listener.running
 
     
-@pytest.mark.asyncio
-async def test_disabling_host_closes_registered_connections(tmp_path):
-    host = CompanionHostService(tmp_path / "registry.json")
-    listener = _listener(tmp_path, host)
-    listener._loop = asyncio.get_running_loop()
+def test_disabling_host_closes_registered_connections(tmp_path):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        listener = _listener(tmp_path, host)
+        listener._loop = asyncio.get_running_loop()
 
-    class Client:
-        def __init__(self):
-            self.closed = []
-        async def close(self, *, code, reason):
-            self.closed.append((code, reason))
+        class Client:
+            def __init__(self):
+                self.closed = []
+            async def close(self, *, code, reason):
+                self.closed.append((code, reason))
 
-    client = Client()
-    listener._clients.add(client)
-    host.enable()
-    host.disable()
-    await asyncio.sleep(0)
-    assert client.closed == [(1008, "Companion disabled")]
-    assert client in listener._clients  # handler owns removal; close wakes recv
-    listener._clients.clear()
-    listener._loop = None
+        client = Client()
+        listener._clients.add(client)
+        host.enable()
+        host.disable()
+        await asyncio.sleep(0)
+        assert client.closed == [(1008, "Companion disabled")]
+        assert client in listener._clients  # handler owns removal; close wakes recv
+        listener._clients.clear()
+        listener._loop = None
+    asyncio.run(run())
