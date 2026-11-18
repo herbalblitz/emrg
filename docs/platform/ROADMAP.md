@@ -12,12 +12,12 @@ Target: preserve all original EMRG features while delivering robust Android and 
 ### M0 — Audit
 - [x] Initial repository/component inventory.
 - [x] Inspect daemon transport/auth and remote-access boundary.
-- [ ] Extract authoritative command/event payloads and Windows packaging baseline.
+- [x] Extract authoritative session command/reply payloads (other command families and Windows packaging baseline remain pending).
 
 ### M1 — Protocol
-- [x] Document local authentication and task fields; partial command/reply mapping.
+- [x] Document local authentication/task fields and source-verified session command/reply schemas.
 - [x] Record protocol/documentation transport mismatch.
-- [ ] Reconcile protocol.py docs with daemon behavior.
+- [x] Correct protocol.py module documentation to state that it models JSON payloads, not transport framing.
 - [ ] Contract fixtures/tests for malformed payload, optional fields, event lifecycle, reconnect.
 - [ ] Review pairing design without weakening local endpoint.
 
@@ -61,15 +61,15 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 
 ## Current work queue
 - [ ] Extract remaining protocol payload schemas and terminal/cancellation order.
-- [ ] Resolve transport mismatch in source documentation.
+- [x] Resolve transport mismatch in source documentation (protocol.py header corrected; contract doc explains current WebSocket transport).
 - [ ] Test tools allowlist omission vs empty.
-- [ ] Confirm Android persistence integration CI result and resolve any build/lint/test failures before adding features.
+- [x] Confirm Android persistence and session UI integration CI results; builds/lint/tests passed before adding features.
 - [x] Integrate offline session manager into Compose UI; session controls are disabled during a request to prevent cross-session response writes.
-- [ ] Validate UI build/lint/tests; no daemon synchronization until protocol and pairing are validated.
+- [x] Validate offline session UI build/lint/tests; no daemon synchronization until protocol and pairing are validated.
 - [ ] Add wrapper and confirm CI result.
 - [ ] Inspect Windows packaging/test evidence for concrete defects.
 
 Execution branch: `feat/android-windows-platform-audit`; do not work on `master`.
 CI first attempt (commit `34e23d1`) failed at Kotlin compile because Java compile target defaulted to 1.8 while Kotlin targeted 17. Fixed by setting both Java compatibility and Kotlin JVM target to 17 in `android/app/build.gradle.kts` (commit `9d74a53`); later CI runs for the fix and mock-chat UI both completed successfully.
-Commit `5bd51cc` adds local mock chat UI; no host connection or tool execution. The mock transport is isolated in `ChatTransport.kt`; unit tests cover its explicit demo response and transport-error fallback. Earlier CI passed the mock transport and reducer baseline. Persistence integration run `44229919552` passed after the Compose context fix (`f6a0b6c`). Offline session store and state unit-test CI passed (`44231236886`, `44231252445`). Compose session UI and per-session chat update refactor are committed; their CI runs are pending.
-Source review does not imply builds/tests ran.
+Commit `5bd51cc` adds local mock chat UI; no host connection or tool execution. The mock transport is isolated in `ChatTransport.kt`; unit tests cover its explicit demo response and transport-error fallback. Earlier CI passed the mock transport and reducer baseline. Persistence integration run `44229919552` passed after the Compose context fix (`f6a0b6c`). Offline session store and state unit-test CI passed (`44231236886`, `44231252445`). Compose session UI and per-session chat update refactor committed; CI run `44232157705` succeeded (APK build/lint/tests).
+Protocol session schemas were source-inspected and documented in `CLIENT_PROTOCOL_CONTRACT.md`; this is not a runtime protocol integration test. Source review does not imply builds/tests ran.
