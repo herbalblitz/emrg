@@ -195,3 +195,5 @@ These are requirements for a future implementation, not evidence of an existing 
 - **Not integrated into a remote reducer or transport:** callers must invoke this validator before treating a snapshot as reconciled. No host snapshot API exists yet.
 
 - Follow-up: the reconnection reducer now accepts the approved workspace ID and cwd as reconciliation context and validates them before transitioning to `READY`; tests exercise the reducer boundary for both matching and foreign snapshots.
+
+- Request-stream reducer now refuses to reuse a request ID already present in state, including terminal/interrupted requests; retry must use a fresh ID and explicit user intent. This is local reducer protection, not server-side idempotency.
