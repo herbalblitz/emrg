@@ -1,6 +1,7 @@
 import os
 import stat
 import ssl
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -111,3 +112,10 @@ def test_identity_rejects_certificate_key_mismatch(tmp_path):
     _key_path(directory).write_bytes(replacement_key)
     with pytest.raises(CompanionTlsError):
         provision_host_identity(directory, ["localhost"])
+
+
+def test_concurrent_identity_provisioning_keeps_one_stable_pin(tmp_path):
+    directory = tmp_path / "identity"
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        identities = list(pool.map(lambda _: provision_host_identity(directory, ["localhost"]), range(6)))
+    assert len({identity.fingerprint_sha256 for identity in identities}) == 1
