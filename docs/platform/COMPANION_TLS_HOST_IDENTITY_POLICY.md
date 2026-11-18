@@ -1,7 +1,7 @@
 # Companion TLS Host Identity Lifecycle (H2)
 
 Branch: `feat/android-windows-platform-audit`
-Status: design gate only; no certificates are generated, persisted, or served by current code.
+Status: policy implemented in a transport-free identity-provisioning module; listener/UI integration and cross-platform CI verification remain pending.
 
 ## Goals and threat boundary
 
@@ -19,9 +19,9 @@ The existing daemon WebSocket remains bound to `127.0.0.1`. A future companion W
 
 ## Provisioning and persistence
 
-1. Provision only after user explicitly enables Companion access in host UI.
+1. Provision only after user explicitly enables Companion access in host UI. The current API does not implement UI approval; the caller must gate provisioning.
 2. Persist identity across normal restarts to avoid silently changing the pinned fingerprint.
-3. Use platform-protected storage where available (Windows DPAPI-backed protection; supported OS credential/key storage on other platforms). If protection is unavailable, fail closed or require an explicit documented secure fallback; never silently write a private key as world-readable.
+3. Current implementation protects the Windows private key with user-scoped DPAPI and stores the PEM key on POSIX with mode 0600 inside a directory mode 0700. Other OSes and Windows ACL/temp-file review remain required before release. If protection is unavailable, fail closed; never silently write a private key as world-readable.
 4. Write atomically; restrict permissions; reject symlinks or unexpected file ownership/permissions where platform APIs permit; avoid backups/sync folders.
 5. Never log, export, or include the private key in QR payloads, diagnostic bundles, or pairing metadata.
 6. Startup validates key/certificate match, expiry, SANs, and configured fingerprint; corruption is a visible error and must not trigger automatic trust-reset.
@@ -66,3 +66,9 @@ Before a listener may be implemented or enabled, require:
 - Cross-platform Windows/Linux provisioning and permission behavior is tested.
 
 This document is a security specification, not evidence that these mechanisms are implemented.
+
+## Current implementation
+
+`emrg/server/companion_tls_identity.py` provisions a P-256 self-signed server certificate with SAN entries for explicitly supplied DNS/IP hosts, a bounded 365-day validity, SHA-256 fingerprint, and persistence across restart. Existing identities are validated (key/cert match, validity, SAN coverage) and are not silently regenerated; rotation requires explicit `reset=True`. Windows key bytes are DPAPI-protected; POSIX files are written atomically with restrictive modes. `create_identity_server_context` loads the identity into a TLS 1.2+ context and creates no socket. Unit tests are added; execution is pending CI.
+
+Still not implemented: host UI consent, host identity display/QR generation, Windows ACL verification for directory/temp files, cross-process provisioning lock, rotation UX, or listener integration.
