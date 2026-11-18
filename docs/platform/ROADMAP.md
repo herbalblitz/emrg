@@ -109,5 +109,7 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Bind SEND_CHAT pairing credentials to explicit approved workspace ID/cwd; reject chat sends outside the exact approved cwd.
 - [x] Draft host companion v1 wire contract and security gates in `HOST_COMPANION_PROTOCOL_V1.md` (specification only; no listener implementation).
 - [x] Add strict companion-frame parser/validator (pre-auth gate, message allowlist, scope/workspace checks, size limits, strips client cwd/tools/sandbox fields); unit tests added. This is a validation module only.
-- [ ] Implement host-side remote companion listener, device credential issuance/verification, revocation and approved-workspace enforcement; must not widen existing loopback daemon listener.
+- [ ] Implement host-side remote companion listener and pairing approval; must not widen existing loopback daemon listener.
+- [x] Add credential registry primitive: random 256-bit tokens, salted verifiers only, device/workspace/cwd/scopes binding, rotation by re-issue, revocation and safe metadata listing. **No listener or pairing flow consumes it yet.**
+- [ ] Integrate credential registry with host approval, TLS listener, active-connection revocation and approved-workspace enforcement.
 - [ ] Integrate secure transport with Android connection/reconciliation UI and test against a real host implementation.
