@@ -2,7 +2,7 @@
 
 Branch: feat/android-windows-platform-audit
 
-Status: source audit complete; remote host integration is still not implemented.
+Status: source audit complete; host-side pairing/auth composition exists, but trusted local UI and remote host transport are not implemented.
 
 ## Verified existing daemon boundary
 
@@ -22,6 +22,14 @@ The daemon's current WebSocket listener is created in EmrgServer.serve() using a
 8. TLS must use an explicit host identity and a reviewed certificate provisioning/rotation strategy. Android's pin must be tied to that identity. A self-signed certificate is not acceptable merely because the client can pin it; the user needs a trustworthy out-of-band verification path.
 9. Revocation must remove credentials and close active connections associated with that device. Listener disable/shutdown must invalidate pending pairings and close remote sockets.
 10. The integration must have separate tests proving the current listener remains loopback-only and the remote listener defaults disabled. Add cross-platform socket/TLS tests before exposing a LAN option.
+
+## Current code-level progress
+
+- `CompanionHostService` composes the credential registry, pairing transactions and auth gate.
+- It provides local operations to begin pairing, inspect safe pending metadata, approve/reject/cancel, list and revoke devices.
+- Transport-independent operations redeem pairing and authenticate the first frame.
+- Tests cover the approved pairing-to-auth path and reject/revoke behavior.
+- The service opens no sockets. Access control for local UI callers is not enforced by this Python class.
 
 ## Suggested implementation sequence
 
