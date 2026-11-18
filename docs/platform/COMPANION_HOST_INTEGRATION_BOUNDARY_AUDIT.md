@@ -34,9 +34,13 @@ The daemon's current WebSocket listener is created in EmrgServer.serve() using a
 ## Suggested implementation sequence
 
 - H1: Implement host-side pairing manager composition and a trusted local approval interface, without opening a socket.
-- H2: Define TLS identity persistence, rotation, and user-verifiable fingerprint presentation.
+- H2: Define TLS identity persistence, rotation, and user-verifiable fingerprint presentation. **Design specification committed in `COMPANION_TLS_HOST_IDENTITY_POLICY.md`; implementation remains open.**
 - H3: Implement a disabled-by-default dedicated WSS listener and narrow protocol adapter, initially status-only.
 - H4: Add scoped session listing, then chat with host-side task construction and approval/sandbox enforcement.
 - H5: Test device revocation, pending-pairing expiry, listener disable, reconnect reconciliation, rate limits, malformed frames, and Android-to-host end-to-end flows on Windows and Linux.
 
 No milestone above is complete until tests and CI evidence exist.
+
+## H2 policy document
+
+`COMPANION_TLS_HOST_IDENTITY_POLICY.md` now defines the host certificate identity, DER fingerprint format, private-key persistence and access protection, QR out-of-band trust, explicit rotation/recovery, listener enablement gate, shutdown/revocation behavior, and acceptance tests. It is a design gate only; no key generation or listener code was added in this increment.
