@@ -9,7 +9,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import com.emrg.app.ui.theme.EmrgTheme
@@ -46,40 +45,44 @@ fun EmrgNavigator(repository: com.emrg.app.data.GatewayRepository) {
                 com.emrg.app.ui.screens.SessionsScreen(repository = repository, navController = navController)
             }
             composable(route = Route.Chat) {
+                val entry = navController.currentBackStackEntry
                 com.emrg.app.ui.screens.ChatScreen(
                     repository = repository,
                     navController = navController,
-                    sessionId = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgSessionId) ?: "",
-                    cwd = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgCwd) ?: repository.currentWorkspace(),
+                    sessionId = entry?.arguments?.getString(Route.ArgSessionId) ?: "",
+                    cwd = entry?.arguments?.getString(Route.ArgCwd) ?: repository.currentWorkspace(),
                 )
             }
             composable(route = Route.ToolMonitor) {
                 com.emrg.app.ui.screens.ToolMonitorScreen(repository = repository, navController = navController)
             }
             composable(route = Route.Files) {
+                val entry = navController.currentBackStackEntry
                 com.emrg.app.ui.screens.FilesScreen(
                     repository = repository,
                     navController = navController,
-                    path = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgPath) ?: "/",
+                    path = entry?.arguments?.getString(Route.ArgPath) ?: "/",
                 )
             }
             composable(route = Route.Editor) {
+                val entry = navController.currentBackStackEntry
                 com.emrg.app.ui.screens.EditorScreen(
                     repository = repository,
                     navController = navController,
-                    path = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgPath) ?: "",
-                    sessionId = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgSessionId) ?: "",
+                    path = entry?.arguments?.getString(Route.ArgPath) ?: "",
+                    sessionId = entry?.arguments?.getString(Route.ArgSessionId) ?: "",
                 )
             }
             composable(route = Route.Terminal) {
                 com.emrg.app.ui.screens.TerminalScreen(repository = repository, navController = navController)
             }
             composable(route = Route.Sandbox) {
+                val entry = navController.currentBackStackEntry
                 com.emrg.app.ui.screens.SandboxScreen(
                     repository = repository,
                     navController = navController,
-                    sessionId = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgSessionId) ?: "",
-                    cwd = currentBackStackEntryAsState().value?.arguments?.getString(Route.ArgCwd) ?: repository.currentWorkspace(),
+                    sessionId = entry?.arguments?.getString(Route.ArgSessionId) ?: "",
+                    cwd = entry?.arguments?.getString(Route.ArgCwd) ?: repository.currentWorkspace(),
                 )
             }
             composable(route = Route.Memory) {

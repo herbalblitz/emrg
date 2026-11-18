@@ -33,29 +33,10 @@ fun SessionsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __cwd = remember { mutableStateOf(repository.currentWorkspace()) }
-    var cwd: String
-        get() = __cwd.value
-        set(value) { __cwd.value = value }
-    val __sessions = remember { mutableStateOf(emptyList<com.emrg.app.model.SessionSummary>()) }
-    var sessions: List<com.emrg.app.model.SessionSummary>
-        get() = __sessions.value
-        set(value) { __sessions.value = value }
-    val __loading = remember { mutableStateOf(false) }
-    var loading: Boolean
-        get() = __loading.value
-        set(value) { __loading.value = value }
-    val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
-        get() = __error.value
-        set(value) { __error.value = value }
-    var loading: String
-        get() = __loading.value
-        set(value) { __loading.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var cwd by remember { mutableStateOf(repository.currentWorkspace()) }
+    var sessions by remember { mutableStateOf(emptyList<com.emrg.app.model.SessionSummary>()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     if (cwd.isBlank()) {
         androidx.compose.material3.Scaffold(

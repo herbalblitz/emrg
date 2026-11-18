@@ -24,18 +24,9 @@ fun MemoryScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __memories = remember { (emptyList<com.emrg.app.model.MemoryEntry>()) }
-    var memories: String
-        get() = __memories.value
-        set(value) { __memories.value = value }
-    val __loading = remember { (false) }
-    var loading: String
-        get() = __loading.value
-        set(value) { __loading.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var memories by remember { mutableStateOf(emptyList<com.emrg.app.model.MemoryEntry>()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun refresh() {
         loading = true
@@ -72,18 +63,9 @@ fun ModelsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __current = remember { ("") }
-    var current: String
-        get() = __current.value
-        set(value) { __current.value = value }
-    val __models = remember { (emptyList<com.emrg.app.model.ModelInfo>()) }
-    var models: String
-        get() = __models.value
-        set(value) { __models.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var current by remember { mutableStateOf("") }
+    var models by remember { mutableStateOf(emptyList<com.emrg.app.model.ModelInfo>()) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -106,7 +88,7 @@ fun ModelsScreen(
             LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = padding) {
                 items(models, key = { it.name }) { m ->
                     androidx.compose.material3.Text(
-                        text = "${m.name} (${m.contextWindow})${if (m.vision) " • vision" else ""}",
+                        text = "${m.name} (${m.contextWindow})${if (m.vision) " \u2022 vision" else ""}",
                     )
                 }
             }
@@ -120,26 +102,11 @@ fun RantScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __message = remember { ("") }
-    var message: String
-        get() = __message.value
-        set(value) { __message.value = value }
-    val __agent = remember { ("") }
-    var agent: String
-        get() = __agent.value
-        set(value) { __agent.value = value }
-    val __submitting = remember { (false) }
-    var submitting: String
-        get() = __submitting.value
-        set(value) { __submitting.value = value }
-    val __result = remember { (null) }
-    var result: String
-        get() = __result.value
-        set(value) { __result.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var message by remember { mutableStateOf("") }
+    var agent by remember { mutableStateOf("") }
+    var submitting by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<Int?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun submit() {
         val m = message.trim()

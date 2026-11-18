@@ -24,18 +24,9 @@ fun EvolutionScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __count = remember { (0) }
-    var count: String
-        get() = __count.value
-        set(value) { __count.value = value }
-    val __records = remember { (emptyList<com.emrg.app.model.EvolutionRecord>()) }
-    var records: String
-        get() = __records.value
-        set(value) { __records.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var count by remember { mutableStateOf(0) }
+    var records by remember { mutableStateOf(emptyList<com.emrg.app.model.EvolutionRecord>()) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -72,18 +63,9 @@ fun TasksScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __tasks = remember { (emptyList<com.emrg.app.model.TaskInfo>()) }
-    var tasks: String
-        get() = __tasks.value
-        set(value) { __tasks.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
-    val __taskName = remember { ("") }
-    var taskName: String
-        get() = __taskName.value
-        set(value) { __taskName.value = value }
+    var tasks by remember { mutableStateOf(emptyList<com.emrg.app.model.TaskInfo>()) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var taskName by remember { mutableStateOf("") }
 
     scope.launch {
         try {
@@ -137,14 +119,8 @@ fun SkillsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __skills = remember { (emptyList<com.emrg.app.model.SkillInfo>()) }
-    var skills: String
-        get() = __skills.value
-        set(value) { __skills.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var skills by remember { mutableStateOf(emptyList<com.emrg.app.model.SkillInfo>()) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -164,7 +140,7 @@ fun SkillsScreen(
             LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = padding) {
                 items(skills, key = { it.name }) { s ->
                     androidx.compose.material3.Text(
-                        text = "${s.name} — ${s.description}",
+                        text = "${s.name} \u2014 ${s.description}",
                     )
                 }
             }

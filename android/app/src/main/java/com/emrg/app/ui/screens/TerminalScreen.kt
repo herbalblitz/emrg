@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberMutableStateOf
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
@@ -26,26 +25,11 @@ fun TerminalScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __command = remember { ("") }
-    var command: String
-        get() = __command.value
-        set(value) { __command.value = value }
-    val __running = remember { (false) }
-    var running: String
-        get() = __running.value
-        set(value) { __running.value = value }
-    val __output = remember { ("") }
-    var output: String
-        get() = __output.value
-        set(value) { __output.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
-    val __mode = remember { ("workspace-write") }
-    var mode: String
-        get() = __mode.value
-        set(value) { __mode.value = value }
+    var command by remember { mutableStateOf("") }
+    var running by remember { mutableStateOf(false) }
+    var output by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var mode by remember { mutableStateOf("workspace-write") }
 
     fun run() {
         val cmd = command.trim()
@@ -58,10 +42,10 @@ fun TerminalScreen(
                     command = cmd,
                     cwd = repository.currentWorkspace(),
                     sessionId = "",
-                    mode = mode.value,
+                    mode = mode,
                     timeout = 60,
                 )
-                output += "\n$ $cmd\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\n${outcome.stderr}" else ""}\n(exit ${outcome.exitCode})"
+                output += "\n$ cmd\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\n${outcome.stderr}" else ""}\n(exit ${outcome.exitCode})"
             } catch (e: GatewayRequestException) {
                 error = e.message
             }
@@ -69,10 +53,7 @@ fun TerminalScreen(
         }
     }
 
-    val __expanded = remember { (false) }
-    var expanded: String
-        get() = __expanded.value
-        set(value) { __expanded.value = value }
+    var expanded by remember { mutableStateOf(false) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Terminal") }) },
@@ -82,17 +63,17 @@ fun TerminalScreen(
                 androidx.compose.material3.Text(text = e, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
             }
             androidx.compose.material3.Text(
-                text = "Sandbox mode: ${mode.value}",
+                text = "Sandbox mode: $mode",
                 style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
             )
-            androidx.compose.material3.Button(onClick = { expanded.value = !expanded.value }) {
+            androidx.compose.material3.Button(onClick = { expanded = !expanded }) {
                 Text(text = "Change mode")
             }
-            if (expanded.value) {
-                DropdownMenu(expanded = expanded.value, onDismissRequest = { expanded.value = false }) {
-                    DropdownMenuItem(text = { Text(text = "read-only") }, onClick = { mode.value = "read-only"; expanded.value = false })
-                    DropdownMenuItem(text = { Text(text = "workspace-write") }, onClick = { mode.value = "workspace-write"; expanded.value = false })
-                    DropdownMenuItem(text = { Text(text = "danger-full-access") }, onClick = { mode.value = "danger-full-access"; expanded.value = false })
+            if (expanded) {
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    DropdownMenuItem(text = { Text(text = "read-only") }, onClick = { mode = "read-only"; expanded = false })
+                    DropdownMenuItem(text = { Text(text = "workspace-write") }, onClick = { mode = "workspace-write"; expanded = false })
+                    DropdownMenuItem(text = { Text(text = "danger-full-access") }, onClick = { mode = "danger-full-access"; expanded = false })
                 }
             }
             androidx.compose.material3.TextField(

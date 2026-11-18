@@ -27,22 +27,10 @@ fun FilesScreen(
     path: String = "/",
 ) {
     val scope = rememberCoroutineScope()
-    val __current = remember { (path) }
-    var current: String
-        get() = __current.value
-        set(value) { __current.value = value }
-    val __entries = remember { (emptyList<Triple<String, String, String>>()) }
-    var entries: String
-        get() = __entries.value
-        set(value) { __entries.value = value }
-    val __loading = remember { (false) }
-    var loading: String
-        get() = __loading.value
-        set(value) { __loading.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var current by remember { mutableStateOf(path) }
+    var entries by remember { mutableStateOf(emptyList<Triple<String, String, String>>()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun refresh() {
         loading = true
@@ -95,18 +83,9 @@ fun EditorScreen(
     sessionId: String = "",
 ) {
     val scope = rememberCoroutineScope()
-    val __content = remember { ("") }
-    var content: String
-        get() = __content.value
-        set(value) { __content.value = value }
-    val __saving = remember { (false) }
-    var saving: String
-        get() = __saving.value
-        set(value) { __saving.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var content by remember { mutableStateOf("") }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Editor") }) },

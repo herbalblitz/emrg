@@ -24,22 +24,10 @@ fun ToolMonitorScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __command = remember { ("") }
-    var command: String
-        get() = __command.value
-        set(value) { __command.value = value }
-    val __running = remember { (false) }
-    var running: String
-        get() = __running.value
-        set(value) { __running.value = value }
-    val __result = remember { (null) }
-    var result: String
-        get() = __result.value
-        set(value) { __result.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var command by remember { mutableStateOf("") }
+    var running by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun run() {
         val cmd = command.trim()

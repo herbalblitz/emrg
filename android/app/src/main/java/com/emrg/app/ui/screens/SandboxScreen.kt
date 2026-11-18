@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberMutableStateOf
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
@@ -28,53 +27,38 @@ fun SandboxScreen(
 ) {
     val scope = rememberCoroutineScope()
     val effectiveCwd = cwd.takeIf { it.isNotEmpty() }.orElse { repository.currentWorkspace() }
-    val __mode = remember { ("workspace-write") }
-    var mode: String
-        get() = __mode.value
-        set(value) { __mode.value = value }
-    val __root = remember { ("") }
-    var root: String
-        get() = __root.value
-        set(value) { __root.value = value }
-    val __result = remember { (null) }
-    var result: String
-        get() = __result.value
-        set(value) { __result.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var mode by remember { mutableStateOf("workspace-write") }
+    var root by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun apply() {
         error = null
         scope.launch {
             try {
-                repository.setSandbox(sessionId = sessionId, cwd = effectiveCwd, mode = mode.value)
-                result = "Sandbox set to ${mode.value}"
+                repository.setSandbox(sessionId = sessionId, cwd = effectiveCwd, mode = mode)
+                result = "Sandbox set to $mode"
             } catch (e: GatewayRequestException) {
                 error = e.message
             }
         }
     }
     fun addRoot() {
-        val r = root.value.trim()
+        val r = root.trim()
         if (r.isEmpty()) return
         error = null
         scope.launch {
             try {
                 repository.addSandboxRoot(sessionId = sessionId, cwd = effectiveCwd, path = r)
                 result = "Added root $r"
-                root.value = ""
+                root = ""
             } catch (e: GatewayRequestException) {
                 error = e.message
             }
         }
     }
 
-    val __expanded = remember { (false) }
-    var expanded: String
-        get() = __expanded.value
-        set(value) { __expanded.value = value }
+    var expanded by remember { mutableStateOf(false) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Sandbox") }) },
@@ -87,18 +71,18 @@ fun SandboxScreen(
                 androidx.compose.material3.Text(text = r, color = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer)
             }
             androidx.compose.material3.Text(text = "Mode", style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
-            androidx.compose.material3.Button(onClick = { expanded.value = !expanded.value }) {
-                Text(text = mode.value)
+            androidx.compose.material3.Button(onClick = { expanded = !expanded }) {
+                Text(text = mode)
             }
-            if (expanded.value) {
-                DropdownMenu(expanded = expanded.value, onDismissRequest = { expanded.value = false }) {
+            if (expanded) {
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     for (m in listOf("read-only", "workspace-write", "danger-full-access")) {
-                        DropdownMenuItem(text = { Text(text = m) }, onClick = { mode.value = m; expanded.value = false })
+                        DropdownMenuItem(text = { Text(text = m) }, onClick = { mode = m; expanded = false })
                     }
                 }
             }
             androidx.compose.material3.Button(onClick = { apply() }) { Text(text = "Apply mode") }
-            TextField(value = root.value, onValueChange = { root.value = it }, label = { Text(text = "Writable root (absolute path)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            TextField(value = root, onValueChange = { root = it }, label = { Text(text = "Writable root (absolute path)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             Button(onClick = { addRoot() }) { Text(text = "Add root") }
         }
     }

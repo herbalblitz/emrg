@@ -6,12 +6,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Row
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
@@ -23,18 +26,9 @@ fun LogsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __source = remember { ("daemon") }
-    var source: String
-        get() = __source.value
-        set(value) { __source.value = value }
-    val __lines = remember { (null) }
-    var lines: String
-        get() = __lines.value
-        set(value) { __lines.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var source by remember { mutableStateOf("daemon") }
+    var lines by remember { mutableStateOf<com.emrg.app.model.LogPage?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -75,14 +69,8 @@ fun AuditScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __entries = remember { (emptyList<com.emrg.app.model.AuditEntry>()) }
-    var entries: String
-        get() = __entries.value
-        set(value) { __entries.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var entries by remember { mutableStateOf(emptyList<com.emrg.app.model.AuditEntry>()) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -117,14 +105,8 @@ fun DevicesScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    val __devices = remember { (emptyList<com.emrg.app.model.DeviceInfo>()) }
-    var devices: String
-        get() = __devices.value
-        set(value) { __devices.value = value }
-    val __error = remember { (null) }
-    var error: String
-        get() = __error.value
-        set(value) { __error.value = value }
+    var devices by remember { mutableStateOf(emptyList<com.emrg.app.model.DeviceInfo>()) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     scope.launch {
         try {
@@ -157,10 +139,7 @@ fun SettingsScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
-    val __danger = remember { (false) }
-    var danger: String
-        get() = __danger.value
-        set(value) { __danger.value = value }
+    var danger by remember { mutableStateOf(false) }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Settings") }) },
@@ -169,9 +148,9 @@ fun SettingsScreen(
             androidx.compose.material3.Text(text = "Gateway settings", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
             androidx.compose.material3.Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                androidx.compose.material3.Switch(checked = danger, onCheckedChange = { danger = it })
+                Switch(checked = danger, onCheckedChange = { danger = it })
                 androidx.compose.material3.Text(text = "Allow danger-full-access exec")
             }
         }
