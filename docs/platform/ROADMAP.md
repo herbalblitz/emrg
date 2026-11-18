@@ -114,5 +114,6 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [ ] Implement trusted local UI for pairing approval and remote listener; must not widen existing loopback daemon listener.
 - [x] Add credential registry primitive: random 256-bit tokens, salted verifiers only, device/workspace/cwd/scopes binding, rotation by re-issue, revocation and safe metadata listing. **No listener or pairing flow consumes it yet.**
 - [x] Add transport-independent companion authentication gate: validates protocol auth envelope, verifies device credential and returns only workspace/cwd/scope binding; tests added. **Not wired to a TLS listener.**
+- [x] Compose local pairing approval, safe pending-pairing metadata, credential issuance/authentication, device listing and revocation in `CompanionHostService`; unit tests added. **Service is transport-independent and exposes no listener; trusted-local UI boundary remains caller responsibility.**
 - [ ] Integrate credential registry with host approval, TLS listener, active-connection revocation and approved-workspace enforcement.
 - [ ] Integrate secure transport with Android connection/reconciliation UI and test against a real host implementation.
