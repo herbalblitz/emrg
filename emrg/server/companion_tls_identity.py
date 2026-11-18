@@ -206,18 +206,38 @@ def _load_and_validate(directory: Path, hosts: tuple[str, ...]) -> HostTlsIdenti
         raise
     except Exception:
         raise CompanionTlsError("stored TLS identity is invalid") from None
-    cert_public = certificate.public_key().public_bytes(
+    cert_public_key = certificate.public_key()
+    key_public_key = private_key.public_key()
+    if not isinstance(cert_public_key, ec.EllipticCurvePublicKey) or cert_public_key.curve.name != "secp256r1":
+        raise CompanionTlsError("stored TLS certificate algorithm is unsupported")
+    if not isinstance(private_key, ec.EllipticCurvePrivateKey) or private_key.curve.name != "secp256r1":
+        raise CompanionTlsError("stored TLS private key algorithm is unsupported")
+    cert_public = cert_public_key.public_bytes(
         serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
-    key_public = private_key.public_key().public_bytes(
+    key_public = key_public_key.public_bytes(
         serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
     if cert_public != key_public:
         raise CompanionTlsError("stored TLS certificate and key do not match")
+    if certificate.issuer != certificate.subject:
+        raise CompanionTlsError("stored TLS certificate is not self-signed")
+    try:
+        cert_public_key.verify(
+            certificate.signature, certificate.tbs_certificate_bytes,
+            ec.ECDSA(certificate.signature_hash_algorithm),
+        )
+        constraints = certificate.extensions.get_extension_for_class(x509.BasicConstraints).value
+        extended_usage = certificate.extensions.get_extension_for_class(x509.ExtendedKeyUsage).value
+        key_usage = certificate.extensions.get_extension_for_class(x509.KeyUsage).value
+    except Exception:
+        raise CompanionTlsError("stored TLS certificate is invalid") from None
+    if constraints.ca or ExtendedKeyUsageOID.SERVER_AUTH not in extended_usage or not key_usage.digital_signature:
+        raise CompanionTlsError("stored TLS certificate is not a server identity")
     now = dt.datetime.now(dt.timezone.utc)
     if certificate.not_valid_after_utc <= now or certificate.not_valid_before_utc > now:
         raise CompanionTlsError("stored TLS certificate is outside its validity period")
     san_hosts = _san_extension(certificate)
-    if not set(hosts) <= set(san_hosts):
-        raise CompanionTlsError("stored TLS identity does not cover requested endpoint hosts")
+    if set(hosts) != set(san_hosts):
+        raise CompanionTlsError("stored TLS identity SAN does not match requested endpoint hosts")
     fingerprint = hashlib.sha256(certificate.public_bytes(serialization.Encoding.DER)).hexdigest()
     return HostTlsIdentity(cert_path, fingerprint, san_hosts, certificate.not_valid_after_utc)
 
@@ -230,6 +250,8 @@ def provision_host_identity(directory: Path, hosts: list[str] | tuple[str, ...],
     triggers silent replacement, preserving the trust pin across normal restarts.
     """
     directory = Path(directory)
+    if directory.is_symlink():
+        raise CompanionTlsError("TLS identity directory must not be a symlink")
     normalized_hosts = _normalize_hosts(hosts)
     cert_path = directory / CERT_FILENAME
     key_path = directory / (DPAPI_KEY_FILENAME if os.name == "nt" else KEY_FILENAME)
