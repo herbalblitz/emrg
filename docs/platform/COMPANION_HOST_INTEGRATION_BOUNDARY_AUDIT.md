@@ -60,3 +60,7 @@ The Android WSS primitive now emits the v1 auth envelope with protocol version a
 ## Host parser malformed-Unicode handling
 
 The Python frame parser now converts invalid UTF-8 / lone-surrogate encoding failures into the same safe protocol rejection rather than allowing an encoding exception to escape. Tests exercise malformed raw string input and JSON-escaped surrogate data in validated fields. No raw frame or credential is included in the error.
+
+## Registry concurrent-write handling
+
+The credential registry now serializes read-modify-write issue/revoke operations and reads with a per-instance thread lock, preventing lost updates between concurrent host-service threads using the same registry instance. A regression test issues credentials concurrently for multiple devices and verifies all entries remain. This is process-local serialization only; cross-process file locking and Windows ACL hardening remain open requirements before listener integration.
