@@ -71,13 +71,16 @@ class CompanionWssListener:
 
     async def stop(self) -> None:
         """Stop accepting, close clients, and wait boundedly for handlers."""
+        await self._shutdown(code=1001, reason="Listener stopped")
+        self._loop = None
+
+    async def _shutdown(self, *, code: int, reason: str) -> None:
         server, self._server = self._server, None
         self._closing = True
-        await self._close_clients(code=1001, reason="Listener stopped")
+        await self._close_clients(code=code, reason=reason)
         if server is not None:
             server.close()
             await server.wait_closed()
-        self._loop = None
 
     def _on_host_state(self, enabled: bool) -> None:
         """Schedule connection closure promptly when local policy is disabled."""
@@ -85,7 +88,7 @@ class CompanionWssListener:
             return
         try:
             self._loop.call_soon_threadsafe(
-                lambda: asyncio.create_task(self._close_clients(code=1008, reason="Companion disabled")))
+                lambda: asyncio.create_task(self._shutdown(code=1008, reason="Companion disabled")))
         except RuntimeError:
             pass
 
