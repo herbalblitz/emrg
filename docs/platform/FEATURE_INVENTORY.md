@@ -33,7 +33,8 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] Safe chat error fallback preserves coroutine cancellation (tests added; CI pending)
 - [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for the latest verified run
 - [ ] Pair/revoke; secure transport; diagnostics/reconnect
-- [ ] Chat/stream/cancel; Compose session UI; daemon session synchronization; tool activity/approvals
+- [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI pending).
+- [ ] Chat/stream/cancel; daemon session synchronization; tool activity/approvals
 - [ ] SAF workspace; memory; skills; tasks; evolution
 - [ ] Opt-in notifications; settings/export; accessibility/offline states
 
