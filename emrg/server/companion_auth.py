@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from emrg.server.companion_credentials import CredentialRegistry
+from emrg.server.companion_credentials import CredentialRegistry, CredentialRegistryError
 from emrg.server.companion_protocol import CompanionProtocolError, validate_client_frame
 
 
@@ -25,7 +25,7 @@ class CompanionAuthenticator:
             frame = validate_client_frame(first_frame, authenticated=False)
             record = self._registry.verify(
                 device_id=frame["device_id"], credential=frame["credential"])
-        except CompanionProtocolError:
+        except (CompanionProtocolError, CredentialRegistryError):
             raise CompanionAuthenticationError("authentication rejected") from None
         if record is None:
             raise CompanionAuthenticationError("authentication rejected")
