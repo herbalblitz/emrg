@@ -94,3 +94,10 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Reject endpoint host outside certificate SAN and invalid/insecure endpoint forms.
 - [x] Enforce QR expiry at no more than 180 seconds.
 - [ ] Integrate descriptor into host approval UI and QR rendering; no live WSS listener yet.
+
+
+## Companion listener safety primitives
+
+- [x] Host Companion defaults disabled; explicit enable gate protects pairing and auth entry points, and disable invalidates outstanding pairing transactions.
+- [x] Listener configuration validation rejects hostname/DNS inputs, wildcard binds, multicast/reserved addresses, privileged/out-of-range ports, and unbounded resource/timeout settings.
+- [ ] No actual WSS listener, accept loop, active-connection registry, or Android-to-host live integration yet.
