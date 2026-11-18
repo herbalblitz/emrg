@@ -125,3 +125,5 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Client validates `auth_ok` protocol and exact approved workspace binding for chat-enabled pairing.
 - [x] QR descriptor parser requires integral finite expiry and enforces a maximum 180-second lifetime.
 - [ ] CI run for this increment; source-only changes are committed, Android workflow still running on the latest code commit.
+- [x] Credential registry serializes same-process concurrent issue/revoke/read operations; concurrency regression test added. Cross-process locking and Windows ACL hardening remain unresolved.
+- [x] Companion parser converts invalid UTF-8/lone-surrogate encoding errors into safe protocol rejections; malformed-Unicode tests added.
