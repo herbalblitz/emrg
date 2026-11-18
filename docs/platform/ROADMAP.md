@@ -160,5 +160,6 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 
 ### Companion pairing transaction capacity/lifecycle increment
 - Pending pairing records are capped at 32. Creation purges expired entries first and rejects safely if capacity is still exhausted.
-- Added a host-service lifecycle hook to invalidate all outstanding transactions, intended for companion disable/shutdown wiring.
-- Tests cover cap, expiry capacity recovery, and clearing/redeem denial after invalidation. CI is pending; this is not a listener/UI integration.
+- Host service companion state is now **disabled by default**; pairing creation/approval/redemption and authentication are gated until explicit local `enable()`.
+- `disable()` flips the state off and invalidates all outstanding transactions; pending-list UI data is hidden while disabled. This remains a service primitive, not yet wired to host UI or a listener.
+- Tests cover default-off behavior, enable/disable, pending invalidation, redeem rejection, and the prior cap/expiry tests. CI verification pending.
