@@ -7,7 +7,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -30,7 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -77,7 +76,7 @@ internal fun CameraQrScannerDialog(onQrDetected: (String) -> Unit, onDismiss: ()
     }
 }
 
-@OptIn(ExperimentalGetImage::class)
+@ExperimentalGetImage
 @Composable
 private fun CameraPreviewScanner(modifier: Modifier, onQrDetected: (String) -> Unit) {
     val context = LocalContext.current
