@@ -51,8 +51,10 @@ def test_expiry_and_wrong_secret_attempt_limit(tmp_path):
     pairing = make_pairing(tmp_path, clock)
     expired = pairing.begin(workspace_id="ws", cwd="/w", scopes={"status"})
     clock.now += 180
+    assert not pairing.approve(expired["pairing_id"], approved=True)
     with pytest.raises(PairingError, match="unavailable"):
-        pairing.approve(expired["pairing_id"], approved=True)
+        pairing.redeem(pairing_id=expired["pairing_id"],
+                       pairing_secret=expired["pairing_secret"], device_id="expired-phone")
 
     clock.now = 200
     request = pairing.begin(workspace_id="ws", cwd="/w", scopes={"status"})
