@@ -9,11 +9,22 @@ class DemoTransportTest {
     fun sendReturnsExplicitDemoOnlyResponse() = runTest {
         val transport = DemoTransport()
 
-        val response = transport.send("hello")
+        val response = sendSafely(transport, "hello")
 
         assertEquals(
             "Demo response received. Host connection and real agent execution are not yet enabled.",
             response
         )
+    }
+
+    @Test
+    fun transportFailureReturnsSafeMessage() = runTest {
+        val failingTransport = object : ChatTransport {
+            override suspend fun send(prompt: String): String {
+                throw IllegalStateException("private transport details")
+            }
+        }
+
+        assertEquals(CHAT_FAILURE_MESSAGE, sendSafely(failingTransport, "hello"))
     }
 }
