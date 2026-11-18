@@ -150,3 +150,32 @@ def test_instance_identity_defaults():
     assert ident.host_name == ""
     assert ident.fork_source is None
     assert ident.branch_id == "master"
+
+
+def test_task_request_optional_fields_preserve_semantics():
+    """Omitted tools and an explicit empty allowlist are different requests."""
+    defaults = TaskRequest(id="default", prompt="hello").to_dict()
+    no_tools = TaskRequest(id="restricted", prompt="hello", tools=[]).to_dict()
+    selected_tools = TaskRequest(
+        id="selected", prompt="hello", tools=["read"]
+    ).to_dict()
+
+    assert "tools" not in defaults
+    assert no_tools["tools"] == []
+    assert selected_tools["tools"] == ["read"]
+
+
+def test_task_request_optional_sandbox_and_images():
+    req = TaskRequest(
+        id="with-options",
+        prompt="inspect",
+        sandbox="read-only",
+        images=[{"type": "image", "data": "placeholder"}],
+    ).to_dict()
+    assert req["sandbox"] == "read-only"
+    assert req["images"] == [{"type": "image", "data": "placeholder"}]
+
+    # Empty optional values are omitted by the existing wire contract.
+    empty = TaskRequest(id="empty", prompt="inspect", sandbox="", images=[]).to_dict()
+    assert "sandbox" not in empty
+    assert "images" not in empty
