@@ -91,4 +91,25 @@ class ProtocolStreamReducerTest {
         assertEquals(initial, reduceProtocolStreams(initial, frame("""{"request_id":"missing","content":"x","delta":true}""")))
         assertEquals(initial, reduceProtocolStreams(initial, frame("""{"content":"x","delta":true}""")))
     }
+    @Test fun ignoresFramesFromPreviousConnectionEpoch() {
+        var s = reduceProtocolStreams(ProtocolStreamState(), ProtocolStreamAction.SetConnectionEpoch(7))
+        s = reduceProtocolStreams(s, start("r"))
+        s = reduceProtocolStreams(s, ProtocolStreamAction.Receive(
+            ProtocolFrame.parse("""{"request_id":"r","content":"old","delta":true}"""),
+            connectionEpoch = 6,
+        ))
+        assertEquals("", s.requests["r"]!!.text)
+        s = reduceProtocolStreams(s, ProtocolStreamAction.Receive(
+            ProtocolFrame.parse("""{"request_id":"r","content":"current","delta":true}"""),
+            connectionEpoch = 7,
+        ))
+        assertEquals("current", s.requests["r"]!!.text)
+    }
+
+    @Test fun acceptsUnversionedFramesForLegacyTestAndDemoCallers() {
+        var s = reduceProtocolStreams(ProtocolStreamState(), start("r"))
+        s = reduceProtocolStreams(s, frame("""{"request_id":"r","content":"legacy","delta":true}"""))
+        assertEquals("legacy", s.requests["r"]!!.text)
+    }
+
 }
