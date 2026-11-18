@@ -48,16 +48,6 @@ class MainActivity : ComponentActivity() {
 
 private data class ChatMessage(val role: String, val text: String)
 
-private interface ChatTransport {
-    suspend fun send(prompt: String): String
-}
-
-/** Local-only fake. Replace only after the reviewed pairing/transport contract exists. */
-private class DemoTransport : ChatTransport {
-    override suspend fun send(prompt: String): String =
-        "Demo response received. Host connection and real agent execution are not yet enabled."
-}
-
 @Composable
 private fun CompanionChatScreen() {
     val messages = remember {
