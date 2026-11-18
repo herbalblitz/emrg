@@ -12,7 +12,8 @@ internal data class ChatUiState(
     val draft: String = "",
     val isSending: Boolean = false,
     val streamingText: String = "",
-    val toolCalls: List<ToolCallState> = emptyList()
+    val toolCalls: List<ToolCallState> = emptyList(),
+    val activeRequestId: String? = null
 )
 
 internal sealed interface ChatAction {
@@ -20,6 +21,8 @@ internal sealed interface ChatAction {
     data object Submit : ChatAction
     data class ResponseDelta(val text: String) : ChatAction
     data class ToolCallsUpdated(val calls: List<ToolCallState>) : ChatAction
+    data class BindRequest(val requestId: String) : ChatAction
+    data class ProtocolSnapshot(val requestId: String, val request: StreamRequest) : ChatAction
     data class ResponseReceived(val text: String) : ChatAction
     data object RequestFailed : ChatAction
     data object Cancel : ChatAction
@@ -66,7 +69,8 @@ internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransi
                     draft = "",
                     isSending = true,
                     streamingText = "",
-                    toolCalls = emptyList()
+                    toolCalls = emptyList(),
+                    activeRequestId = null
                 ),
                 promptToSend = prompt
             )
@@ -74,6 +78,26 @@ internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransi
         is ChatAction.ToolCallsUpdated ->
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(state.copy(toolCalls = action.calls))
+        is ChatAction.BindRequest ->
+            if (!state.isSending || action.requestId.isBlank()) ChatTransition(state)
+            else ChatTransition(state.copy(activeRequestId = action.requestId))
+        is ChatAction.ProtocolSnapshot -> {
+            if (!state.isSending || state.activeRequestId != action.requestId) ChatTransition(state)
+            else when (action.request.status) {
+                StreamStatus.ACTIVE -> ChatTransition(state.copy(
+                    streamingText = action.request.text,
+                    toolCalls = action.request.toolCalls
+                ))
+                StreamStatus.COMPLETED -> ChatTransition(
+                    state.copy(
+                        messages = state.messages + ChatMessage("EMRG", action.request.text.ifEmpty { state.streamingText }),
+                        isSending = false, streamingText = "", toolCalls = emptyList(), activeRequestId = null
+                    )
+                )
+                StreamStatus.CANCELLED -> reduceChatState(state, ChatAction.Cancel)
+                StreamStatus.FAILED -> reduceChatState(state, ChatAction.RequestFailed)
+            }
+        }
         is ChatAction.ResponseDelta ->
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(state.copy(streamingText = state.streamingText + action.text))
