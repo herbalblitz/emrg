@@ -124,6 +124,10 @@ No automatic replay of chat-send requests on reconnect. A future status/snapshot
 
 `emrg/server/companion_credentials.py` now provides a file-backed registry that issues high-entropy credentials once, stores only salted SHA-256 verifiers, binds each device to workspace/cwd and an explicit scope set, supports rotation/revocation and exposes safe device metadata. It uses atomic replacement and requests POSIX-style file mode `0600`; Windows ACL hardening and integration with pairing approval/authentication are still outstanding. The registry is not currently used by a listener. Tests were added but have not yet been executed in CI.
 
+## Pairing transaction primitive
+
+`emrg/server/companion_pairing.py` implements a thread-safe in-memory transaction: pairing secret is returned only to the trusted local caller, expires after 180 seconds, requires explicit local approval, is redeemed once, allows at most five failed secret attempts, and can be cancelled. Successful redemption issues a workspace/cwd/scope-bound device credential through the registry. The primitive is not yet wired to local UI, TLS listener or live host authentication. Pairing secrets are not persisted. Tests have been added; execution/CI evidence is pending.
+
 ## Implementation gates
 
 1. Threat-model/security review of pairing and host credential store.
