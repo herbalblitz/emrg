@@ -8,13 +8,13 @@ class PairingDescriptorParserTest {
     private val fingerprint = "AA:".repeat(31) + "AA"
 
     @Test fun acceptsValidVersionOneDescriptor() {
-        val json = """{"version":1,"endpoint":"wss://host.example:56031","fingerprint_sha256":"$fingerprint","expires_at":2000}"""
+        val json = """{"version":1,"endpoint":"wss://host.example:56031","fingerprint_sha256":"$fingerprint","expires_at":1100}"""
         val result = PairingDescriptorParser.parse(json, 1000)
         assertTrue(result is PairingDescriptorResult.Valid)
         val descriptor = (result as PairingDescriptorResult.Valid).descriptor
         assertEquals("wss://host.example:56031", descriptor.endpoint)
         assertEquals(fingerprint, descriptor.fingerprintSha256)
-        assertEquals(2000L, descriptor.expiresAtEpochSeconds)
+        assertEquals(1100L, descriptor.expiresAtEpochSeconds)
     }
 
     @Test fun rejectsPlaintextEndpoint() {
@@ -25,7 +25,7 @@ class PairingDescriptorParserTest {
     @Test fun rejectsMissingExpiryAndLongLivedDescriptors() {
         val noExpiry = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint"}"""
         assertEquals("MISSING_EXPIRY", (PairingDescriptorParser.parse(noExpiry, 1000) as PairingDescriptorResult.Invalid).reason)
-        val tooFar = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":2000}"""
+        val tooFar = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1100}"""
         assertEquals("EXPIRY_TOO_FAR", (PairingDescriptorParser.parse(tooFar, 1000) as PairingDescriptorResult.Invalid).reason)
         val fractional = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1001.5}"""
         assertEquals("INVALID_EXPIRY", (PairingDescriptorParser.parse(fractional, 1000) as PairingDescriptorResult.Invalid).reason)
