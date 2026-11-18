@@ -64,3 +64,12 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Host frame schema strictness: duplicate JSON keys, unknown fields and invalid Unicode fail closed; host parser tests added (CI execution pending).
 - [x] Registry same-instance thread serialization for credential issue/revoke/read; concurrent-issuance test added. Cross-process lock and Windows ACL hardening are open.
 - [ ] Host TLS identity generation/persistence and trusted local UI are not yet built; TLS primitives remain transport-free.
+
+## Host TLS identity (implementation status)
+
+- [x] P-256 self-signed certificate generation, exact SAN host binding, SHA-256 fingerprint, bounded validity and certificate-purpose validation.
+- [x] Stable identity persistence; no silent regeneration on missing/corrupt state; explicit reset/rotation.
+- [x] Windows DPAPI-protected private key and POSIX restrictive file modes; atomic writes.
+- [x] TLS context loader, TLS 1.2 minimum, no socket creation; process-local provisioning/context lock.
+- [ ] Python tests/CI, lockfile regeneration and Windows DPAPI/ACL review.
+- [ ] Android trust strategy for self-signed pins, local host UI confirmation, QR generation and live listener integration.
