@@ -7,6 +7,7 @@ the TLS listener after protocol validation. This module is not a network server.
 from __future__ import annotations
 
 import hashlib
+import math
 import hmac
 import secrets
 import threading
@@ -108,7 +109,7 @@ class PairingTransactions:
                 {"pairing_id": key, "workspace_id": item.workspace_id,
                  "cwd": item.cwd, "scopes": sorted(item.scopes),
                  "approved": item.approved,
-                 "expires_in": max(0, int(PAIRING_TTL_SECONDS - (now - item.created_at)))}
+                 "expires_in": max(0, math.ceil(PAIRING_TTL_SECONDS - (now - item.created_at)))}
                 for key, item in self._pending.items()
             ]
 
