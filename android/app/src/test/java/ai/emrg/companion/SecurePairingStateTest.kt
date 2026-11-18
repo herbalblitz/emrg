@@ -19,6 +19,9 @@ class SecurePairingStateTest {
         assertNull(plain.candidateEndpoint)
         assertFalse(isSecurePairingEndpoint("https://host/path"))
         assertFalse(isSecurePairingEndpoint("wss://user:pass@host/path"))
+        assertFalse(isSecurePairingEndpoint("wss://host/path?token=secret"))
+        assertFalse(isSecurePairingEndpoint("wss://host:0/path"))
+        assertFalse(isSecurePairingEndpoint("wss://host:99999/path"))
         assertFalse(isSha256Fingerprint("not-a-fingerprint"))
     }
 
