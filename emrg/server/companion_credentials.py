@@ -28,6 +28,18 @@ def _token_hash(token: str, salt: str) -> str:
     return hashlib.sha256((salt + token).encode("utf-8")).hexdigest()
 
 
+def _bounded_text(value: object, max_bytes: int, error: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise CredentialRegistryError(error)
+    try:
+        size = len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        raise CredentialRegistryError(error) from None
+    if size > max_bytes:
+        raise CredentialRegistryError(error)
+    return value
+
+
 class CredentialRegistry:
     """File-backed device credential verifier with revoke/rotate support."""
 
@@ -65,14 +77,11 @@ class CredentialRegistry:
     def issue(self, *, device_id: str, workspace_id: str, cwd: str,
               scopes: set[str]) -> str:
         """Create/replace a device credential; returns the token exactly once."""
-        if not device_id or len(device_id.encode()) > 128:
-            raise CredentialRegistryError("invalid device")
-        if not workspace_id or len(workspace_id.encode()) > 128:
-            raise CredentialRegistryError("invalid workspace")
-        if not cwd or len(cwd.encode()) > 4096:
-            raise CredentialRegistryError("invalid workspace path")
+        device_id = _bounded_text(device_id, 128, "invalid device")
+        workspace_id = _bounded_text(workspace_id, 128, "invalid workspace")
+        cwd = _bounded_text(cwd, 4096, "invalid workspace path")
         allowed = {"status", "sessions.list", "chat.send"}
-        if not scopes or not scopes <= allowed:
+        if not isinstance(scopes, (set, frozenset)) or not scopes or not scopes <= allowed:
             raise CredentialRegistryError("invalid scopes")
         token = secrets.token_urlsafe(TOKEN_BYTES)
         salt = secrets.token_hex(16)
@@ -88,7 +97,13 @@ class CredentialRegistry:
 
     def verify(self, *, device_id: str, credential: str) -> dict[str, Any] | None:
         """Verify a presented token. Return scope-bound metadata, not verifier data."""
-        if not isinstance(credential, str) or not credential:
+        if not isinstance(device_id, str) or not device_id or len(device_id) > 128:
+            return None
+        if not isinstance(credential, str) or not credential or len(credential) > 512:
+            return None
+        try:
+            _token_hash(credential, "validation-salt")
+        except UnicodeEncodeError:
             return None
         with self._lock:
             record = self._read()["devices"].get(device_id)
