@@ -3,7 +3,7 @@ import pytest
 from emrg.server.companion_protocol import CompanionProtocolError, MAX_FRAME_BYTES, MAX_PROMPT_BYTES, encode_server_frame, validate_client_frame
 
 def _auth(**overrides):
-    frame={"type":"auth","protocol":"1.0","device_id":"device-1","credential":"secret","client_nonce":"nonce"}
+    frame={"type":"auth","protocol":"1.0","device_id":"device-1","credential":"secret","client_nonce":"nonce-value-0001"}
     frame.update(overrides)
     return json.dumps(frame)
 
