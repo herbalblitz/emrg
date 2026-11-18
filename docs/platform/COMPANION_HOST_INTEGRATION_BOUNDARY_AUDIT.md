@@ -44,3 +44,8 @@ No milestone above is complete until tests and CI evidence exist.
 ## H2 policy document
 
 `COMPANION_TLS_HOST_IDENTITY_POLICY.md` now defines the host certificate identity, DER fingerprint format, private-key persistence and access protection, QR out-of-band trust, explicit rotation/recovery, listener enablement gate, shutdown/revocation behavior, and acceptance tests. It is a design gate only; no key generation or listener code was added in this increment.
+
+
+## TLS primitive implementation increment
+
+`emrg/server/companion_tls.py` adds transport-free helpers for SHA-256 fingerprinting over DER bytes, fingerprint normalization/validation, constant-time pin comparison, and a TLS 1.2+ server context that loads a supplied certificate/key pair fail-closed. It does not generate or persist identity material and does not create sockets. Unit coverage is in `tests/test_companion_tls.py`; CI verification is pending.
