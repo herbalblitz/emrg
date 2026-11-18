@@ -208,3 +208,8 @@ These are requirements for a future implementation, not evidence of an existing 
 - No automatic reconnect/replay is implemented. Transport callbacks currently report safe status strings and parsed frames; integration with UI/reconciliation remains pending.
 
 - Chat pairing credentials now require an explicit approved workspace ID and cwd binding. The transport rejects chat tasks whose cwd is not an exact match for the approved cwd; host-side authorization and canonical path enforcement remain mandatory.
+
+
+## Host companion protocol proposal (2026-11-18)
+
+The isolated remote host API, pairing lifecycle, auth frames, capabilities, workspace-scoped session/chat operations, stream events, replay policy and implementation gates are drafted in `HOST_COMPANION_PROTOCOL_V1.md`. This is a design/spec milestone only. No listener, credential verifier, TLS host identity management, pairing approval UI or daemon bridge exists yet. The existing local loopback endpoint remains unchanged and must not be exposed.
