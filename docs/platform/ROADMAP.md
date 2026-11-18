@@ -45,7 +45,8 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [ ] Workspace via scoped storage/capabilities; memory; skills; scheduled tasks; evolution; diagnostics; opt-in notifications.
 
 ### M5 — Windows reliability
-- [ ] Windows tests baseline; packaging/install/update/uninstall.
+- [x] Windows CI job and Inno Setup script compile smoke test baseline inspected.
+- [ ] Clean-machine packaging/install/update/uninstall smoke tests.
 - [ ] Lifecycle/restart/reconnect, PATH/shell integration.
 - [ ] Sandbox/security regression and clean-machine smoke tests.
 - [ ] CI artifacts/checksums.
@@ -67,7 +68,8 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [x] Integrate offline session manager into Compose UI; session controls are disabled during a request to prevent cross-session response writes.
 - [x] Validate offline session UI build/lint/tests; no daemon synchronization until protocol and pairing are validated.
 - [ ] Add wrapper and confirm CI result.
-- [ ] Inspect Windows packaging/test evidence for concrete defects.
+- [x] Inspect Windows packaging and test workflow baseline; documented in `WINDOWS_PACKAGING_AUDIT.md`.
+- [ ] Run clean Windows install/upgrade/reconnect/uninstall smoke and investigate gaps.
 
 Execution branch: `feat/android-windows-platform-audit`; do not work on `master`.
 CI first attempt (commit `34e23d1`) failed at Kotlin compile because Java compile target defaulted to 1.8 while Kotlin targeted 17. Fixed by setting both Java compatibility and Kotlin JVM target to 17 in `android/app/build.gradle.kts` (commit `9d74a53`); later CI runs for the fix and mock-chat UI both completed successfully.
