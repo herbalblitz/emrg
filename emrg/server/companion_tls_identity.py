@@ -15,6 +15,7 @@ import re
 import ssl
 import tempfile
 import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,6 +31,54 @@ KEY_FILENAME = "companion-host-key.pem"
 DPAPI_KEY_FILENAME = "companion-host-key.dpapi"
 IDENTITY_VALIDITY_DAYS = 365
 _IDENTITY_LOCK = threading.RLock()
+
+
+@contextmanager
+def _identity_file_lock(directory: Path):
+    """Cross-process exclusive lock for identity provisioning and TLS context loads."""
+    directory = Path(directory)
+    if directory.is_symlink():
+        raise CompanionTlsError("TLS identity directory must not be a symlink")
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if os.name == "posix":
+        os.chmod(directory, 0o700)
+    lock_path = directory / ".companion-identity.lock"
+    if lock_path.is_symlink():
+        raise CompanionTlsError("TLS identity lock must not be a symlink")
+    try:
+        stream = lock_path.open("a+b")
+        if os.name == "posix":
+            os.chmod(lock_path, 0o600)
+        if os.name == "nt":
+            import msvcrt
+            stream.seek(0, os.SEEK_END)
+            if stream.tell() == 0:
+                stream.write(b"0")
+                stream.flush()
+            stream.seek(0)
+            msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+    except Exception:
+        try:
+            stream.close()
+        except Exception:
+            pass
+        raise CompanionTlsError("TLS identity lock unavailable") from None
+    try:
+        yield
+    finally:
+        try:
+            if os.name == "nt":
+                import msvcrt
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+        finally:
+            stream.close()
 
 
 @dataclass(frozen=True)
@@ -248,7 +297,7 @@ def _load_and_validate(directory: Path, hosts: tuple[str, ...]) -> HostTlsIdenti
 def provision_host_identity(directory: Path, hosts: list[str] | tuple[str, ...], *,
                            reset: bool = False) -> HostTlsIdentity:
     """Thread-serialize identity provisioning; cross-process locking is not provided."""
-    with _IDENTITY_LOCK:
+    with _IDENTITY_LOCK, _identity_file_lock(Path(directory)):
         return _provision_host_identity(directory, hosts, reset=reset)
 
 
@@ -286,7 +335,7 @@ def _provision_host_identity(directory: Path, hosts: list[str] | tuple[str, ...]
 
 def create_identity_server_context(directory: Path) -> ssl.SSLContext:
     """Thread-serialize context loading against provisioning; never opens a socket."""
-    with _IDENTITY_LOCK:
+    with _IDENTITY_LOCK, _identity_file_lock(Path(directory)):
         return _create_identity_server_context(directory)
 
 
