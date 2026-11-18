@@ -16,6 +16,7 @@ internal data class ToolCallState(
     val arguments: String? = null,
     val result: String? = null,
     val failed: Boolean = false,
+    val completed: Boolean = false,
 )
 
 internal enum class StreamStatus { ACTIVE, COMPLETED, CANCELLED, FAILED }
@@ -73,6 +74,7 @@ internal fun reduceProtocolStreams(
                         it[index] = it[index].copy(
                             result = frame.content,
                             failed = frame.error != null && frame.error != "false",
+                            completed = true,
                         )
                     })
                 }
