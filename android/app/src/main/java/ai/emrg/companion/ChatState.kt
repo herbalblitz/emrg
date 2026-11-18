@@ -35,17 +35,19 @@ internal fun saveChatUiState(state: ChatUiState): Map<String, Any> = mapOf(
     "draft" to state.draft
 )
 
+internal fun restoreChatUiStateFromSnapshot(saved: Map<String, Any?>): ChatUiState {
+    val rawMessages = saved["messages"] as? List<*>
+    val messages = rawMessages.orEmpty().chunked(2).mapNotNull { pair ->
+        val role = pair.getOrNull(0) as? String
+        val text = pair.getOrNull(1) as? String
+        if (role != null && text != null) ChatMessage(role, text) else null
+    }
+    return restoreChatUiState(messages, saved["draft"] as? String ?: "")
+}
+
 internal val ChatUiStateSaver = mapSaver(
     save = { state -> saveChatUiState(state) },
-    restore = { saved ->
-        val rawMessages = saved["messages"] as? List<*>
-        val messages = rawMessages.orEmpty().chunked(2).mapNotNull { pair ->
-            val role = pair.getOrNull(0) as? String
-            val text = pair.getOrNull(1) as? String
-            if (role != null && text != null) ChatMessage(role, text) else null
-        }
-        restoreChatUiState(messages, saved["draft"] as? String ?: "")
-    }
+    restore = { saved -> restoreChatUiStateFromSnapshot(saved) }
 )
 
 internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransition =
