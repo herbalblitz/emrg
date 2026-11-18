@@ -22,7 +22,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,20 +45,31 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class ChatMessage(val role: String, val text: String)
-
 @Composable
 private fun CompanionChatScreen() {
-    val messages = remember {
-        mutableStateListOf(
-            ChatMessage("EMRG", "Welcome. This is the Android UI preview using a local mock transport.")
-        )
-    }
+    var chatState by remember { mutableStateOf(ChatUiState()) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val transport = remember { DemoTransport() }
-    var draft by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
+
+    fun dispatch(action: ChatAction) {
+        val transition = reduceChatState(chatState, action)
+        chatState = transition.state
+        transition.promptToSend?.let { prompt ->
+            scope.launch {
+                try {
+                    val response = sendSafely(transport, prompt)
+                    chatState = reduceChatState(chatState, ChatAction.ResponseReceived(response)).state
+                } catch (_: Exception) {
+                    chatState = reduceChatState(chatState, ChatAction.RequestFailed).state
+                } finally {
+                    if (chatState.messages.isNotEmpty()) {
+                        listState.animateScrollToItem(chatState.messages.lastIndex)
+                    }
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -92,7 +102,7 @@ private fun CompanionChatScreen() {
             state = listState,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(messages) { message ->
+            items(chatState.messages) { message ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -112,33 +122,17 @@ private fun CompanionChatScreen() {
 
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = draft,
-                onValueChange = { draft = it },
+                value = chatState.draft,
+                onValueChange = { dispatch(ChatAction.DraftChanged(it)) },
                 modifier = Modifier.weight(1f),
                 label = { Text("Message EMRG") },
-                enabled = !busy,
+                enabled = !chatState.isSending,
                 maxLines = 4
             )
             Button(
-                enabled = draft.isNotBlank() && !busy,
-                onClick = {
-                    val prompt = draft.trim()
-                    draft = ""
-                    messages.add(ChatMessage("You", prompt))
-                    busy = true
-                    scope.launch {
-                        try {
-                            val response = sendSafely(transport, prompt)
-                            messages.add(ChatMessage("EMRG", response))
-                        } finally {
-                            busy = false
-                            if (messages.isNotEmpty()) {
-                                listState.animateScrollToItem(messages.lastIndex)
-                            }
-                        }
-                    }
-                }
-            ) { Text(if (busy) "…" else "Send") }
+                enabled = chatState.draft.isNotBlank() && !chatState.isSending,
+                onClick = { dispatch(ChatAction.Submit) }
+            ) { Text(if (chatState.isSending) "…" else "Send") }
         }
     }
 }
