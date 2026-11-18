@@ -42,6 +42,7 @@ internal fun SecurePairingPanel() {
                 "Camera QR scanning is available. Live daemon transport is not yet implemented.",
                 style = MaterialTheme.typography.bodySmall
             )
+            Button(onClick = { scannerVisible = true }) { Text("Scan QR with camera") }
             OutlinedTextField(
                 value = qrPayload,
                 onValueChange = { qrPayload = it },
@@ -124,5 +125,11 @@ internal fun SecurePairingPanel() {
                 }) { Text("Reset") }
             }
         }
+    }
+    if (scannerVisible) {
+        CameraQrScannerDialog(
+            onQrDetected = { value -> qrPayload = value; scannerVisible = false },
+            onDismiss = { scannerVisible = false }
+        )
     }
 }
