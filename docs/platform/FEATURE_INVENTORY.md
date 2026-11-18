@@ -86,7 +86,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Android per-connection exact leaf SHA-256 pin trust manager supports pinned self-signed host certificates; validity dates are enforced during TLS handshake and default hostname verification remains active.
 - [x] Host fingerprint string is colon-delimited uppercase bytes for Android QR/parser compatibility.
 - [x] Host auth nonce is minimum 16 bytes and consumed once per device with bounded 10-minute process-local replay cache; capacity exhaustion fails closed.
-- [ ] Android trust tests/build CI final confirmation; host listener and UI integration are still not wired.
+- [ ] Android trust tests/build CI final confirmation; host UI and Android live integration are still not wired.
 
 ## Host QR descriptor generation
 
@@ -100,5 +100,6 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 
 - [x] Host Companion defaults disabled; explicit enable gate protects pairing and auth entry points, and disable invalidates outstanding pairing transactions.
 - [x] Listener configuration validation rejects hostname/DNS inputs, wildcard binds, multicast/reserved addresses, privileged/out-of-range ports, and unbounded resource/timeout settings.
-- [x] Dedicated opt-in WSS listener now binds only after explicit host enable; TLS context is loaded before bind, frames/connections/timeouts are bounded, auth is required as first frame, and shutdown stops accepting. Status-only transport response implemented; chat/session dispatch, active connection force-close on disable, local UI and Android live integration remain open.
-- [ ] CI verification and review of listener lifecycle/error behavior.
+- [x] Dedicated opt-in WSS listener binds only after explicit host enable; TLS context loads before bind, frame/connection/timeouts bounded, authentication required as first frame, and stop closes clients.
+- [x] Host-service disable lifecycle observer promptly closes active WSS clients; transport integration tests cover auth + scoped status and disable closure.
+- [ ] Chat/session dispatch into daemon runtime, UI pairing/QR, Android live transport and full end-to-end remain open.
