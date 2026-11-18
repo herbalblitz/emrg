@@ -9,9 +9,10 @@ class SecurePairingCoordinatorTest {
     private class FakeCredentialStore : CredentialStore {
         val values = mutableMapOf<String, String>()
         val deleted = mutableListOf<String>()
+        var failDelete = false
         override fun put(alias: String, credential: String) { values[alias] = credential }
         override fun get(alias: String): String? = values[alias]
-        override fun delete(alias: String) { values.remove(alias); deleted += alias }
+        override fun delete(alias: String) { if (failDelete) throw IllegalStateException(); values.remove(alias); deleted += alias }
     }
 
     private val fingerprint = (1..32).joinToString(":") { "%02X".format(it) }
@@ -72,4 +73,23 @@ class SecurePairingCoordinatorTest {
         assertTrue(store.values.isEmpty())
         assertEquals(listOf("device-01"), store.deleted)
     }
+    @Test
+    fun failedRevocationKeepsAliasSoUserCanRetryAndDoesNotClaimRevoked() {
+        val store = FakeCredentialStore()
+        val coordinator = approved(store)
+        coordinator.dispatch(PairingAction.CredentialIssued(host), "credential")
+        store.failDelete = true
+        val failed = coordinator.dispatch(PairingAction.Revoked)
+        assertEquals(PairingPhase.FAILED, failed.phase)
+        assertEquals("CREDENTIAL_REVOCATION_FAILED", failed.errorCode)
+        assertEquals(host, failed.pairedHost)
+        assertEquals("credential", store.values["device-01"])
+
+        store.failDelete = false
+        val retried = coordinator.dispatch(PairingAction.Revoked)
+        assertEquals(PairingPhase.REVOKED, retried.phase)
+        assertNull(retried.pairedHost)
+        assertTrue(store.values.isEmpty())
+    }
+
 }
