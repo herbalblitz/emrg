@@ -7,7 +7,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] Daemon WebSocket transport/local auth inspected
 - [ ] Lifecycle/reconnect end-to-end tests
 - [x] Protocol dataclasses and GUI response-type map partially reviewed
-- [x] Android protocol fixtures and frame parser added; request-stream reducer implemented (latest CI validation pending). Session command schemas documented; Android transport not connected.
+- [x] Android protocol fixtures, frame parser, request-stream reducer, validated task/session command builders added (CI validation pending). Session schemas documented; Android transport not connected.
 - [ ] Sessions, tools, approvals, workspace, sandbox
 - [ ] Memory, skills, subagents, scheduler, evolution
 - [ ] Logs/diagnostics, CLI/TUI
