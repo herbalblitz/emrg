@@ -17,7 +17,7 @@ class SecurePairingCoordinatorTest {
 
     private val fingerprint = (1..32).joinToString(":") { "%02X".format(it) }
     private val endpoint = "wss://host.example/companion"
-    private val host = PairedHost(endpoint, fingerprint, "device", "device-01", setOf(PairingScope.SEND_CHAT))
+    private val host = PairedHost(endpoint, fingerprint, "device", "device-01", setOf(PairingScope.SEND_CHAT), "workspace-1", "/workspace/approved")
 
     private fun approved(store: FakeCredentialStore): SecurePairingCoordinator {
         val coordinator = SecurePairingCoordinator(store)
