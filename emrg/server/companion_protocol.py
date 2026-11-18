@@ -17,6 +17,20 @@ class CompanionProtocolError(ValueError):
     """Safe, non-sensitive protocol rejection."""
 
 
+def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise CompanionProtocolError("duplicate frame field")
+        result[key] = value
+    return result
+
+
+def _require_fields(frame: dict[str, Any], allowed: set[str]) -> None:
+    if not set(frame) <= allowed:
+        raise CompanionProtocolError("unsupported frame field")
+
+
 def _object(payload: str | bytes) -> dict[str, Any]:
     if isinstance(payload, bytes):
         raw = payload
@@ -27,8 +41,8 @@ def _object(payload: str | bytes) -> dict[str, Any]:
     if len(raw) > MAX_FRAME_BYTES:
         raise CompanionProtocolError("frame too large")
     try:
-        value = json.loads(raw)
-    except (UnicodeDecodeError, json.JSONDecodeError):
+        value = json.loads(raw, object_pairs_hook=_reject_duplicate_keys)
+    except (UnicodeDecodeError, json.JSONDecodeError, CompanionProtocolError):
         raise CompanionProtocolError("invalid frame") from None
     if not isinstance(value, dict):
         raise CompanionProtocolError("invalid frame")
@@ -63,6 +77,7 @@ def validate_client_frame(
         raise CompanionProtocolError("invalid frame")
 
     if not authenticated:
+        _require_fields(frame, {"type", "protocol", "device_id", "credential", "client_nonce"})
         if kind != "auth":
             raise CompanionProtocolError("authentication required")
         if frame.get("protocol") != PROTOCOL_VERSION:
@@ -73,12 +88,14 @@ def validate_client_frame(
         return frame
 
     if kind == "status":
+        _require_fields(frame, {"type", "request_id"})
         if "status" not in scopes:
             raise CompanionProtocolError("permission denied")
         _required_string(frame, "request_id", max_bytes=128)
         return frame
 
     if kind == "sessions.list":
+        _require_fields(frame, {"type", "request_id", "workspace_id"})
         if "sessions.list" not in scopes:
             raise CompanionProtocolError("permission denied")
         _required_string(frame, "request_id", max_bytes=128)
@@ -88,6 +105,7 @@ def validate_client_frame(
         return frame
 
     if kind == "chat.send":
+        _require_fields(frame, {"type", "request_id", "workspace_id", "prompt", "session_id"})
         if "chat.send" not in scopes:
             raise CompanionProtocolError("permission denied")
         _required_string(frame, "request_id", max_bytes=128)
