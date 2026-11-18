@@ -66,4 +66,15 @@ class SecurePairingStateTest {
         assertNull(revoked.candidateEndpoint)
         assertNull(revoked.candidateFingerprint)
     }
+    @Test
+    fun chatCredentialRequiresApprovedWorkspaceBinding() {
+        val candidate = reducePairingState(PairingState(), PairingAction.PairingQrReceived(endpoint, fingerprint))
+        val verified = reducePairingState(candidate, PairingAction.HostIdentityConfirmed(fingerprint))
+        val approved = reducePairingState(verified, PairingAction.HostApproved)
+        val unbound = PairedHost(endpoint, fingerprint, "device-1", "alias", setOf(PairingScope.SEND_CHAT))
+        val rejected = reducePairingState(approved, PairingAction.CredentialIssued(unbound))
+        assertEquals(PairingPhase.FAILED, rejected.phase)
+        assertNull(rejected.pairedHost)
+    }
+
 }
