@@ -27,17 +27,17 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 
 ## Android
 - [x] Native Kotlin/Compose scaffold with interactive mock chat, send/receive and demo/offline state (no real host connection).
-- [x] Transport interface includes stream callback; current mock sends a single delta; Compose renders interim text and Stop cancels request coroutine (CI pending). 
+- [x] Transport interface includes stream callback; demo mock emits cancellable chunks; Compose renders interim text and Stop cancels request coroutine (CI passed in run `44239121243`). 
 - [x] Mock transport extracted with tests for demo response and transport failure fallback (CI passed)
-- [x] Chat state reducer tests include partial deltas, completion, cancellation preserving partial text and stale-response guards (CI pending).
+- [x] Chat state reducer tests include partial deltas, completion, cancellation preserving partial text and stale-response guards (CI passed in run `44239121243`).
 - [x] Activity saved-state snapshot restores chat messages/draft, caps saved history to 60, clears transient sending state.
 - [x] Device-local private SharedPreferences snapshot persists chat history/draft across app restarts; malformed snapshot falls back to fresh preview state (CI passed).
 - [x] Safe chat error fallback preserves coroutine cancellation (tests added; CI passed)
-- [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for the latest verified run (session UI commit `1132f69` / run `44232157705`)
+- [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for streaming integration run `44239121243` (`bc1d3bf2`); markdown renderer CI pending
 - [ ] Pair/revoke; secure transport; diagnostics/reconnect (proposal only documented)
 - [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
-- [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI pending); no real daemon transport yet.
-- [x] Offline UI integration for response streaming, partial text display and Stop/cancel action (no live transport; CI pending).
+- [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI passed in run `44239121243`); no real daemon transport yet.
+- [x] Offline UI integration for response streaming, partial text display and Stop/cancel action (no live transport; CI passed in run `44239121243`).
 - [ ] Daemon session synchronization; tool approval UI
 - [ ] SAF workspace; memory; skills; tasks; evolution
 - [ ] Opt-in notifications; settings/export; accessibility/offline states
