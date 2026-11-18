@@ -6,7 +6,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ChatStateReducerTest {\n    private val saverScope = androidx.compose.runtime.saveable.SaverScope { true }\n
+class ChatStateReducerTest {
+    private val saverScope = androidx.compose.runtime.saveable.SaverScope { true }
+
     @Test
     fun submitTrimsPromptAndClearsDraft() {
         val transition = reduceChatState(ChatUiState(draft = "  hello  "), ChatAction.Submit)
