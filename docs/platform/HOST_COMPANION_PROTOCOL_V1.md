@@ -120,6 +120,10 @@ No automatic replay of chat-send requests on reconnect. A future status/snapshot
 - No payload logging. Diagnostics may record event type, result, device ID and timing only; redact endpoint, cwd, prompt, credential and tool arguments.
 - Listener shutdown drains or terminates connections according to host policy and removes all pending pairing state.
 
+## Host credential-store primitive
+
+`emrg/server/companion_credentials.py` now provides a file-backed registry that issues high-entropy credentials once, stores only salted SHA-256 verifiers, binds each device to workspace/cwd and an explicit scope set, supports rotation/revocation and exposes safe device metadata. It uses atomic replacement and requests POSIX-style file mode `0600`; Windows ACL hardening and integration with pairing approval/authentication are still outstanding. The registry is not currently used by a listener. Tests were added but have not yet been executed in CI.
+
 ## Implementation gates
 
 1. Threat-model/security review of pairing and host credential store.
