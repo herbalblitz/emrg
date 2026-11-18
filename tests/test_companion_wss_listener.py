@@ -69,22 +69,26 @@ def test_disabling_host_closes_registered_connections(tmp_path):
         class Client:
             def __init__(self):
                 self.closed = []
+            self.close_event = asyncio.Event()
             async def close(self, *, code, reason):
                 self.closed.append((code, reason))
+                self.close_event.set()
 
         client = Client()
         listener._clients.add(client)
         events = []
+        server_closed = asyncio.Event()
         class Server:
             def close(self):
                 events.append("close")
             async def wait_closed(self):
                 events.append("wait_closed")
+                server_closed.set()
         listener._server = Server()
         host.enable()
         host.disable()
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
+        await asyncio.wait_for(client.close_event.wait(), timeout=1)
+        await asyncio.wait_for(server_closed.wait(), timeout=1)
         assert client.closed == [(1008, "Companion disabled")]
         assert events == ["close", "wait_closed"]
         assert listener.running is False
