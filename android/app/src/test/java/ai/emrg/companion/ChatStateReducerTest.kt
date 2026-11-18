@@ -66,7 +66,7 @@ class ChatStateReducerTest {
             draft = "unfinished",
             isSending = true
         )
-        val restored = ChatUiStateSaver.restore(ChatUiStateSaver.save(state)!!)
+        val restored = ChatUiStateSaver.restore(ChatUiStateSaver.save(state)!!) ?: error("Saved state could not be restored")
 
         assertEquals(state.messages, restored.messages)
         assertEquals(state.draft, restored.draft)
@@ -76,7 +76,7 @@ class ChatStateReducerTest {
     @Test
     fun savedStateLimitsHistoryAndRestoresLatestMessages() {
         val history = (0..MAX_SAVED_MESSAGES).map { ChatMessage("You", "message-$it") }
-        val restored = ChatUiStateSaver.restore(ChatUiStateSaver.save(ChatUiState(messages = history))!!)
+        val restored = ChatUiStateSaver.restore(ChatUiStateSaver.save(ChatUiState(messages = history))!!) ?: error("Saved state could not be restored")
 
         assertEquals(MAX_SAVED_MESSAGES, restored.messages.size)
         assertEquals("message-$MAX_SAVED_MESSAGES", restored.messages.last().text)
