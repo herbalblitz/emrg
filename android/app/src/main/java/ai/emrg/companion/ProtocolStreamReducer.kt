@@ -36,40 +36,57 @@ internal fun reduceProtocolStreams(
     action: ProtocolStreamAction,
 ): ProtocolStreamState {
     return when (action) {
-    is ProtocolStreamAction.Start -> {
-        if (action.requestId.isBlank() || state.requests[action.requestId]?.status == StreamStatus.ACTIVE) state
-        else state.copy(requests = state.requests + (action.requestId to StreamRequest(sessionId = action.sessionId)))
-    }
-    is ProtocolStreamAction.Cancel -> finish(state, action.requestId, StreamStatus.CANCELLED)
-    ProtocolStreamAction.ConnectionLost -> state.copy(requests = state.requests.mapValues { (_, request) ->
-        if (request.status == StreamStatus.ACTIVE) request.copy(status = StreamStatus.FAILED, error = "Connection lost")
-        else request
-    })
-    is ProtocolStreamAction.Receive -> {
-        val frame = action.frame
-        val id = frame.requestId ?: return state
-        val existing = state.requests[id] ?: return state
-        if (existing.status != StreamStatus.ACTIVE) return state
-        val updated = when {
-            frame.type == "tool_start" -> existing.copy(toolCalls = existing.toolCalls + ToolCallState(
-                callId = frame.toolCallId, name = frame.toolName, label = frame.callLabel,
-                arguments = frame.arguments?.toString(),
-            ))
-            frame.type == "tool_end" -> {
-                val index = existing.toolCalls.indexOfLast {
-                    if (frame.toolCallId != null) it.callId == frame.toolCallId
-                    else it.callId == null && it.name == frame.toolName
-                }
-                if (index < 0) existing else existing.copy(toolCalls = existing.toolCalls.toMutableList().also {
-                    it[index] = it[index].copy(result = frame.content, failed = frame.error != null && frame.error != "false")
-                })
-            }
-            frame.isDelta -> existing.copy(text = existing.text + (frame.content ?: ""))
-            frame.type == "error" || frame.error != null -> existing.copy(status = StreamStatus.FAILED, error = frame.error ?: frame.content)
-            frame.done == true -> existing.copy(status = if (frame.cancelled == true) StreamStatus.CANCELLED else StreamStatus.COMPLETED, text = frame.content?.takeIf { it.isNotEmpty() } ?: existing.text)
-            else -> existing
+        is ProtocolStreamAction.Start -> {
+            if (action.requestId.isBlank() || state.requests[action.requestId]?.status == StreamStatus.ACTIVE) state
+            else state.copy(
+                requests = state.requests + (action.requestId to StreamRequest(sessionId = action.sessionId))
+            )
         }
-        state.copy(requests = state.requests + (id to updated))
+        is ProtocolStreamAction.Cancel -> finish(state, action.requestId, StreamStatus.CANCELLED)
+        ProtocolStreamAction.ConnectionLost -> state.copy(requests = state.requests.mapValues { (_, request) ->
+            if (request.status == StreamStatus.ACTIVE) {
+                request.copy(status = StreamStatus.FAILED, error = "Connection lost")
+            } else request
+        })
+        is ProtocolStreamAction.Receive -> {
+            val frame = action.frame
+            val id = frame.requestId ?: return state
+            val existing = state.requests[id] ?: return state
+            if (existing.status != StreamStatus.ACTIVE) return state
+
+            val updated = when {
+                frame.type == "tool_start" -> existing.copy(
+                    toolCalls = existing.toolCalls + ToolCallState(
+                        callId = frame.toolCallId,
+                        name = frame.toolName,
+                        label = frame.callLabel,
+                        arguments = frame.arguments?.toString(),
+                    )
+                )
+                frame.type == "tool_end" -> {
+                    val index = existing.toolCalls.indexOfLast {
+                        if (frame.toolCallId != null) it.callId == frame.toolCallId
+                        else it.callId == null && it.name == frame.toolName
+                    }
+                    if (index < 0) existing
+                    else existing.copy(toolCalls = existing.toolCalls.toMutableList().also {
+                        it[index] = it[index].copy(
+                            result = frame.content,
+                            failed = frame.error != null && frame.error != "false",
+                        )
+                    })
+                }
+                frame.isDelta -> existing.copy(text = existing.text + (frame.content ?: ""))
+                frame.type == "error" || frame.error != null ->
+                    existing.copy(status = StreamStatus.FAILED, error = frame.error ?: frame.content)
+                frame.done == true -> existing.copy(
+                    status = if (frame.cancelled == true) StreamStatus.CANCELLED else StreamStatus.COMPLETED,
+                    text = frame.content?.takeIf { it.isNotEmpty() } ?: existing.text,
+                )
+                else -> existing
+            }
+            state.copy(requests = state.requests + (id to updated))
+        }
     }
 }
 
