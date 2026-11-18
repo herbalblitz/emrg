@@ -113,3 +113,13 @@ All commands below are JSON WebSocket frames sent after authentication. Command 
 - JVM tests reject malformed JSON and non-object roots, and verify nullable/optional values and correlation fields.
 - Android CI now runs `testDebugUnitTest` in addition to assemble/lint.
 - **Not implemented:** WebSocket transport, pairing/authentication flow, secure credentials, protocol negotiation, daemon connection, or remote execution. The frame model alone is not a client.
+
+
+## Android request-stream reducer milestone (2026-11-18)
+
+- Added a pure Kotlin reducer keyed by `request_id`; independent requests can receive interleaved chunks without mixing content.
+- Tracks session correlation, ordered deltas, tool-call start/end, completion, cancellation, error and connection-loss terminal state.
+- Late frames and duplicate terminal events are ignored; connection loss fails only active requests.
+- Unit tests cover concurrent/interleaved IDs, stream ordering, idempotent terminal handling, cancellation/error, connection loss and tool lifecycle.
+- This reducer is state logic only; no WebSocket/daemon transport or live host is connected.
+- CI failure on the previous test-enabled run was traced to existing Compose Saver tests calling `Saver.save` without a `SaverScope`. The test harness is being corrected and revalidated.
