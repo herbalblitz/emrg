@@ -34,7 +34,8 @@ internal sealed interface ProtocolStreamAction {
 internal fun reduceProtocolStreams(
     state: ProtocolStreamState,
     action: ProtocolStreamAction,
-): ProtocolStreamState {\n    return when (action) {
+): ProtocolStreamState {
+    return when (action) {
     is ProtocolStreamAction.Start -> {
         if (action.requestId.isBlank() || state.requests[action.requestId]?.status == StreamStatus.ACTIVE) state
         else state.copy(requests = state.requests + (action.requestId to StreamRequest(sessionId = action.sessionId)))
@@ -55,7 +56,10 @@ internal fun reduceProtocolStreams(
                 arguments = frame.arguments?.toString(),
             ))
             frame.type == "tool_end" -> {
-                val index = existing.toolCalls.indexOfLast {\n                    if (frame.toolCallId != null) it.callId == frame.toolCallId\n                    else it.callId == null && it.name == frame.toolName\n                }
+                val index = existing.toolCalls.indexOfLast {
+                    if (frame.toolCallId != null) it.callId == frame.toolCallId
+                    else it.callId == null && it.name == frame.toolName
+                }
                 if (index < 0) existing else existing.copy(toolCalls = existing.toolCalls.toMutableList().also {
                     it[index] = it[index].copy(result = frame.content, failed = frame.error != null && frame.error != "false")
                 })
