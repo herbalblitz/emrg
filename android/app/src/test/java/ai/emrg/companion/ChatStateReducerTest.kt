@@ -83,6 +83,30 @@ class ChatStateReducerTest {
     }
 
     @Test
+    fun responseDeltasAccumulateAndFinalResponseClearsStreamingState() {
+        val started = reduceChatState(ChatUiState(draft = "hi"), ChatAction.Submit).state
+        val first = reduceChatState(started, ChatAction.ResponseDelta("part ")).state
+        val second = reduceChatState(first, ChatAction.ResponseDelta("two")).state
+        assertEquals("part two", second.streamingText)
+
+        val finished = reduceChatState(second, ChatAction.ResponseReceived("complete")).state
+        assertFalse(finished.isSending)
+        assertEquals(ChatMessage("EMRG", "complete"), finished.messages.last())
+        assertEquals("", finished.streamingText)
+    }
+
+    @Test
+    fun cancelPreservesPartialTextAndStopsSending() {
+        val started = reduceChatState(ChatUiState(draft = "hi"), ChatAction.Submit).state
+        val partial = reduceChatState(started, ChatAction.ResponseDelta("partial output")).state
+        val cancelled = reduceChatState(partial, ChatAction.Cancel).state
+
+        assertFalse(cancelled.isSending)
+        assertEquals(ChatMessage("EMRG", "partial output\\n[Stopped]"), cancelled.messages.last())
+        assertEquals("", cancelled.streamingText)
+    }
+
+    @Test
     fun staleResponseWhenNotSendingIsIgnored() {
         val initial = ChatUiState()
         assertEquals(initial, reduceChatState(initial, ChatAction.ResponseReceived("stale")).state)
