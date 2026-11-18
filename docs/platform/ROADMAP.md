@@ -26,6 +26,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Fix Java/Kotlin JVM target mismatch found by first CI build (Java 8 vs Kotlin 17); follow-up CI build and lint passed.
 - [ ] Gradle wrapper/reproducible build.
 - [x] Initial chat state/UI and mock transport (offline-only; no network).
+- [x] Chat UI resets busy state and displays safe fallback when transport throws.
 - [x] Extract mock transport into a testable source unit and add a deterministic unit test (CI verification pending).
 - [ ] Navigation/state expansion, protocol fixtures.
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke.
