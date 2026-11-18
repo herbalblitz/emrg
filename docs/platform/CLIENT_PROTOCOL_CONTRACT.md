@@ -73,3 +73,30 @@ This table only names response types; command payload schemas, permissions and d
 - [ ] Extract authoritative message schemas and event order from daemon emitters/handlers.
 - [ ] Add fixture tests for auth, optional-field semantics, streaming, tool lifecycle, cancellation, errors and reconnect.
 - [ ] Version/capability negotiation and remote-pairing threat model.
+
+
+## Session command wire schemas (source-verified)
+
+All commands below are JSON WebSocket frames sent after authentication. Command names and response frame names are confirmed in `emrg/server/daemon.py`; required fields and success/error behavior are source-inspected.
+
+| Command frame | Required fields | Response frame | Response fields |
+|---|---|---|---|
+| `list_sessions` | `cwd` | `sessions_list` | `sessions`; error when cwd omitted |
+| `resume_session` | `session_id`, `cwd` | `resume_result` | `session_id`, `meta` on success; `error` otherwise |
+| `rename_session` | `session_id`, `cwd`; `title` optional | `rename_result` | `session_id`, `title`; title may be generated when omitted/empty |
+| `clear_session` | `session_id`, `cwd` | `clear_result` | `session_id`, `ok: true` on success; `error` on invalid request |
+| `delete_session` | `session_id`, `cwd` | `session_deleted` | `session_id`, `ok: true` or `error` |
+| `rewind_session` | `session_id`, `cwd`, `record_index` | `rewind_result` | success: `record_index`, `kept_count`, `removed_count`, `removed[]`; errors include `error` |
+
+### Session safety / client behavior
+
+- `resume_session` validates that the session exists at the supplied cwd and checks session metadata; it does not return transcript records. Desktop reads history from disk. Android must not assume this local-disk behavior is available remotely.
+- `list_sessions` is cwd-scoped. A client must retain the cwd associated with each session and must not silently substitute a different project path.
+- `rename_session` with an empty title invokes host-side title generation; clients should send a non-empty title for deterministic rename.
+- `clear_session` and `delete_session` may cancel queued messages and broadcast `queued_cancelled` to session subscribers.
+- `rewind_session` broadcasts its successful result to subscribers, including descriptors of removed records. Treat the event as a session-wide state update, not just a reply to the caller.
+- These findings are source inspection, not runtime integration tests. Android transport remains unimplemented.
+
+## Transport doc correction
+
+`emrg/protocol.py` contains typed message models and JSON serialization; its module header's length-prefix / Unix socket / Windows pipe description is inconsistent with the current daemon and desktop GUI WebSocket implementation. Do not derive transport or framing from that header. Existing desktop behavior remains loopback WebSocket with token auth.
