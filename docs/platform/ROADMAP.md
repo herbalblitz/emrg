@@ -40,7 +40,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke (security proposal documented; implementation pending).
 
 ### M3 — Core workflows
-- [ ] Chat markdown/code.
+- [x] Chat markdown/code renderer (headings, bold, inline/fenced code and bullets; CI validation pending).
 - [x] Transport stream callback + Compose partial response rendering and Stop/cancel state (mock-only; CI passed).
 - [ ] Session create/list/resume/rename.
 - [ ] Tool events and approval.
