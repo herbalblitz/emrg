@@ -8,7 +8,6 @@ from __future__ import annotations
 import ipaddress
 import json
 import time
-from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 from emrg.server.companion_tls import CompanionTlsError, normalize_fingerprint
