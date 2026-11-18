@@ -98,4 +98,4 @@ def test_registry_rejects_invalid_unicode_and_scope_container(tmp_path: Path):
         registry.issue(device_id="\ud800", workspace_id="ws", cwd="/work", scopes={"status"})
     with pytest.raises(CredentialRegistryError):
         registry.issue(device_id="device", workspace_id="ws", cwd="/work", scopes=["status"])
-    assert registry.verify(device_id="device", credential="\\ud800") is None
+    assert registry.verify(device_id="device", credential="\ud800") is None
