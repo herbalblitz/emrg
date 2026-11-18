@@ -197,3 +197,5 @@ These are requirements for a future implementation, not evidence of an existing 
 - Follow-up: the reconnection reducer now accepts the approved workspace ID and cwd as reconciliation context and validates them before transitioning to `READY`; tests exercise the reducer boundary for both matching and foreign snapshots.
 
 - Request-stream reducer now refuses to reuse a request ID already present in state, including terminal/interrupted requests; retry must use a fresh ID and explicit user intent. This is local reducer protection, not server-side idempotency.
+
+- Credential revocation handling: if encrypted credential deletion fails, pairing enters `FAILED` but retains the credential alias/host reference for retry; it must not falsely report `REVOKED` or discard the cleanup handle. A successful retry clears pairing state.
