@@ -55,7 +55,7 @@ internal fun reduceProtocolStreams(
                 arguments = frame.arguments?.toString(),
             ))
             frame.type == "tool_end" -> {
-                val index = existing.toolCalls.indexOfLast { it.callId == frame.toolCallId || (it.callId == null && it.name == frame.toolName) }
+                val index = existing.toolCalls.indexOfLast {\n                    if (frame.toolCallId != null) it.callId == frame.toolCallId\n                    else it.callId == null && it.name == frame.toolName\n                }
                 if (index < 0) existing else existing.copy(toolCalls = existing.toolCalls.toMutableList().also {
                     it[index] = it[index].copy(result = frame.content, failed = frame.error != null && frame.error != "false")
                 })
