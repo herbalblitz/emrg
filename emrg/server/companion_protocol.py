@@ -35,7 +35,10 @@ def _object(payload: str | bytes) -> dict[str, Any]:
     if isinstance(payload, bytes):
         raw = payload
     elif isinstance(payload, str):
-        raw = payload.encode("utf-8")
+        try:
+            raw = payload.encode("utf-8")
+        except UnicodeEncodeError:
+            raise CompanionProtocolError("invalid frame") from None
     else:
         raise CompanionProtocolError("invalid frame")
     if len(raw) > MAX_FRAME_BYTES:
@@ -53,7 +56,11 @@ def _required_string(frame: dict[str, Any], name: str, *, max_bytes: int = 512) 
     value = frame.get(name)
     if not isinstance(value, str) or not value.strip():
         raise CompanionProtocolError("invalid frame")
-    if len(value.encode("utf-8")) > max_bytes:
+    try:
+        encoded_length = len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        raise CompanionProtocolError("invalid frame") from None
+    if encoded_length > max_bytes:
         raise CompanionProtocolError("invalid frame")
     return value
 
