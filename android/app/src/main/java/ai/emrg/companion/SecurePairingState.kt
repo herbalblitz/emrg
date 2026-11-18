@@ -23,6 +23,7 @@ internal enum class PairingPhase {
     DISCONNECTED,
     AWAITING_HOST_VERIFICATION,
     AWAITING_HOST_APPROVAL,
+    HOST_APPROVED,
     PAIRED,
     REVOKED,
     FAILED,
@@ -77,9 +78,11 @@ internal fun reducePairingState(state: PairingState, action: PairingAction): Pai
             ) state.copy(phase = PairingPhase.FAILED, errorCode = "HOST_IDENTITY_MISMATCH")
             else state.copy(phase = PairingPhase.AWAITING_HOST_APPROVAL)
         PairingAction.HostApproved ->
-            if (state.phase == PairingPhase.AWAITING_HOST_APPROVAL) state else state
+            if (state.phase == PairingPhase.AWAITING_HOST_APPROVAL)
+                state.copy(phase = PairingPhase.HOST_APPROVED)
+            else state
         is PairingAction.CredentialIssued ->
-            if (state.phase != PairingPhase.AWAITING_HOST_APPROVAL ||
+            if (state.phase != PairingPhase.HOST_APPROVED ||
                 action.host.endpoint != state.candidateEndpoint ||
                 !action.host.hostFingerprintSha256.equals(state.candidateFingerprint, ignoreCase = true) ||
                 action.host.deviceId.isBlank() ||
