@@ -167,3 +167,5 @@ Android now creates a per-connection OkHttp client whose trust manager validates
 ## Host QR descriptor generation
 
 A host-side descriptor generator now emits the Android v1 JSON fields only: version, WSS endpoint, SHA-256 fingerprint and expiry. It requires endpoint hostname to be covered by the provisioned certificate SAN, rejects non-WSS/userinfo/query/fragment/path endpoints, formats pins as colon-separated uppercase byte pairs, and limits lifetime to 180 seconds. No credential is present. QR rendering and host UI consent remain future integration tasks.
+
+Pairing descriptor expiry is also capped by the host certificate's actual expiry, and generation rejects an already-expired identity. This prevents a QR descriptor from promising trust longer than its certificate remains valid.
