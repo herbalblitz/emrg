@@ -103,7 +103,7 @@ class PinnedRemoteWebSocketTest {
     @Test fun exactPinTrustManagerRejectsWrongFingerprint() {
         val certificate = testCertificate()
         val wrongPin = "00".repeat(32)
-        val manager = PinnedRemoteWebSocket.ExactPinTrustManager(wrongPin)
+        val manager = ExactPinTrustManager(wrongPin)
         try {
             manager.checkServerTrusted(arrayOf(certificate), "ECDSA")
             fail("pin mismatch must fail TLS trust")
@@ -111,7 +111,7 @@ class PinnedRemoteWebSocketTest {
     }
 
     @Test fun exactPinTrustManagerRejectsMissingCertificate() {
-        val manager = PinnedRemoteWebSocket.ExactPinTrustManager("11".repeat(32))
+        val manager = ExactPinTrustManager("11".repeat(32))
         try {
             manager.checkServerTrusted(emptyArray(), "ECDSA")
             fail("missing cert must fail")
@@ -120,7 +120,7 @@ class PinnedRemoteWebSocketTest {
 
     @Test fun pinManagerRejectsMalformedFingerprint() {
         try {
-            PinnedRemoteWebSocket.ExactPinTrustManager("not-a-pin")
+            ExactPinTrustManager("not-a-pin")
             fail("invalid pin must be rejected")
         } catch (_: IllegalArgumentException) { }
     }
