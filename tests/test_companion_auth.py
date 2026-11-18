@@ -41,3 +41,11 @@ def test_authenticate_rejects_malformed_or_unsupported_envelope(tmp_path):
     for frame in ("[]", '{"type":"status"}', '{"type":"auth","protocol":"2","device_id":"x","credential":"y","client_nonce":"z"}'):
         with pytest.raises(CompanionAuthenticationError):
             auth.authenticate(frame)
+
+
+def test_authenticate_fails_closed_when_registry_unavailable(tmp_path):
+    path = tmp_path / "registry.json"
+    path.write_text("broken", encoding="utf-8")
+    auth = CompanionAuthenticator(CredentialRegistry(path))
+    with pytest.raises(CompanionAuthenticationError):
+        auth.authenticate(_frame("phone", "some-token"))
