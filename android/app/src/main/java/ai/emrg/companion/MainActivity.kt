@@ -146,6 +146,9 @@ private fun CompanionChatScreen() {
             )
         }
 
+
+        SecurePairingPanel()
+
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Sessions", style = MaterialTheme.typography.titleMedium)
             Button(enabled = !chatState.isSending && sessionsState.sessions.size < MAX_LOCAL_SESSIONS, onClick = { createSession() }) {
