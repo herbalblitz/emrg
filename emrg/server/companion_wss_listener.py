@@ -36,6 +36,9 @@ class CompanionWssListener:
         self._semaphore = asyncio.Semaphore(config.max_connections)
         self._active = 0
         self._closing = False
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._clients: set[Any] = set()
+        self._host.add_state_callback(self._on_host_state)
 
     @property
     def running(self) -> bool:
@@ -52,6 +55,7 @@ class CompanionWssListener:
             raise CompanionTlsError("companion disabled")
         tls = create_server_context(self._cert_file, self._key_file)
         self._closing = False
+        self._loop = asyncio.get_running_loop()
         self._server = await serve(
             self._handle,
             self._config.bind_address,
@@ -69,10 +73,27 @@ class CompanionWssListener:
         """Stop accepting, close clients, and wait boundedly for handlers."""
         server, self._server = self._server, None
         self._closing = True
-        if server is None:
+        await self._close_clients(code=1001, reason="Listener stopped")
+        if server is not None:
+            server.close()
+            await server.wait_closed()
+        self._loop = None
+
+    def _on_host_state(self, enabled: bool) -> None:
+        """Schedule connection closure promptly when local policy is disabled."""
+        if enabled or self._loop is None or not self._loop.is_running():
             return
-        server.close()
-        await server.wait_closed()
+        try:
+            self._loop.call_soon_threadsafe(
+                lambda: asyncio.create_task(self._close_clients(code=1008, reason="Companion disabled")))
+        except RuntimeError:
+            pass
+
+    async def _close_clients(self, *, code: int, reason: str) -> None:
+        clients = tuple(self._clients)
+        if clients:
+            await asyncio.gather(*(client.close(code=code, reason=reason) for client in clients),
+                                 return_exceptions=True)
 
     async def _handle(self, websocket) -> None:
         if self._closing or not self._host.enabled:
@@ -85,6 +106,7 @@ class CompanionWssListener:
             return
         await self._semaphore.acquire()
         self._active += 1
+        self._clients.add(websocket)
         try:
             await self._session(websocket)
         except (ConnectionClosed, asyncio.TimeoutError):
@@ -95,6 +117,7 @@ class CompanionWssListener:
             _LOG.warning("companion connection handler failed")
             await websocket.close(code=1011, reason="Internal error")
         finally:
+            self._clients.discard(websocket)
             self._active -= 1
             self._semaphore.release()
 
