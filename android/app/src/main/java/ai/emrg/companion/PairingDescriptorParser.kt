@@ -17,6 +17,7 @@ internal sealed interface PairingDescriptorResult {
 
 internal object PairingDescriptorParser {
     private const val MAX_PAYLOAD_CHARS = 2048
+    private const val MAX_DESCRIPTOR_LIFETIME_SECONDS = 180
     private val allowedFields = setOf("version", "endpoint", "fingerprint_sha256", "expires_at")
     private val forbiddenCredentialFields = setOf("credential", "token", "secret", "password", "private_key", "authorization")
 
@@ -38,13 +39,18 @@ internal object PairingDescriptorParser {
             val fingerprint = json.optString("fingerprint_sha256", "").trim()
             if (!isSecurePairingEndpoint(endpoint)) return PairingDescriptorResult.Invalid("INVALID_ENDPOINT")
             if (!isSha256Fingerprint(fingerprint)) return PairingDescriptorResult.Invalid("INVALID_FINGERPRINT")
-            val expiry = if (json.has("expires_at")) {
-                val value = json.get("expires_at")
-                if (value !is Number) return PairingDescriptorResult.Invalid("INVALID_EXPIRY")
-                val raw = value.toLong()
-                if (raw <= nowEpochSeconds) return PairingDescriptorResult.Invalid("EXPIRED")
-                raw
-            } else null
+            if (!json.has("expires_at")) return PairingDescriptorResult.Invalid("MISSING_EXPIRY")
+            val value = json.get("expires_at")
+            if (value !is Number) return PairingDescriptorResult.Invalid("INVALID_EXPIRY")
+            val numeric = value.toDouble()
+            if (!numeric.isFinite() || numeric != numeric.toLong().toDouble()) {
+                return PairingDescriptorResult.Invalid("INVALID_EXPIRY")
+            }
+            val expiry = numeric.toLong()
+            if (expiry <= nowEpochSeconds) return PairingDescriptorResult.Invalid("EXPIRED")
+            if (expiry - nowEpochSeconds > MAX_DESCRIPTOR_LIFETIME_SECONDS) {
+                return PairingDescriptorResult.Invalid("EXPIRY_TOO_FAR")
+            }
             PairingDescriptorResult.Valid(
                 PairingDescriptor(1, endpoint, fingerprint.uppercase(), expiry)
             )
