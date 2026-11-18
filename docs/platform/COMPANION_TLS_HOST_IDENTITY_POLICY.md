@@ -74,3 +74,7 @@ This document is a security specification, not evidence that these mechanisms ar
 Still not implemented: host UI consent, host identity display/QR generation, Windows ACL verification for directory/temp files, cross-process provisioning lock, rotation UX, or listener integration.
 
 Provisioning and context loading are now serialized with a process-local lock to prevent concurrent threads from generating competing pins. Cross-process locking remains unimplemented.
+
+## CI platform coverage
+
+The Companion security workflow now runs the Python companion suite on both Ubuntu and Windows. Windows execution is intended to exercise DPAPI-backed key protection and identity context loading; results are pending. POSIX file permission assertions run only on POSIX. This still does not establish Windows ACL hardening of the identity directory or temporary decrypted-key file.
