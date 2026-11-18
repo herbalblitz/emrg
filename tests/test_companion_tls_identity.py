@@ -11,7 +11,6 @@ from emrg.server.companion_tls_identity import (
     CERT_FILENAME,
     DPAPI_KEY_FILENAME,
     KEY_FILENAME,
-    IDENTITY_VALIDITY_DAYS,
     create_identity_server_context,
     provision_host_identity,
 )
@@ -31,7 +30,9 @@ def test_provision_identity_and_persist_fingerprint_across_restarts(tmp_path):
     sans = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
     assert sans.get_values_for_type(x509.DNSName) == ["localhost"]
     assert str(sans.get_values_for_type(x509.IPAddress)[0]) == "127.0.0.1"
-    assert identity.expires_at > identity.expires_at.replace(year=identity.expires_at.year - 1)
+    now = datetime.now(timezone.utc)
+    assert identity.expires_at > now
+    assert identity.expires_at <= now + timedelta(days=366)
 
 
 def test_identity_key_and_directory_are_private_on_posix(tmp_path):
