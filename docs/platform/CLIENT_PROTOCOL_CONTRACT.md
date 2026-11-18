@@ -74,7 +74,7 @@ This table only names response types; command payload schemas, permissions and d
 ## Next verification
 - [x] Reconcile protocol.py transport description with daemon's actual WebSocket transport.
 - [x] Extract session command schemas and inspect task/event lifecycle and desktop test coverage.
-- [ ] Create portable protocol fixtures shared with Android tests for authentication, optional fields, streaming, tool lifecycle, cancellation and errors.
+- [x] Add portable JSON fixtures and Android JVM parser tests for authentication/status, optional fields, streaming, tool lifecycle, cancellation, task requests, unknown future frames and malformed JSON. Fixtures live at `android/app/src/test/resources/protocol-fixtures/frames.json` and parser at `android/app/src/main/java/ai/emrg/companion/ProtocolFrame.kt`.
 - [ ] Version/capability negotiation and remote-pairing threat model.
 
 
@@ -103,3 +103,13 @@ All commands below are JSON WebSocket frames sent after authentication. Command 
 ## Transport doc correction
 
 `emrg/protocol.py` contains typed message models and JSON serialization; its module header's length-prefix / Unix socket / Windows pipe description is inconsistent with the current daemon and desktop GUI WebSocket implementation. Do not derive transport or framing from that header. Existing desktop behavior remains loopback WebSocket with token auth.
+
+
+## Android protocol parsing milestone (2026-11-18)
+
+- Added a transport-neutral Kotlin `ProtocolFrame` model that preserves the raw JSON frame and tolerates unknown event types and optional fields.
+- The parser explicitly exposes task correlation/session IDs, streaming and terminal flags, cancellation/error state, and tool lifecycle metadata.
+- Shared test fixtures cover auth/status, delta, tool start/end (including older frames without `call_label`), done/cancelled, error, empty tool allowlist and unknown future event.
+- JVM tests reject malformed JSON and non-object roots, and verify nullable/optional values and correlation fields.
+- Android CI now runs `testDebugUnitTest` in addition to assemble/lint.
+- **Not implemented:** WebSocket transport, pairing/authentication flow, secure credentials, protocol negotiation, daemon connection, or remote execution. The frame model alone is not a client.
