@@ -108,5 +108,6 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Android WSS transport primitive with system TLS + pinned leaf-certificate fingerprint check, device-scoped credential lookup, auth gate, chat-only send surface, stale-callback generation guard and certificate fingerprint test. **Client primitive only; daemon remote companion authentication/listener is not implemented.**
 - [x] Bind SEND_CHAT pairing credentials to explicit approved workspace ID/cwd; reject chat sends outside the exact approved cwd.
 - [x] Draft host companion v1 wire contract and security gates in `HOST_COMPANION_PROTOCOL_V1.md` (specification only; no listener implementation).
+- [x] Add strict companion-frame parser/validator (pre-auth gate, message allowlist, scope/workspace checks, size limits, strips client cwd/tools/sandbox fields); unit tests added. This is a validation module only.
 - [ ] Implement host-side remote companion listener, device credential issuance/verification, revocation and approved-workspace enforcement; must not widen existing loopback daemon listener.
 - [ ] Integrate secure transport with Android connection/reconciliation UI and test against a real host implementation.
