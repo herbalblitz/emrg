@@ -204,6 +204,16 @@ private fun CompanionChatScreen() {
             }
         }
 
+        if (chatState.streamingText.isNotEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("EMRG · streaming", style = MaterialTheme.typography.labelMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text(chatState.streamingText, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = chatState.draft,
@@ -214,9 +224,15 @@ private fun CompanionChatScreen() {
                 maxLines = 4
             )
             Button(
-                enabled = chatState.draft.isNotBlank() && !chatState.isSending,
-                onClick = { dispatch(ChatAction.Submit) }
-            ) { Text(if (chatState.isSending) "…" else "Send") }
+                enabled = if (chatState.isSending) true else chatState.draft.isNotBlank(),
+                onClick = {
+                    if (chatState.isSending) {
+                        dispatch(ChatAction.Cancel)
+                        activeRequestJob?.cancel()
+                        activeRequestJob = null
+                    } else dispatch(ChatAction.Submit)
+                }
+            ) { Text(if (chatState.isSending) "Stop" else "Send") }
         }
     }
 }
