@@ -1,6 +1,8 @@
 import os
 import stat
 import ssl
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -132,3 +134,18 @@ def test_symlink_identity_lock_rejected(tmp_path):
     (directory / ".companion-identity.lock").symlink_to(target)
     with pytest.raises(CompanionTlsError, match="lock must not be a symlink"):
         provision_host_identity(directory, ["localhost"])
+
+def test_multiprocess_identity_provisioning_uses_one_persistent_pin(tmp_path):
+    directory = tmp_path / "identity"
+    script = (
+        "from pathlib import Path; "
+        "from emrg.server.companion_tls_identity import provision_host_identity; "
+        "print(provision_host_identity(Path(__import__('sys').argv[1]), "
+        "['localhost']).fingerprint_sha256)"
+    )
+    def run_once():
+        return subprocess.run([sys.executable, "-c", script, str(directory)],
+                             check=True, capture_output=True, text=True, timeout=30).stdout.strip()
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        pins = list(pool.map(lambda _: run_once(), range(2)))
+    assert pins[0] == pins[1]
