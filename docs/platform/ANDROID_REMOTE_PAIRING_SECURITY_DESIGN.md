@@ -82,3 +82,7 @@ Before implementation:
 - Pairing by static PIN, unlimited QR, or reusable QR secret.
 - Granting shell/tool access solely because a device is paired.
 - Custom crypto or bypassing host sandbox/approval controls.
+
+## QR descriptor parser implementation note
+
+The Android parser accepts only the versioned credential-free descriptor allowlist, requires an expiry timestamp, rejects expired descriptors, rejects non-integral/non-finite timestamps, and caps the descriptor lifetime at 180 seconds. This is parser/UI groundwork only; it does not prove host identity or pair a device until the real TLS host and approval flow exist.
