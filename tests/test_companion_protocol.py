@@ -68,3 +68,7 @@ def test_prompt_and_frame_size_limits():
 def test_server_encoder_limits_and_requires_object():
     assert json.loads(encode_server_frame({"type":"ok"}))=={"type":"ok"}
     with pytest.raises(CompanionProtocolError): encode_server_frame([])
+
+def test_pre_auth_rejects_short_client_nonce():
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame(_auth(client_nonce="too-short"))
