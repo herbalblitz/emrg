@@ -34,6 +34,17 @@ class PinnedRemoteWebSocketTest {
         } catch (_: IllegalArgumentException) { }
     }
 
+    @Test fun chatFrameRejectsOversizedOrBlankIdentifiers() {
+        val badId = TaskCommand("r".repeat(129), "/w", "prompt")
+        val badSession = TaskCommand("r", "/w", "prompt", " ")
+        for (command in listOf(badId, badSession)) {
+            try {
+                PinnedRemoteWebSocket.companionChatFrame(command, "workspace")
+                throw AssertionError("invalid frame should be rejected")
+            } catch (_: IllegalArgumentException) { }
+        }
+    }
+
     @Test fun authFrameIncludesRequiredProtocolAndFreshNonce() {
         val first = PinnedRemoteWebSocket.createAuthFrame("device-7", "credential-test")
         val second = PinnedRemoteWebSocket.createAuthFrame("device-7", "credential-test")
