@@ -148,7 +148,9 @@ private fun CompanionChatScreen() {
         }
 
 
-        ConnectionStatusPanel(connectionState)\n\n        SecurePairingPanel()
+        ConnectionStatusPanel(connectionState)
+
+        SecurePairingPanel()
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Sessions", style = MaterialTheme.typography.titleMedium)
