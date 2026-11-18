@@ -130,13 +130,20 @@ internal fun reduceReconnection(
         phase = ConnectionPhase.STATE_UNKNOWN,
         snapshot = null,
         lastError = "Unsupported host protocol version: ${action.snapshot.protocolVersion}",
-    ) else state.copy(
-        phase = ConnectionPhase.READY,
-        snapshot = action.snapshot,
-        retryAttempt = 0,
-        retryDelayMillis = null,
-        lastError = null,
-    )
+    ) else {
+        val validation = validateHostSnapshot(action.snapshot)
+        if (!validation.valid) state.copy(
+            phase = ConnectionPhase.STATE_UNKNOWN,
+            snapshot = null,
+            lastError = validation.reason ?: "Host snapshot validation failed",
+        ) else state.copy(
+            phase = ConnectionPhase.READY,
+            snapshot = action.snapshot,
+            retryAttempt = 0,
+            retryDelayMillis = null,
+            lastError = null,
+        )
+    }
     is ReconnectionAction.SnapshotUnavailable -> if (action.epoch != state.connectionEpoch ||
         state.phase != ConnectionPhase.RECONCILING
     ) state else state.copy(
