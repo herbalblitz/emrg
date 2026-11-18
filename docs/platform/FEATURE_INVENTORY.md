@@ -21,6 +21,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 ## Windows
 - [x] Platform-specific shell/daemon branches located in repository
 - [ ] Startup/wrappers/process shutdown/restart verified
+- [x] Release packaging source and Windows Inno Setup compile smoke test baseline inspected (not clean-install proof)
 - [ ] Runtime packaging, installer/PATH/shortcuts/uninstall
 - [ ] Sandbox, upgrades/rollback, clean-machine smoke, CI artifact/checksum
 
@@ -45,6 +46,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - `DAEMON_PROTOCOL_AND_ANDROID_SECURITY.md`
 - `NEXT_GENERATION_REBUILD_POLICY.md`
 - `CLIENT_PROTOCOL_CONTRACT.md`
+- `WINDOWS_PACKAGING_AUDIT.md`
 
 - [x] Source-verified session command/reply schemas documented; protocol transport mismatch corrected in module header.
 
