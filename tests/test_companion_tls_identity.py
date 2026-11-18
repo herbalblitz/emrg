@@ -51,7 +51,7 @@ def test_identity_key_and_directory_are_private_on_posix(tmp_path):
 def test_existing_identity_rejects_host_change_without_explicit_reset(tmp_path):
     directory = tmp_path / "identity"
     provision_host_identity(directory, ["localhost"])
-    with pytest.raises(CompanionTlsError, match="does not cover"):
+    with pytest.raises(CompanionTlsError, match="SAN does not match"):
         provision_host_identity(directory, ["other.example"])
 
 
