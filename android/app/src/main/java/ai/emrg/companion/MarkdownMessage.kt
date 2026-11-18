@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun MarkdownMessage(text: String, modifier: Modifier = Modifier) {
-    val lines = text.split("\\n")
+    val lines = text.split("\n")
     var inCode = false
     val codeLines = mutableListOf<String>()
     val proseLines = mutableListOf<String>()
@@ -34,7 +34,7 @@ fun MarkdownMessage(text: String, modifier: Modifier = Modifier) {
         lines.forEach { line ->
             if (line.trimStart().startsWith("```")) {
                 if (inCode) {
-                    CodeBlock(codeLines.joinToString("\\n"))
+                    CodeBlock(codeLines.joinToString("\n"))
                     codeLines.clear()
                     inCode = false
                 } else {
@@ -50,7 +50,7 @@ fun MarkdownMessage(text: String, modifier: Modifier = Modifier) {
                 proseLines += line
             }
         }
-        if (inCode) CodeBlock(codeLines.joinToString("\\n"))
+        if (inCode) CodeBlock(codeLines.joinToString("\n"))
         if (proseLines.isNotEmpty()) ProseBlock(proseLines)
     }
 }
