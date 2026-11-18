@@ -11,6 +11,7 @@ from typing import Any
 
 MAX_FRAME_BYTES = 256 * 1024
 MAX_PROMPT_BYTES = 64 * 1024
+MIN_CLIENT_NONCE_BYTES = 16
 PROTOCOL_VERSION = "1.0"
 
 class CompanionProtocolError(ValueError):
@@ -91,7 +92,9 @@ def validate_client_frame(
             raise CompanionProtocolError("unsupported protocol")
         _required_string(frame, "device_id", max_bytes=128)
         _required_string(frame, "credential", max_bytes=512)
-        _required_string(frame, "client_nonce", max_bytes=128)
+        nonce = _required_string(frame, "client_nonce", max_bytes=128)
+        if len(nonce.encode("utf-8")) < MIN_CLIENT_NONCE_BYTES:
+            raise CompanionProtocolError("invalid frame")
         return frame
 
     if kind == "status":
