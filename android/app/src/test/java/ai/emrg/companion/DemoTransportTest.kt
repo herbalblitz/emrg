@@ -2,6 +2,7 @@ package ai.emrg.companion
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DemoTransportTest {
@@ -13,6 +14,16 @@ class DemoTransportTest {
             "Demo response received. Host connection and real agent execution are not yet enabled.",
             response
         )
+    }
+
+    @Test
+    fun demoStreamEmitsChunksThatReassembleToResponse() = runTest {
+        val transport = DemoTransport()
+        val chunks = mutableListOf<String>()
+        val finalText = transport.stream("prompt") { chunks += it }
+
+        assertEquals(finalText, chunks.joinToString(""))
+        assertTrue(chunks.size > 1)
     }
 
     @Test
