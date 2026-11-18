@@ -81,3 +81,8 @@ The Android client now installs a per-connection exact SHA-256 leaf-pin trust ma
 ## Pending pairing lifecycle hardening
 
 Pending transactions are now bounded to 32 concurrent entries. Expired entries are purged before capacity is evaluated; when capacity remains full, creation fails closed with a safe error. The host composition exposes `invalidate_pending_pairings()` as a lifecycle hook to clear all QR/pairing transactions when a future companion service is disabled or stopped. Tests cover capacity, expiry freeing capacity, and invalidation of all pending requests. This hook is not yet wired to a listener/UI lifecycle because those components do not exist.
+
+
+## Listener configuration policy primitive
+
+`companion_listener_policy.py` validates explicit unicast IP-literal bind addresses, rejects wildcard and multicast/reserved addresses, enforces non-privileged ports, and bounds resource/time settings. It intentionally does not perform DNS, open sockets, start a listener, or modify firewall rules. An actual listener and its lifecycle tests remain unimplemented.
