@@ -91,6 +91,7 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [x] Android persistence/session UI build, lint and tests validated.
 - [ ] Add Gradle wrapper and verify reproducibility.
 - [x] Host-scoped Android Keystore credential storage; no remote network transport yet.
+- [x] Bound host pending pairing transactions (32 max); purge expired entries before capacity checks and expose shutdown/disable invalidation hook. Tests added; CI verification pending.
 - [x] Windows packaging and test workflow baseline inspected; audit documented.
 - [ ] Windows clean-machine install/upgrade/reconnect/uninstall smoke.
 
@@ -156,3 +157,8 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] QR descriptor expiry is capped at host TLS certificate expiration and already-expired identity descriptors are rejected; tests added.
 - Pairing descriptor expiry guard CI `44325896168` passed on both platforms: Ubuntu **91 passed**, Windows **87 passed, 4 skipped**. Certificate-expiry bounds and expired-host identity rejection are tested. Endpoint canonicalization changes are pending the next run.
 - Canonical endpoint descriptor CI `44326015099` passed: Ubuntu **92 passed**, Windows **88 passed, 4 skipped**. Host descriptor canonicalizes DNS case/trailing dot and port, with unit coverage. Cross-platform companion tests remain green.
+
+### Companion pairing transaction capacity/lifecycle increment
+- Pending pairing records are capped at 32. Creation purges expired entries first and rejects safely if capacity is still exhausted.
+- Added a host-service lifecycle hook to invalidate all outstanding transactions, intended for companion disable/shutdown wiring.
+- Tests cover cap, expiry capacity recovery, and clearing/redeem denial after invalidation. CI is pending; this is not a listener/UI integration.
