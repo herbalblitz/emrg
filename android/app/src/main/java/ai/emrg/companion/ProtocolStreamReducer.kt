@@ -41,7 +41,7 @@ internal fun reduceProtocolStreams(
 ): ProtocolStreamState {
     return when (action) {
         is ProtocolStreamAction.Start -> {
-            if (action.requestId.isBlank() || state.requests[action.requestId]?.status == StreamStatus.ACTIVE) state
+            if (action.requestId.isBlank() || action.requestId in state.requests) state
             else state.copy(
                 requests = state.requests + (action.requestId to StreamRequest(sessionId = action.sessionId))
             )
