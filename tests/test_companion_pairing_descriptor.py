@@ -1,4 +1,6 @@
 import json
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -66,3 +68,20 @@ def test_descriptor_rejects_invalid_clock(tmp_path):
     identity = provision_host_identity(tmp_path / "tls", ["localhost"])
     with pytest.raises(CompanionTlsError):
         create_pairing_descriptor(identity, "wss://localhost:8443", now_epoch_seconds="bad")
+
+def test_descriptor_rejects_expired_host_identity(tmp_path):
+    identity = provision_host_identity(tmp_path / "tls", ["localhost"])
+    expired = replace(identity, expires_at=datetime.now(timezone.utc) - timedelta(seconds=1))
+    with pytest.raises(CompanionTlsError, match="identity is expired"):
+        create_pairing_descriptor(expired, "wss://localhost:8443")
+
+
+def test_descriptor_expiry_never_outlives_host_certificate(tmp_path):
+    identity = provision_host_identity(tmp_path / "tls", ["localhost"])
+    cert_expiry = datetime.now(timezone.utc) + timedelta(seconds=30)
+    short_lived = replace(identity, expires_at=cert_expiry)
+    descriptor = json.loads(create_pairing_descriptor(
+        short_lived, "wss://localhost:8443", ttl_seconds=180,
+        now_epoch_seconds=int(datetime.now(timezone.utc).timestamp())
+    ))
+    assert descriptor["expires_at"] <= int(cert_expiry.timestamp())
