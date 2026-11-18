@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import pytest
 
@@ -80,4 +81,40 @@ def test_disabling_host_closes_registered_connections(tmp_path):
         assert client in listener._clients  # handler owns removal; close wakes recv
         listener._clients.clear()
         listener._loop = None
+    asyncio.run(run())
+
+    
+def test_wss_session_authenticates_and_returns_scoped_status(tmp_path):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        credential = host.registry.issue(device_id="phone-1", workspace_id="ws-1",
+                                        cwd="/workspace", scopes={"status"})
+        listener = _listener(tmp_path, host)
+
+        class Socket:
+            def __init__(self, frames):
+                self.frames = iter(frames)
+                self.sent = []
+            async def recv(self):
+                try:
+                    return next(self.frames)
+                except StopIteration:
+                    raise asyncio.TimeoutError()
+            async def send(self, data):
+                self.sent.append(data)
+            async def close(self, **kwargs):
+                pass
+
+        auth = {"type": "auth", "protocol": "1.0", "device_id": "phone-1",
+                "credential": credential, "client_nonce": "nonce-abcdefghijkl"}
+        status = {"type": "status", "request_id": "r1"}
+        ws = Socket([json.dumps(auth), json.dumps(status)])
+        with pytest.raises(asyncio.TimeoutError):
+            await listener._session(ws)
+        decoded = [json.loads(frame) for frame in ws.sent]
+        assert decoded[0]["type"] == "auth.ok"
+        assert decoded[0]["workspace_id"] == "ws-1"
+        assert decoded[1] == {"type": "status.result", "request_id": "r1",
+                              "listener": "wss", "enabled": True}
     asyncio.run(run())
