@@ -87,3 +87,10 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Host fingerprint string is colon-delimited uppercase bytes for Android QR/parser compatibility.
 - [x] Host auth nonce is minimum 16 bytes and consumed once per device with bounded 10-minute process-local replay cache; capacity exhaustion fails closed.
 - [ ] Android trust tests/build CI final confirmation; host listener and UI integration are still not wired.
+
+## Host QR descriptor generation
+
+- [x] Generate Android-compatible, credential-free v1 pairing descriptor with WSS endpoint and SHA-256 pin.
+- [x] Reject endpoint host outside certificate SAN and invalid/insecure endpoint forms.
+- [x] Enforce QR expiry at no more than 180 seconds.
+- [ ] Integrate descriptor into host approval UI and QR rendering; no live WSS listener yet.
