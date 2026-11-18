@@ -191,7 +191,7 @@ class ChatStateReducerTest {
         )).state
         assertFalse(partial.isSending)
         assertNull(partial.activeRequestId)
-        assertEquals(ChatMessage("EMRG", "partial\\n[Stopped]"), partial.messages.last())
+        assertEquals(ChatMessage("EMRG", "partial\n[Stopped]"), partial.messages.last())
     }
 
 }
