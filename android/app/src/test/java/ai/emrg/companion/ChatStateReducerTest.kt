@@ -7,8 +7,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChatStateReducerTest {
-    private val saverScope = androidx.compose.runtime.saveable.SaverScope { true }
-
     @Test
     fun submitTrimsPromptAndClearsDraft() {
         val transition = reduceChatState(ChatUiState(draft = "  hello  "), ChatAction.Submit)
@@ -68,7 +66,7 @@ class ChatStateReducerTest {
             draft = "unfinished",
             isSending = true
         )
-        val restored = ChatUiStateSaver.restore(saverScope.run { ChatUiStateSaver.save(state) }!!) ?: error("Saved state could not be restored")
+        val restored = ChatUiStateSaver.restore(saveChatUiState(state)) ?: error("Saved state could not be restored")
 
         assertEquals(state.messages, restored.messages)
         assertEquals(state.draft, restored.draft)
@@ -78,7 +76,7 @@ class ChatStateReducerTest {
     @Test
     fun savedStateLimitsHistoryAndRestoresLatestMessages() {
         val history = (0..MAX_SAVED_MESSAGES).map { ChatMessage("You", "message-$it") }
-        val restored = ChatUiStateSaver.restore(saverScope.run { ChatUiStateSaver.save(ChatUiState(messages = history)) }!!) ?: error("Saved state could not be restored")
+        val restored = ChatUiStateSaver.restore(saveChatUiState(ChatUiState(messages = history))) ?: error("Saved state could not be restored")
 
         assertEquals(MAX_SAVED_MESSAGES, restored.messages.size)
         assertEquals("message-$MAX_SAVED_MESSAGES", restored.messages.last().text)
