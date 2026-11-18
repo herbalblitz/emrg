@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   companion:
@@ -40,6 +40,18 @@ jobs:
           python-version: "3.13"
       - name: Sync project dependencies
         run: uv sync
+      - name: Commit generated lockfile
+        if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
+        run: |
+          if git diff --quiet -- uv.lock; then
+            echo "uv.lock is already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add uv.lock
+          git commit -m "build: update uv lockfile"
+          git push origin HEAD:${{ github.ref_name }}
       - name: Upload resolved lockfile
         uses: actions/upload-artifact@v4
         with:
