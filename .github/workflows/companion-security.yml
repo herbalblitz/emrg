@@ -40,17 +40,24 @@ jobs:
           python-version: "3.13"
       - name: Sync project dependencies
         run: uv sync
+      - name: Generate platform requirements locks
+        if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
+        run: |
+          uv pip compile pyproject.toml --python-version 3.13 --python-platform x86_64-pc-windows-msvc -o packaging/requirements-windows-x64.lock
+          uv pip compile pyproject.toml --python-version 3.13 --python-platform x86_64-unknown-linux-gnu -o packaging/requirements-linux-x86_64.lock
+          uv pip compile pyproject.toml --python-version 3.13 --python-platform aarch64-unknown-linux-gnu -o packaging/requirements-linux-aarch64.lock
+          uv pip compile pyproject.toml --python-version 3.13 --python-platform aarch64-apple-darwin -o packaging/requirements-macos-arm64.lock
       - name: Commit generated lockfile
         if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
         run: |
-          if git diff --quiet -- uv.lock; then
-            echo "uv.lock is already current"
+          if git diff --quiet -- uv.lock packaging/requirements-*.lock; then
+            echo "Dependency lock files are already current"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add uv.lock
-          git commit -m "build: update uv lockfile"
+          git add uv.lock packaging/requirements-*.lock
+          git commit -m "build: update dependency lockfiles"
           git push origin HEAD:${{ github.ref_name }}
       - name: Upload resolved lockfile
         uses: actions/upload-artifact@v4
