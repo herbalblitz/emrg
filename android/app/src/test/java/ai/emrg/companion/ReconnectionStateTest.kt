@@ -105,6 +105,28 @@ class ReconnectionStateTest {
         state = reduceReconnection(state, ReconnectionAction.RetryScheduled(epoch, 1))
         assertEquals(1_000L, state.retryDelayMillis)
     }
+    @Test fun protocolVersionPolicyAcceptsCurrentMajorAndRejectsMalformedOrUnknownMajor() {
+        assertTrue(isSupportedProtocolVersion("1"))
+        assertTrue(isSupportedProtocolVersion("1.0"))
+        assertTrue(isSupportedProtocolVersion("1.12"))
+        assertFalse(isSupportedProtocolVersion("2"))
+        assertFalse(isSupportedProtocolVersion("2.0"))
+        assertFalse(isSupportedProtocolVersion("v1"))
+        assertFalse(isSupportedProtocolVersion("1.0-beta"))
+        assertFalse(isSupportedProtocolVersion(""))
+    }
+
+    @Test fun unsupportedProtocolMajorFailsClosedAndDoesNotRetainSnapshot() {
+        var state = reduceReconnection(ReconnectionState(), ReconnectionAction.Connect)
+        state = reduceReconnection(state, ReconnectionAction.Authenticated(state.connectionEpoch))
+        state = reduceReconnection(state, ReconnectionAction.SnapshotReceived(
+            state.connectionEpoch, snapshot.copy(protocolVersion = "2.0"),
+        ))
+        assertEquals(ConnectionPhase.STATE_UNKNOWN, state.phase)
+        assertNull(state.snapshot)
+        assertEquals("Unsupported host protocol version: 2.0", state.lastError)
+    }
+
     @Test fun snapshotWithoutProtocolVersionFailsClosed() {
         var state = reduceReconnection(ReconnectionState(), ReconnectionAction.Connect)
         state = reduceReconnection(state, ReconnectionAction.Authenticated(state.connectionEpoch))
