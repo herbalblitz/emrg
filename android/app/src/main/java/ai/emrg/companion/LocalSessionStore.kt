@@ -33,8 +33,11 @@ internal fun selectLocalSession(state: LocalSessionsState, id: String): LocalSes
     if (state.sessions.any { it.id == id }) state.copy(activeId = id) else state
 
 internal fun updateActiveLocalChat(state: LocalSessionsState, chat: ChatUiState): LocalSessionsState =
+    updateLocalChat(state, state.activeId, chat)
+
+internal fun updateLocalChat(state: LocalSessionsState, sessionId: String, chat: ChatUiState): LocalSessionsState =
     state.copy(sessions = state.sessions.map { session ->
-        if (session.id == state.activeId) session.copy(chat = chat.copy(isSending = false)) else session
+        if (session.id == sessionId) session.copy(chat = chat.copy(isSending = false)) else session
     })
 
 internal fun renameLocalSession(state: LocalSessionsState, id: String, title: String): LocalSessionsState {
