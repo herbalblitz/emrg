@@ -204,6 +204,8 @@ private fun CompanionChatScreen() {
             }
         }
 
+        ToolActivityView(chatState.toolCalls, modifier = Modifier.fillMaxWidth())
+
         if (chatState.streamingText.isNotEmpty()) {
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(Modifier.padding(12.dp)) {
