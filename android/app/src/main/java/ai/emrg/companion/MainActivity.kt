@@ -128,10 +128,8 @@ private fun CompanionChatScreen() {
                     busy = true
                     scope.launch {
                         try {
-                            val response = transport.send(prompt)
+                            val response = sendSafely(transport, prompt)
                             messages.add(ChatMessage("EMRG", response))
-                        } catch (_: Exception) {
-                            messages.add(ChatMessage("EMRG", "Unable to complete the request. Please try again."))
                         } finally {
                             busy = false
                             if (messages.isNotEmpty()) {
