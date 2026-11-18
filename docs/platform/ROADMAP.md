@@ -21,7 +21,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Android protocol JSON fixtures + Kotlin frame parser tests for malformed/optional/unknown frames, streaming, tool lifecycle and terminal events (CI passed in run 44239121243).
 - [x] Request stream reducer tracks request/session IDs, interleaved deltas, tool events, terminal/cancel/error and connection-loss transitions (CI passed in run 44239121243).
 - [x] Validated task/session command JSON builders and tests; tools omitted vs empty allowlist explicitly distinguished.
-- [ ] Reconnect policy and protocol negotiation/transport integration.
+- [ ] Reconnect policy and protocol negotiation/transport integration.\n- [x] Add Android protocol-event-to-chat bridge with request binding and mismatch isolation (CI pending).
 - [ ] Review pairing design without weakening local endpoint.
 
 ### M2 — Android foundation
@@ -37,13 +37,15 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Offline session state/store and Compose UI: bounded session list, isolated chat snapshots/drafts, select/create/rename/delete, safe last-session replacement (UI CI passed).
 - [x] Protocol frame model/parser and request-stream reducer added (unit test CI validation ongoing).
 - [ ] Navigation/state expansion.
-- [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke (security proposal documented; implementation pending).
+- [x] Add fail-closed Android pairing state model: WSS-only endpoint, SHA-256 host fingerprint confirmation, explicit host approval, host-bound scoped credential acceptance, revocation reset (unit tests added; CI pending).\n- [ ] Pairing QR scanner/UI, Android Keystore credential storage, TLS certificate pinning in a real transport, host-side approval/revoke implementation.
 
 ### M3 — Core workflows
 - [x] Chat markdown/code renderer (headings, bold, inline/fenced code and bullets; CI passed run 44241040540).
 - [x] Transport stream callback + Compose partial response rendering and Stop/cancel state (mock-only; CI passed).
 - [ ] Session create/list/resume/rename.
-- [x] Tool Activity UI component/state lifecycle wired to chat; CI validation pending (no live daemon event source yet).\n- [x] Add protocol snapshot-to-chat reducer bridge with request-ID guard and terminal-state reconciliation; unit tests added (CI pending).\n- [ ] Live tool events and approval.
+- [x] Tool Activity UI component/state lifecycle wired to chat; CI validation pending (no live daemon event source yet).
+- [x] Add protocol snapshot-to-chat reducer bridge with request-ID guard and terminal-state reconciliation; unit tests added (CI pending).
+- [ ] Live tool events and approval (bridge reducer tests added; daemon transport still mock-only).
 - [ ] Provider/settings and error states.
 
 ### M4 — Parity
@@ -69,7 +71,9 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [x] Add UI-level streaming callback, partial assistant text, stop/cancel handling and reducer tests; offline transport only (CI passed in run 44239121243).
 - [x] Add protocol JSON fixtures, Kotlin frame model/parser and request-stream reducer; desktop command schemas audited and lifecycle documented. Android CI test verification is still in progress.
 - [x] Resolve transport mismatch in source documentation (protocol.py header corrected; contract doc explains current WebSocket transport).
-- [ ] Test tools allowlist omission vs empty.\n- [x] Wire Tool Activity display into chat transient state and Compose; tests cover active-request updates and cleanup (CI pending).\n- [x] Bridge protocol request snapshots to chat streaming/tool activity state; mismatched request IDs are ignored (CI pending).
+- [ ] Test tools allowlist omission vs empty.
+- [x] Wire Tool Activity display into chat transient state and Compose; tests cover active-request updates and cleanup (CI pending).
+- [x] Bridge protocol request snapshots to chat streaming/tool activity state; mismatched request IDs are ignored (CI pending).
 - [x] Confirm Android persistence and session UI integration CI results; builds/lint/tests passed before adding features.
 - [x] Integrate offline session manager into Compose UI; session controls are disabled during a request to prevent cross-session response writes.
 - [x] Validate offline session UI build/lint/tests; no daemon synchronization until protocol and pairing are validated.
