@@ -198,7 +198,7 @@ private fun CompanionChatScreen() {
                     Column(Modifier.padding(12.dp)) {
                         Text(message.role, style = MaterialTheme.typography.labelMedium)
                         Spacer(Modifier.height(4.dp))
-                        Text(message.text, style = MaterialTheme.typography.bodyMedium)
+                        MarkdownMessage(message.text)
                     }
                 }
             }
@@ -209,7 +209,7 @@ private fun CompanionChatScreen() {
                 Column(Modifier.padding(12.dp)) {
                     Text("EMRG · streaming", style = MaterialTheme.typography.labelMedium)
                     Spacer(Modifier.height(4.dp))
-                    Text(chatState.streamingText, style = MaterialTheme.typography.bodyMedium)
+                    MarkdownMessage(chatState.streamingText)
                 }
             }
         }
