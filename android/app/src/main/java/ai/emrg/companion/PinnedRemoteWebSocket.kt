@@ -150,8 +150,10 @@ internal class PinnedRemoteWebSocket(
 
     companion object {
         internal fun companionChatFrame(command: TaskCommand, workspaceId: String): JSONObject {
-            require(workspaceId.isNotBlank()) { "approved workspace is required" }
-            require(command.id.isNotBlank() && command.prompt.isNotBlank()) { "invalid chat command" }
+            require(workspaceId.isNotBlank() && workspaceId.toByteArray(Charsets.UTF_8).size <= 128) { "approved workspace is invalid" }
+            require(command.id.isNotBlank() && command.id.toByteArray(Charsets.UTF_8).size <= 128) { "invalid request ID" }
+            require(command.prompt.isNotBlank() && command.prompt.toByteArray(Charsets.UTF_8).size <= 64 * 1024) { "invalid prompt" }
+            require(command.sessionId == null || (command.sessionId.isNotBlank() && command.sessionId.toByteArray(Charsets.UTF_8).size <= 128)) { "invalid session ID" }
             return JSONObject()
                 .put("type", "chat.send")
                 .put("request_id", command.id)
