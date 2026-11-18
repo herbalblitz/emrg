@@ -130,3 +130,11 @@ All commands below are JSON WebSocket frames sent after authentication. Command 
 - Added validated, transport-neutral `TaskCommand` and `SessionCommand` JSON builders for task, list/resume/rename/clear/delete/rewind operations.
 - Tests cover required fields, optional session/timestamp/title fields, tools omitted versus explicit empty allowlist, and invalid inputs.
 - Builders are payload-only: no authentication, WebSocket send, command authorization, or remote file access is implemented.
+
+
+## Android offline streaming UI milestone (2026-11-18)
+
+- Chat transport abstraction now accepts a stream callback; the current DemoTransport emits one mock delta and does not contact the daemon.
+- Compose chat displays interim response text, finalizes it into history, and exposes Stop to cancel the coroutine/request state.
+- Reducer preserves partial text when cancelled and clears transient stream state on terminal completion/failure. Unit tests cover delta accumulation and cancellation.
+- **Not implemented:** incremental daemon stream, transport correlation integration, network cancellation semantics, markdown rendering, tool UI or remote connection. CI verification pending.
