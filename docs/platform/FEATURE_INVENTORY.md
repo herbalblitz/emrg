@@ -34,7 +34,9 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] Device-local private SharedPreferences snapshot persists chat history/draft across app restarts; malformed snapshot falls back to fresh preview state (CI passed).
 - [x] Safe chat error fallback preserves coroutine cancellation (tests added; CI passed)
 - [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for streaming integration run `44239121243` (`bc1d3bf2`); markdown renderer CI pending
-- [ ] Pair/revoke; secure transport; diagnostics/reconnect (proposal only documented)
+- [x] WSS client primitive with system TLS + pinned host certificate fingerprint, auth-envelope send, protocol/workspace-bound auth-success validation, chat-only scoped frame construction and connection generation guards; host listener is still absent.
+- [x] Credential-safe QR descriptor parsing: WSS-only, strict allowlist, mandatory <=180-second expiry; endpoint query/user-info/fragment and invalid ports rejected.
+- [ ] Host identity provisioning/persistence, trusted host approval UI, host WSS listener, live pairing/revoke and end-to-end transport remain unimplemented.
 - [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
 - [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI passed in run `44239121243`); no real daemon transport yet.
 - [x] Offline UI integration for response streaming, partial text display and Stop/cancel action (no live transport; CI passed in run `44239121243`).
@@ -56,3 +58,9 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] Source-verified session command/reply schemas documented; protocol transport mismatch corrected in module header.
 
 Status: **Source-inspected** = checked code; **Implemented** = code exists; **Tested** = test actually executed and passed.
+
+## Companion security increment
+
+- [x] Host frame schema strictness: duplicate JSON keys, unknown fields and invalid Unicode fail closed; host parser tests added (CI execution pending).
+- [x] Registry same-instance thread serialization for credential issue/revoke/read; concurrent-issuance test added. Cross-process lock and Windows ACL hardening are open.
+- [ ] Host TLS identity generation/persistence and trusted local UI are not yet built; TLS primitives remain transport-free.
