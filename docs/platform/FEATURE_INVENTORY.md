@@ -7,7 +7,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] Daemon WebSocket transport/local auth inspected
 - [ ] Lifecycle/reconnect end-to-end tests
 - [x] Protocol dataclasses and GUI response-type map partially reviewed
-- [ ] Full schemas/stream lifecycle contract and tests
+- [ ] Full command schemas/stream lifecycle fixtures and tests (session command schemas documented; runtime fixtures still missing)
 - [ ] Sessions, tools, approvals, workspace, sandbox
 - [ ] Memory, skills, subagents, scheduler, evolution
 - [ ] Logs/diagnostics, CLI/TUI
@@ -31,9 +31,9 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] Activity saved-state snapshot restores chat messages/draft, caps saved history to 60, clears transient sending state.
 - [x] Device-local private SharedPreferences snapshot persists chat history/draft across app restarts; malformed snapshot falls back to fresh preview state (integration CI pending).
 - [x] Safe chat error fallback preserves coroutine cancellation (tests added; CI pending)
-- [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for the latest verified run
+- [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for the latest verified run (session UI commit `1132f69` / run `44232157705`)
 - [ ] Pair/revoke; secure transport; diagnostics/reconnect
-- [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI pending).
+- [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
 - [ ] Chat/stream/cancel; daemon session synchronization; tool activity/approvals
 - [ ] SAF workspace; memory; skills; tasks; evolution
 - [ ] Opt-in notifications; settings/export; accessibility/offline states
@@ -45,5 +45,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - `DAEMON_PROTOCOL_AND_ANDROID_SECURITY.md`
 - `NEXT_GENERATION_REBUILD_POLICY.md`
 - `CLIENT_PROTOCOL_CONTRACT.md`
+
+- [x] Source-verified session command/reply schemas documented; protocol transport mismatch corrected in module header.
 
 Status: **Source-inspected** = checked code; **Implemented** = code exists; **Tested** = test actually executed and passed.
