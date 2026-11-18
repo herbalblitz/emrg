@@ -48,7 +48,7 @@ class CredentialRegistry:
         return data
 
     def _write(self, data: dict[str, Any]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=str(self.path.parent), prefix=".companion-", suffix=".tmp")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
