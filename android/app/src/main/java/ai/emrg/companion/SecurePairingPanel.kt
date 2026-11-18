@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 internal fun SecurePairingPanel() {
+    var qrPayload by remember { mutableStateOf("") }
     var endpoint by remember { mutableStateOf("") }
     var fingerprint by remember { mutableStateOf("") }
     var state by remember { mutableStateOf(PairingState()) }
@@ -40,6 +41,26 @@ internal fun SecurePairingPanel() {
                 "Manual descriptor entry for now. QR scanning and daemon transport are not yet implemented.",
                 style = MaterialTheme.typography.bodySmall
             )
+            OutlinedTextField(
+                value = qrPayload,
+                onValueChange = { qrPayload = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Pairing QR payload (paste)") },
+                minLines = 2,
+                maxLines = 4
+            )
+            Button(enabled = qrPayload.isNotBlank(), onClick = {
+                when (val parsed = PairingDescriptorParser.parse(qrPayload, System.currentTimeMillis() / 1000)) {
+                    is PairingDescriptorResult.Valid -> {
+                        endpoint = parsed.descriptor.endpoint
+                        fingerprint = parsed.descriptor.fingerprintSha256
+                        state = reducePairingState(PairingState(), PairingAction.PairingQrReceived(endpoint, fingerprint))
+                    }
+                    is PairingDescriptorResult.Invalid -> {
+                        state = PairingState(phase = PairingPhase.FAILED, errorCode = parsed.reason)
+                    }
+                }
+            }) { Text("Parse QR payload") }
             OutlinedTextField(
                 value = endpoint,
                 onValueChange = { endpoint = it },
@@ -96,6 +117,7 @@ internal fun SecurePairingPanel() {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = {
                     state = PairingState()
+                    qrPayload = ""
                     endpoint = ""
                     fingerprint = ""
                 }) { Text("Reset") }
