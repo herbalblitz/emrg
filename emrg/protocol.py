@@ -1,14 +1,13 @@
-"""Protocol types for EMRG client-server communication.
+"""Typed protocol payloads for EMRG client-server communication.
 
-Mirrors the Rust emrg-protocol crate. All messages are JSON over IPC
-(length-prefix framing: 4-byte big-endian header + body).
+These dataclasses serialize/parse JSON message bodies. They do not define the
+wire transport or framing: transport details are owned by the client/daemon
+implementation and must be audited separately. The current desktop daemon and GUI
+use authenticated loopback WebSocket JSON frames (see platform protocol contract).
 
-The actual IPC transport is abstracted by emrg.connect (platform-adaptive:
-Unix domain socket on macOS/Linux, Named Pipe on Windows).
-
-Message types:
-  Client → Server: ping, task
-  Server → Client: pong, delta, done, tool_start, tool_end, error
+Message models include task requests/responses, tool lifecycle events, status,
+and instance/evolution metadata. The daemon also supports command frames beyond
+these models; this module is not a complete protocol schema.
 """
 
 from __future__ import annotations
