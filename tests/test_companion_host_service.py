@@ -9,7 +9,7 @@ from emrg.server.companion_auth import CompanionAuthenticationError
 def _auth_frame(device_id, token):
     return json.dumps({"type": "auth", "protocol": "1.0",
                        "device_id": device_id, "credential": token,
-                       "client_nonce": "client-nonce"})
+                       "client_nonce": "client-nonce-0001"})
 
 
 def test_host_service_composes_local_pairing_and_auth(tmp_path):
