@@ -145,4 +145,53 @@ class ChatStateReducerTest {
         val initial = ChatUiState()
         assertEquals(initial, reduceChatState(initial, ChatAction.ResponseReceived("stale")).state)
     }
+
+    @Test
+    fun protocolSnapshotProjectsOnlyBoundRequestIntoUi() {
+        val started = reduceChatState(ChatUiState(draft = "prompt"), ChatAction.Submit).state
+        val bound = reduceChatState(started, ChatAction.BindRequest("req-1")).state
+        val snapshot = StreamRequest(text = "partial", toolCalls = listOf(
+            ToolCallState(callId = "tool-1", name = "lookup", label = "Lookup")
+        ))
+        val projected = reduceChatState(bound, ChatAction.ProtocolSnapshot("req-1", snapshot)).state
+        assertEquals("partial", projected.streamingText)
+        assertEquals(snapshot.toolCalls, projected.toolCalls)
+
+        val stale = reduceChatState(projected, ChatAction.ProtocolSnapshot("req-2", snapshot)).state
+        assertEquals(projected, stale)
+    }
+
+    @Test
+    fun protocolCompletionCommitsTextAndClearsRequestBinding() {
+        val started = reduceChatState(ChatUiState(draft = "prompt"), ChatAction.Submit).state
+        val bound = reduceChatState(started, ChatAction.BindRequest("req-1")).state
+        val completed = reduceChatState(bound, ChatAction.ProtocolSnapshot(
+            "req-1", StreamRequest(text = "final", status = StreamStatus.COMPLETED)
+        )).state
+        assertFalse(completed.isSending)
+        assertNull(completed.activeRequestId)
+        assertEquals(ChatMessage("EMRG", "final"), completed.messages.last())
+    }
+
+    @Test
+    fun protocolTerminalStatesFailOrCancelAndClearBinding() {
+        val started = reduceChatState(ChatUiState(draft = "prompt"), ChatAction.Submit).state
+        val bound = reduceChatState(started, ChatAction.BindRequest("req-1")).state
+        val failed = reduceChatState(bound, ChatAction.ProtocolSnapshot(
+            "req-1", StreamRequest(status = StreamStatus.FAILED, error = "host error")
+        )).state
+        assertFalse(failed.isSending)
+        assertNull(failed.activeRequestId)
+        assertEquals(ChatMessage("EMRG", CHAT_FAILURE_MESSAGE), failed.messages.last())
+
+        val cancelledStarted = reduceChatState(ChatUiState(draft = "prompt"), ChatAction.Submit).state
+        val cancelledBound = reduceChatState(cancelledStarted, ChatAction.BindRequest("req-2")).state
+        val partial = reduceChatState(cancelledBound, ChatAction.ProtocolSnapshot(
+            "req-2", StreamRequest(text = "partial", status = StreamStatus.CANCELLED)
+        )).state
+        assertFalse(partial.isSending)
+        assertNull(partial.activeRequestId)
+        assertEquals(ChatMessage("EMRG", "partial\\n[Stopped]"), partial.messages.last())
+    }
+
 }
