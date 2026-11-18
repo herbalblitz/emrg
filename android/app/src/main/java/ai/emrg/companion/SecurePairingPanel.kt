@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
  * Local-only pairing UI foundation. It verifies descriptor shape and requires explicit
  * fingerprint confirmation, but intentionally does not claim a connection or issue credentials.
  */
+@Suppress("UnsafeOptInUsageError")
 @Composable
 internal fun SecurePairingPanel() {
     var qrPayload by remember { mutableStateOf("") }
