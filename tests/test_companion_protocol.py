@@ -22,6 +22,12 @@ def test_duplicate_json_fields_rejected():
     with pytest.raises(CompanionProtocolError):
         validate_client_frame('{"type":"auth","type":"status","protocol":"1.0","device_id":"d","credential":"c","client_nonce":"n"}')
 
+def test_invalid_unicode_is_rejected_without_leaking_encoding_error():
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame("\\ud800")
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame('{"type":"auth","protocol":"1.0","device_id":"\\\\ud800","credential":"c","client_nonce":"n"}')
+
 def test_status_requires_request_id_after_auth():
     assert validate_client_frame('{"type":"status","request_id":"r"}',authenticated=True,scopes=frozenset({"status"}))["type"]=="status"
     with pytest.raises(CompanionProtocolError): validate_client_frame('{"type":"status"}',authenticated=True,scopes=frozenset({"status"}))
