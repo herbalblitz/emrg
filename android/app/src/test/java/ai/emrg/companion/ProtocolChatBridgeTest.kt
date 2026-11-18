@@ -74,4 +74,24 @@ class ProtocolChatBridgeTest {
         assertTrue(lost.chatTransition.state.messages.last().text.contains(CHAT_FAILURE_MESSAGE))
         assertEquals(StreamStatus.FAILED, lost.protocolState.requests["req"]!!.status)
     }
+    @Test
+    fun connectionEpochActionsDoNotMutateChatAndStaleFramesAreIgnored() {
+        var chat = reduceChatState(ChatUiState(draft = "prompt"), ChatAction.Submit).state
+        val started = reduceProtocolChatBridge(chat, ProtocolStreamState(), ProtocolStreamAction.Start("req"))
+        chat = started.chatTransition.state
+        val epochBound = reduceProtocolChatBridge(chat, started.protocolState, ProtocolStreamAction.SetConnectionEpoch(9))
+        assertEquals(chat, epochBound.chatTransition.state)
+        val stale = reduceProtocolChatBridge(chat, epochBound.protocolState, ProtocolStreamAction.Receive(
+            ProtocolFrame.parse("""{"request_id":"req","content":"stale","delta":true}"""),
+            connectionEpoch = 8,
+        ))
+        assertEquals(chat, stale.chatTransition.state)
+        assertEquals("", stale.protocolState.requests["req"]!!.text)
+        val fresh = reduceProtocolChatBridge(chat, stale.protocolState, ProtocolStreamAction.Receive(
+            ProtocolFrame.parse("""{"request_id":"req","content":"fresh","delta":true}"""),
+            connectionEpoch = 9,
+        ))
+        assertEquals("fresh", fresh.chatTransition.state.streamingText)
+    }
+
 }
