@@ -39,7 +39,7 @@ import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-@OptIn(ExperimentalGetImage::class)
+@ExperimentalGetImage
 @Composable
 internal fun CameraQrScannerDialog(onQrDetected: (String) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
