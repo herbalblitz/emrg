@@ -37,6 +37,10 @@ class CompanionHostService:
     def cancel_pairing(self, pairing_id: str) -> bool:
         return self.pairings.cancel(pairing_id)
 
+    def invalidate_pending_pairings(self) -> int:
+        """Invalidate all QR/pairing transactions during companion shutdown or disable."""
+        return self.pairings.cancel_all()
+
     def registered_devices(self) -> list[dict[str, Any]]:
         return self.registry.list_devices()
 
