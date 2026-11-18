@@ -14,6 +14,7 @@ import os
 import re
 import ssl
 import tempfile
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,6 +29,7 @@ CERT_FILENAME = "companion-host-cert.pem"
 KEY_FILENAME = "companion-host-key.pem"
 DPAPI_KEY_FILENAME = "companion-host-key.dpapi"
 IDENTITY_VALIDITY_DAYS = 365
+_IDENTITY_LOCK = threading.RLock()
 
 
 @dataclass(frozen=True)
@@ -244,11 +246,14 @@ def _load_and_validate(directory: Path, hosts: tuple[str, ...]) -> HostTlsIdenti
 
 def provision_host_identity(directory: Path, hosts: list[str] | tuple[str, ...], *,
                            reset: bool = False) -> HostTlsIdentity:
-    """Create once or validate an existing identity; rotation requires reset=True.
+    """Thread-serialize identity provisioning; cross-process locking is not provided."""
+    with _IDENTITY_LOCK:
+        return _provision_host_identity(directory, hosts, reset=reset)
 
-    This function does not create a listener. Existing/corrupt identity state never
-    triggers silent replacement, preserving the trust pin across normal restarts.
-    """
+
+def _provision_host_identity(directory: Path, hosts: list[str] | tuple[str, ...], *,
+                             reset: bool = False) -> HostTlsIdentity:
+    """Create once or validate an existing identity; rotation requires reset=True."""
     directory = Path(directory)
     if directory.is_symlink():
         raise CompanionTlsError("TLS identity directory must not be a symlink")
@@ -279,7 +284,13 @@ def provision_host_identity(directory: Path, hosts: list[str] | tuple[str, ...],
 
 
 def create_identity_server_context(directory: Path) -> ssl.SSLContext:
-    """Load the provisioned identity into TLS; temporary plaintext key is deleted immediately."""
+    """Thread-serialize context loading against provisioning; never opens a socket."""
+    with _IDENTITY_LOCK:
+        return _create_identity_server_context(directory)
+
+
+def _create_identity_server_context(directory: Path) -> ssl.SSLContext:
+    """Load the provisioned identity; temporary plaintext key is deleted immediately."""
     directory = Path(directory)
     try:
         certificate = x509.load_pem_x509_certificate((directory / CERT_FILENAME).read_bytes())
