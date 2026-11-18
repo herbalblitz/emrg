@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -57,6 +58,7 @@ private fun CompanionChatScreen() {
     var renameDraft by remember { mutableStateOf(sessionsState.active.title) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    var activeRequestJob by remember { mutableStateOf<Job?>(null) }
     val transport = remember { DemoTransport() }
 
     fun persistChat(state: ChatUiState) {
@@ -69,9 +71,11 @@ private fun CompanionChatScreen() {
         val transition = reduceChatState(chatState, action)
         persistChat(transition.state)
         transition.promptToSend?.let { prompt ->
-            scope.launch {
+            activeRequestJob = scope.launch {
                 try {
-                    val response = sendSafely(transport, prompt)
+                    val response = transport.stream(prompt) { delta ->
+                        persistChat(reduceChatState(chatState, ChatAction.ResponseDelta(delta)).state)
+                    }
                     persistChat(reduceChatState(chatState, ChatAction.ResponseReceived(response)).state)
                 } catch (cancelled: CancellationException) {
                     throw cancelled
