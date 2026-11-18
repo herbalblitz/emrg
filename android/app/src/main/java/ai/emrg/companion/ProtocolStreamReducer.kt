@@ -34,7 +34,7 @@ internal sealed interface ProtocolStreamAction {
 internal fun reduceProtocolStreams(
     state: ProtocolStreamState,
     action: ProtocolStreamAction,
-): ProtocolStreamState = when (action) {
+): ProtocolStreamState {\n    return when (action) {
     is ProtocolStreamAction.Start -> {
         if (action.requestId.isBlank() || state.requests[action.requestId]?.status == StreamStatus.ACTIVE) state
         else state.copy(requests = state.requests + (action.requestId to StreamRequest(sessionId = action.sessionId)))
