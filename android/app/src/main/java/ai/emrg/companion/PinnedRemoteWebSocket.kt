@@ -135,7 +135,8 @@ internal class PinnedRemoteWebSocket(
         val approvedCwd = host.approvedCwd ?: return false
         if (command.cwd != approvedCwd) return false
         if (command.cwd.isBlank() || command.prompt.isBlank() || command.id.isBlank()) return false
-        return socket?.send(command.toJson().toString()) == true
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionChatFrame(command, workspaceId).toString()) == true
     }
 
     @Synchronized
@@ -148,6 +149,17 @@ internal class PinnedRemoteWebSocket(
     }
 
     companion object {
+        internal fun companionChatFrame(command: TaskCommand, workspaceId: String): JSONObject {
+            require(workspaceId.isNotBlank()) { "approved workspace is required" }
+            require(command.id.isNotBlank() && command.prompt.isNotBlank()) { "invalid chat command" }
+            return JSONObject()
+                .put("type", "chat.send")
+                .put("request_id", command.id)
+                .put("workspace_id", workspaceId)
+                .put("prompt", command.prompt)
+                .put("session_id", command.sessionId)
+        }
+
         internal fun createAuthFrame(deviceId: String, credential: String): JSONObject =
             JSONObject()
                 .put("type", "auth")
