@@ -105,4 +105,15 @@ class ReconnectionStateTest {
         state = reduceReconnection(state, ReconnectionAction.RetryScheduled(epoch, 1))
         assertEquals(1_000L, state.retryDelayMillis)
     }
+    @Test fun snapshotWithoutProtocolVersionFailsClosed() {
+        var state = reduceReconnection(ReconnectionState(), ReconnectionAction.Connect)
+        state = reduceReconnection(state, ReconnectionAction.Authenticated(state.connectionEpoch))
+        state = reduceReconnection(state, ReconnectionAction.SnapshotReceived(
+            state.connectionEpoch, snapshot.copy(protocolVersion = ""),
+        ))
+        assertEquals(ConnectionPhase.STATE_UNKNOWN, state.phase)
+        assertNull(state.snapshot)
+        assertEquals("Host snapshot is missing protocol version", state.lastError)
+    }
+
 }
