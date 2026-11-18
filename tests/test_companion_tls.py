@@ -6,6 +6,7 @@ import pytest
 from emrg.server.companion_tls import (
     CompanionTlsError,
     certificate_fingerprint_sha256,
+    create_server_context,
     fingerprint_matches,
     normalize_fingerprint,
     TLS_MINIMUM_VERSION,
