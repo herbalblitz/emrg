@@ -99,6 +99,19 @@ class PairingTransactions:
         return self._registry.issue(device_id=device_id, workspace_id=workspace_id,
                                     cwd=cwd, scopes=scopes)
 
+    def pending_requests(self) -> list[dict[str, object]]:
+        """Safe local-UI view; never includes pairing secret or secret hash."""
+        now = self._clock()
+        with self._lock:
+            self._purge_expired(now)
+            return [
+                {"pairing_id": key, "workspace_id": item.workspace_id,
+                 "cwd": item.cwd, "scopes": sorted(item.scopes),
+                 "approved": item.approved,
+                 "expires_in": max(0, int(PAIRING_TTL_SECONDS - (now - item.created_at)))}
+                for key, item in self._pending.items()
+            ]
+
     def cancel(self, pairing_id: str) -> bool:
         with self._lock:
             return self._pending.pop(pairing_id, None) is not None
