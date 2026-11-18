@@ -78,7 +78,7 @@ internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransi
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(
                 state.copy(
-                    messages = state.messages + if (state.streamingText.isNotEmpty()) ChatMessage("EMRG", state.streamingText + "\\n[Stopped]") else emptyList(),
+                    messages = state.messages + (if (state.streamingText.isNotEmpty()) listOf(ChatMessage("EMRG", state.streamingText + "\n[Stopped]")) else emptyList()),
                     isSending = false,
                     streamingText = ""
                 )
@@ -86,6 +86,6 @@ internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransi
         ChatAction.RequestFailed ->
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(
-                state.copy(messages = state.messages + ChatMessage("EMRG", if (state.streamingText.isEmpty()) CHAT_FAILURE_MESSAGE else state.streamingText + "\\n" + CHAT_FAILURE_MESSAGE), isSending = false, streamingText = "")
+                state.copy(messages = state.messages + ChatMessage("EMRG", if (state.streamingText.isEmpty()) CHAT_FAILURE_MESSAGE else state.streamingText + "\n" + CHAT_FAILURE_MESSAGE), isSending = false, streamingText = "")
             )
     }
