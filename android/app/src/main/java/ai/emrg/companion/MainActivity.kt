@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -60,6 +61,8 @@ private fun CompanionChatScreen() {
                 try {
                     val response = sendSafely(transport, prompt)
                     chatState = reduceChatState(chatState, ChatAction.ResponseReceived(response)).state
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {
                     chatState = reduceChatState(chatState, ChatAction.RequestFailed).state
                 } finally {
