@@ -72,3 +72,5 @@ This document is a security specification, not evidence that these mechanisms ar
 `emrg/server/companion_tls_identity.py` provisions a P-256 self-signed server certificate with SAN entries for explicitly supplied DNS/IP hosts, a bounded 365-day validity, SHA-256 fingerprint, and persistence across restart. Existing identities are validated (key/cert match, validity, SAN coverage) and are not silently regenerated; rotation requires explicit `reset=True`. Windows key bytes are DPAPI-protected; POSIX files are written atomically with restrictive modes. `create_identity_server_context` loads the identity into a TLS 1.2+ context and creates no socket. Unit tests are added; execution is pending CI.
 
 Still not implemented: host UI consent, host identity display/QR generation, Windows ACL verification for directory/temp files, cross-process provisioning lock, rotation UX, or listener integration.
+
+Provisioning and context loading are now serialized with a process-local lock to prevent concurrent threads from generating competing pins. Cross-process locking remains unimplemented.
