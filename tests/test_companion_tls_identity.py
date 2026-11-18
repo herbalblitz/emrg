@@ -149,3 +149,13 @@ def test_multiprocess_identity_provisioning_uses_one_persistent_pin(tmp_path):
     with ThreadPoolExecutor(max_workers=2) as pool:
         pins = list(pool.map(lambda _: run_once(), range(2)))
     assert pins[0] == pins[1]
+
+def test_tls_crypto_dependency_is_in_all_project_lockfiles():
+    root = Path(__file__).resolve().parents[1]
+    project = (root / "pyproject.toml").read_text(encoding="utf-8")
+    uv_lock = (root / "uv.lock").read_text(encoding="utf-8")
+    assert "cryptography>=44.0.0" in project
+    assert 'name = "cryptography"' in uv_lock
+    for lock_path in sorted((root / "packaging").glob("requirements-*.lock")):
+        lock = lock_path.read_text(encoding="utf-8")
+        assert "cryptography==" in lock, f"missing TLS crypto package in {lock_path.name}"
