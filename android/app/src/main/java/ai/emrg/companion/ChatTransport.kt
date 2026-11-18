@@ -6,6 +6,12 @@ package ai.emrg.companion
  */
 internal interface ChatTransport {
     suspend fun send(prompt: String): String
+
+    suspend fun stream(prompt: String, onDelta: (String) -> Unit): String {
+        val result = send(prompt)
+        onDelta(result)
+        return result
+    }
 }
 
 /** Deterministic mock used by the UI preview and unit tests. */
