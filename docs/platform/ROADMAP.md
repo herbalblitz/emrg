@@ -40,10 +40,10 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke (security proposal documented; implementation pending).
 
 ### M3 — Core workflows
-- [x] Chat markdown/code renderer (headings, bold, inline/fenced code and bullets; CI validation pending).
+- [x] Chat markdown/code renderer (headings, bold, inline/fenced code and bullets; CI passed run 44241040540).
 - [x] Transport stream callback + Compose partial response rendering and Stop/cancel state (mock-only; CI passed).
 - [ ] Session create/list/resume/rename.
-- [ ] Tool events and approval.
+- [x] Tool Activity UI component/state lifecycle wired to chat; CI validation pending (no live daemon event source yet).\n- [ ] Live tool events and approval.
 - [ ] Provider/settings and error states.
 
 ### M4 — Parity
@@ -69,7 +69,7 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [x] Add UI-level streaming callback, partial assistant text, stop/cancel handling and reducer tests; offline transport only (CI passed in run 44239121243).
 - [x] Add protocol JSON fixtures, Kotlin frame model/parser and request-stream reducer; desktop command schemas audited and lifecycle documented. Android CI test verification is still in progress.
 - [x] Resolve transport mismatch in source documentation (protocol.py header corrected; contract doc explains current WebSocket transport).
-- [ ] Test tools allowlist omission vs empty.
+- [ ] Test tools allowlist omission vs empty.\n- [x] Wire Tool Activity display into chat transient state and Compose; tests cover active-request updates and cleanup (CI pending).
 - [x] Confirm Android persistence and session UI integration CI results; builds/lint/tests passed before adding features.
 - [x] Integrate offline session manager into Compose UI; session controls are disabled during a request to prevent cross-session response writes.
 - [x] Validate offline session UI build/lint/tests; no daemon synchronization until protocol and pairing are validated.
