@@ -72,3 +72,29 @@ def test_pairing_scope_validation(tmp_path):
     pairing = make_pairing(tmp_path)
     with pytest.raises(PairingError):
         pairing.begin(workspace_id="ws", cwd="/w", scopes={"admin"})
+
+
+def test_pending_pairings_are_bounded_and_expiry_frees_capacity(tmp_path):
+    clock = FakeClock()
+    pairing = make_pairing(tmp_path, clock)
+    requests = [pairing.begin(workspace_id="ws", cwd="/w", scopes={"status"})
+                for _ in range(32)]
+    with pytest.raises(PairingError, match="capacity"):
+        pairing.begin(workspace_id="ws", cwd="/w", scopes={"status"})
+    clock.now += 180
+    # Expired transactions are purged before enforcing the cap.
+    replacement = pairing.begin(workspace_id="ws", cwd="/w", scopes={"status"})
+    assert replacement["pairing_id"] not in {r["pairing_id"] for r in requests}
+
+
+def test_cancel_all_invalidates_every_pending_transaction(tmp_path):
+    pairing = make_pairing(tmp_path)
+    requests = [pairing.begin(workspace_id="ws", cwd="/w", scopes={"status"})
+                for _ in range(3)]
+    assert pairing.cancel_all() == 3
+    assert pairing.cancel_all() == 0
+    assert pairing.pending_requests() == []
+    for request in requests:
+        with pytest.raises(PairingError, match="unavailable"):
+            pairing.redeem(pairing_id=request["pairing_id"],
+                           pairing_secret=request["pairing_secret"], device_id="d")
