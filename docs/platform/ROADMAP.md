@@ -25,7 +25,8 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Kotlin/Compose starter and CI workflow committed.
 - [x] Fix Java/Kotlin JVM target mismatch found by first CI build (Java 8 vs Kotlin 17); follow-up CI verification pending.
 - [ ] Gradle wrapper/reproducible build.
-- [ ] Navigation/state, fake transport, protocol fixtures.
+- [x] Initial chat state/UI and mock transport (offline-only; no network).
+- [ ] Navigation/state expansion, protocol fixtures.
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke.
 
 ### M3 — Core workflows
@@ -62,4 +63,5 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 
 Execution branch: `feat/android-windows-platform-audit`; do not work on `master`.
 CI first attempt (commit `34e23d1`) failed at Kotlin compile because Java compile target defaulted to 1.8 while Kotlin targeted 17. Fixed by setting both Java compatibility and Kotlin JVM target to 17 in `android/app/build.gradle.kts` (commit `9d74a53`); verify a fresh CI run before calling this resolved.
+Commit `5bd51cc` adds a local mock chat screen behind a transport interface; no real host connection or tool execution. CI run after JVM target fix was pending at last check; subsequent UI commits also require CI validation.
 Source review does not imply builds/tests ran.
