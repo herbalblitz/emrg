@@ -21,7 +21,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Android protocol JSON fixtures + Kotlin frame parser tests for malformed/optional/unknown frames, streaming, tool lifecycle and terminal events (CI passed run 44239121243).
 - [x] Request stream reducer tracks request/session IDs, interleaved deltas, tool events, terminal/cancel/error and connection-loss transitions (CI passed run 44239121243).
 - [x] Validated task/session command JSON builders and tests; tools omitted vs empty allowlist explicitly distinguished.
-- [ ] Reconnect policy and protocol negotiation/transport integration.\n- [x] Document safe reconnect/reconciliation constraints: never replay non-idempotent commands; mark active streams interrupted and require authoritative host snapshot before resuming UI state (design-only).
+- [x] Document reconnect/reconciliation safety requirements (design-only); transport integration and protocol negotiation remain open.\n- [x] Document safe reconnect/reconciliation constraints: never replay non-idempotent commands; mark active streams interrupted and require authoritative host snapshot before resuming UI state (design-only).
 - [x] Add Android protocol-event-to-chat bridge with request binding and mismatch isolation (CI passed run 44260106387).
 - [ ] Review pairing design without weakening local endpoint.
 
