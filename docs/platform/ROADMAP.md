@@ -19,7 +19,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Record protocol/documentation transport mismatch.
 - [x] Correct protocol.py module documentation to state that it models JSON payloads, not transport framing.
 - [x] Android protocol JSON fixtures + Kotlin frame parser tests for malformed/optional/unknown frames, streaming, tool lifecycle and terminal events (CI validation ongoing).
-- [x] Request stream reducer tracks request/session IDs, interleaved deltas, tool events, terminal/cancel/error and connection-loss transitions (CI validation ongoing).
+- [x] Request stream reducer tracks request/session IDs, interleaved deltas, tool events, terminal/cancel/error and connection-loss transitions (CI validation ongoing).\n- [x] Validated task/session command JSON builders and tests; tools omitted vs empty allowlist explicitly distinguished.
 - [ ] Reconnect policy and protocol negotiation/transport integration.
 - [ ] Review pairing design without weakening local endpoint.
 
