@@ -23,6 +23,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 
 ### M2 — Android foundation
 - [x] Kotlin/Compose starter and CI workflow committed.
+- [x] Fix Java/Kotlin JVM target mismatch found by first CI build (Java 8 vs Kotlin 17); follow-up CI verification pending.
 - [ ] Gradle wrapper/reproducible build.
 - [ ] Navigation/state, fake transport, protocol fixtures.
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke.
@@ -60,4 +61,5 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [ ] Inspect Windows packaging/test evidence for concrete defects.
 
 Execution branch: `feat/android-windows-platform-audit`; do not work on `master`.
+CI first attempt (commit `34e23d1`) failed at Kotlin compile because Java compile target defaulted to 1.8 while Kotlin targeted 17. Fixed by setting both Java compatibility and Kotlin JVM target to 17 in `android/app/build.gradle.kts` (commit `9d74a53`); verify a fresh CI run before calling this resolved.
 Source review does not imply builds/tests ran.
