@@ -48,7 +48,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun CompanionChatScreen() {
-    val historyStore = remember { ChatHistoryStore(androidx.compose.ui.platform.LocalContext.current.applicationContext) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val historyStore = remember(context) { ChatHistoryStore(context.applicationContext) }
     var chatState by remember { mutableStateOf(historyStore.load()) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
