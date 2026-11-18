@@ -38,6 +38,7 @@ internal class PinnedRemoteWebSocket(
     @Volatile private var pairedHost: PairedHost? = null
     @Volatile private var authenticated = false
     @Volatile private var generation = 0L
+    @Volatile private var terminalState: RemoteSocketState? = null
 
     @Synchronized
     fun connect(host: PairedHost) {
@@ -51,6 +52,7 @@ internal class PinnedRemoteWebSocket(
         require(credential.isNotBlank()) { "Paired credential is blank" }
         pairedHost = host
         authenticated = false
+        terminalState = null
         val attemptGeneration = generation
         listener.onState(RemoteSocketState.CONNECTING)
 
@@ -61,6 +63,7 @@ internal class PinnedRemoteWebSocket(
                 val peerCerts = response.handshake?.peerCertificates.orEmpty()
                 val actual = peerCerts.firstOrNull()?.let(::certificateFingerprint)
                 if (actual == null || !actual.equals(host.hostFingerprintSha256, ignoreCase = true)) {
+                    terminalState = RemoteSocketState.IDENTITY_REJECTED
                     listener.onState(RemoteSocketState.IDENTITY_REJECTED, "Host certificate identity mismatch")
                     webSocket.close(1008, "identity mismatch")
                     socket = null
@@ -76,6 +79,7 @@ internal class PinnedRemoteWebSocket(
                     .put("device_id", host.deviceId)
                     .put("credential", credential)
                 if (!webSocket.send(auth.toString())) {
+                    terminalState = RemoteSocketState.FAILED
                     listener.onState(RemoteSocketState.FAILED, "Authentication frame could not be sent")
                     webSocket.close(1011, "auth send failed")
                 }
@@ -84,6 +88,7 @@ internal class PinnedRemoteWebSocket(
             override fun onMessage(webSocket: WebSocket, text: String) {
                 if (attemptGeneration != generation) return
                 val frame = try { ProtocolFrame.parse(text) } catch (_: Exception) {
+                    terminalState = RemoteSocketState.FAILED
                     listener.onState(RemoteSocketState.FAILED, "Invalid host frame")
                     webSocket.close(1007, "invalid frame")
                     return
@@ -95,6 +100,7 @@ internal class PinnedRemoteWebSocket(
                     }
                     "auth_error", "auth_rejected" -> {
                         authenticated = false
+                        terminalState = RemoteSocketState.AUTH_REJECTED
                         listener.onState(RemoteSocketState.AUTH_REJECTED, "Host rejected pairing credential")
                         webSocket.close(1008, "auth rejected")
                     }
@@ -104,6 +110,7 @@ internal class PinnedRemoteWebSocket(
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
                 if (attemptGeneration != generation) return
+                terminalState = RemoteSocketState.FAILED
                 listener.onState(RemoteSocketState.FAILED, "Binary frames are unsupported")
                 webSocket.close(1003, "text frames only")
             }
@@ -111,7 +118,7 @@ internal class PinnedRemoteWebSocket(
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 if (attemptGeneration != generation) return
                 authenticated = false
-                listener.onState(RemoteSocketState.CLOSED)
+                if (terminalState == null) listener.onState(RemoteSocketState.CLOSED)
                 webSocket.close(code, null)
             }
 
@@ -119,7 +126,7 @@ internal class PinnedRemoteWebSocket(
                 if (attemptGeneration != generation) return
                 authenticated = false
                 socket = null
-                listener.onState(RemoteSocketState.FAILED, "Secure host connection failed")
+                if (terminalState == null) listener.onState(RemoteSocketState.FAILED, "Secure host connection failed")
             }
         })
     }
