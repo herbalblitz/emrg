@@ -26,9 +26,9 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 
 ## Android
 - [x] Native Kotlin/Compose scaffold with interactive mock chat, send/receive and demo/offline state (no real host connection)
-- [x] Mock transport extracted into a source unit with deterministic unit test (CI passed)
+- [x] Mock transport extracted with tests for demo response and transport failure fallback (CI passed)
 - [x] Chat request exception fallback and busy-state recovery
-- [x] CI workflow committed; debug APK build and lint passed in Actions (latest transport unit test run pending)
+- [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for the latest verified run
 - [ ] Pair/revoke; secure transport; diagnostics/reconnect
 - [ ] Chat/stream/cancel; sessions; tool activity/approvals
 - [ ] SAF workspace; memory; skills; tasks; evolution
