@@ -79,8 +79,8 @@ class CredentialRegistry:
         with self._lock:
             data = self._read()
             data["devices"][device_id] = {
-            "salt": salt, "verifier": _token_hash(token, salt),
-            "workspace_id": workspace_id, "cwd": cwd,
+                "salt": salt, "verifier": _token_hash(token, salt),
+                "workspace_id": workspace_id, "cwd": cwd,
                 "scopes": sorted(scopes), "revoked": False,
             }
             self._write(data)
