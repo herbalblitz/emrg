@@ -92,6 +92,14 @@ internal class PinnedRemoteWebSocket(
                 }
                 when (frame.type) {
                     "auth_ok" -> {
+                        val expectedHost = pairedHost
+                        if (expectedHost == null || !isValidAuthSuccess(frame, expectedHost)) {
+                            authenticated = false
+                            terminalState = RemoteSocketState.AUTH_REJECTED
+                            listener.onState(RemoteSocketState.AUTH_REJECTED, "Host authentication response is invalid")
+                            webSocket.close(1008, "invalid auth response")
+                            return
+                        }
                         authenticated = true
                         listener.onState(RemoteSocketState.AUTHENTICATED)
                     }
@@ -149,6 +157,16 @@ internal class PinnedRemoteWebSocket(
     }
 
     companion object {
+        internal fun isValidAuthSuccess(frame: ProtocolFrame, host: PairedHost): Boolean {
+            if (frame.type != "auth_ok" || frame.raw.optString("protocol") != "1.0") return false
+            val returnedWorkspace = frame.raw.optString("workspace_id").takeIf { it.isNotBlank() }
+            if (PairingScope.SEND_CHAT in host.scopes) {
+                return !host.approvedWorkspaceId.isNullOrBlank() &&
+                    returnedWorkspace == host.approvedWorkspaceId
+            }
+            return host.approvedWorkspaceId == null || returnedWorkspace == host.approvedWorkspaceId
+        }
+
         internal fun companionChatFrame(command: TaskCommand, workspaceId: String): JSONObject {
             require(workspaceId.isNotBlank() && workspaceId.toByteArray(Charsets.UTF_8).size <= 128) { "approved workspace is invalid" }
             require(command.id.isNotBlank() && command.id.toByteArray(Charsets.UTF_8).size <= 128) { "invalid request ID" }
