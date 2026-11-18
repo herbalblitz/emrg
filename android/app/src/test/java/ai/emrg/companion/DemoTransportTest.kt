@@ -8,9 +8,7 @@ class DemoTransportTest {
     @Test
     fun sendReturnsExplicitDemoOnlyResponse() = runTest {
         val transport = DemoTransport()
-
         val response = sendSafely(transport, "hello")
-
         assertEquals(
             "Demo response received. Host connection and real agent execution are not yet enabled.",
             response
@@ -24,10 +22,8 @@ class DemoTransportTest {
                 throw IllegalStateException("private transport details")
             }
         }
-
         assertEquals(CHAT_FAILURE_MESSAGE, sendSafely(failingTransport, "hello"))
     }
-}
 
     @Test
     fun cancellationIsNotConvertedToFailureMessage() = runTest {
@@ -44,3 +40,4 @@ class DemoTransportTest {
             // Expected: cancellation must not be swallowed by the safe error handler.
         }
     }
+}
