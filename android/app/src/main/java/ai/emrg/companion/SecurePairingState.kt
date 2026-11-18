@@ -9,6 +9,8 @@ internal data class PairedHost(
     val deviceId: String,
     val credentialAlias: String,
     val scopes: Set<PairingScope>,
+    val approvedWorkspaceId: String? = null,
+    val approvedCwd: String? = null,
 )
 
 internal enum class PairingScope {
@@ -87,7 +89,9 @@ internal fun reducePairingState(state: PairingState, action: PairingAction): Pai
                 !action.host.hostFingerprintSha256.equals(state.candidateFingerprint, ignoreCase = true) ||
                 action.host.deviceId.isBlank() ||
                 action.host.credentialAlias.isBlank() ||
-                action.host.scopes.isEmpty()
+                action.host.scopes.isEmpty() ||
+                (PairingScope.SEND_CHAT in action.host.scopes &&
+                    (action.host.approvedWorkspaceId.isNullOrBlank() || action.host.approvedCwd.isNullOrBlank()))
             ) state.copy(phase = PairingPhase.FAILED, errorCode = "INVALID_DEVICE_CREDENTIAL")
             else state.copy(phase = PairingPhase.PAIRED, pairedHost = action.host, errorCode = null)
         PairingAction.Revoked -> PairingState(phase = PairingPhase.REVOKED)
