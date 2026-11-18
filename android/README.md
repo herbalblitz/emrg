@@ -1,24 +1,30 @@
-# EMRG Android (companion client scaffold)
+# EMRG Android companion
 
-This directory is the native Android companion project.
+Native Kotlin + Jetpack Compose companion client.
 
 ## Current state
 
-**Scaffold only.** The app launches a Compose screen that explains the connection architecture. It does not yet connect to a daemon, pair devices, or expose agent features.
+- Interactive chat UI with local mock transport (send/receive, scroll to latest).
+- Explicit offline/demo indicator and warning; no real host connection or agent execution.
+- Secure pairing, session management and protocol networking are **not implemented**.
 
-## Architecture constraint
+## Architecture/security boundary
 
-The existing daemon listens on loopback (`127.0.0.1`) and uses desktop-oriented authentication. It is not remotely accessible from Android over a LAN. Do not change the bind address to `0.0.0.0` as a shortcut.
+The existing host daemon is loopback-bound and uses desktop credentials. Android
+must not connect by copying that token or by exposing the daemon on LAN.
 
-Before implementing networking, design and review a secure pairing/remote transport:
-- explicit host enablement and device pairing/revocation
-- authenticated, encrypted transport and replay-resistant credentials
-- permission/approval boundaries for tool execution
-- compatibility/version negotiation and safe reconnect
-- no secret tokens in logs or QR payloads beyond short-lived pairing material
+Before real networking, implement and review:
+- explicit host-side remote enablement and device pairing/revocation
+- authenticated encrypted transport and host identity verification
+- expiring, device-scoped, revocable credentials and replay protection
+- version/capability negotiation, reconnect/snapshot semantics
+- host-owned tool approvals and least-privilege authorization
 
-The Android app should be a companion client initially; the Python runtime remains on the host.
+The Python runtime remains on the host. The current `DemoTransport` is a UI-only
+fake that can be replaced behind the `ChatTransport` interface once the contract
+and security design are approved.
 
 ## Build
 
-A Gradle wrapper will be added with the first reproducible build/CI slice. For now, open this folder in Android Studio and use a compatible Gradle installation to sync/build.
+CI workflow: `.github/workflows/android.yml` runs debug APK assembly and lint.
+Build status must be checked on GitHub Actions; no local build is claimed.
