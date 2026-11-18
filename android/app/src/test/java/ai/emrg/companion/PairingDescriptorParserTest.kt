@@ -44,6 +44,11 @@ class PairingDescriptorParserTest {
         assertEquals("INVALID_FINGERPRINT", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
     }
 
+    @Test fun rejectsStringVersion() {
+        val json = """{"version":"1","endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint"}"""
+        assertEquals("UNSUPPORTED_VERSION", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
+    }
+
     @Test fun rejectsUnknownFields() {
         val json = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","display_name":"Phone"}"""
         assertEquals("UNSUPPORTED_FIELD", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
