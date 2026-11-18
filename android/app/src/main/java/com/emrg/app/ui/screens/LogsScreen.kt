@@ -26,9 +26,9 @@ fun LogsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var source by remember { mutableStateOf("daemon") }
-    var lines by remember { mutableStateOf<com.emrg.app.model.LogPage?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'source', 'mutableStateOf("daemon")', 'String')}
+{var_decl('    ', 'lines', 'mutableStateOf<com.emrg.app.model.LogPage?>(null)', 'com.emrg.app.model.LogPage?')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     scope.launch {
         try {
@@ -69,8 +69,8 @@ fun AuditScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var entries by remember { mutableStateOf(emptyList<com.emrg.app.model.AuditEntry>()) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'entries', 'mutableStateOf(emptyList<com.emrg.app.model.AuditEntry>())', 'List<com.emrg.app.model.AuditEntry>')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     scope.launch {
         try {
@@ -105,8 +105,8 @@ fun DevicesScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var devices by remember { mutableStateOf(emptyList<com.emrg.app.model.DeviceInfo>()) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'devices', 'mutableStateOf(emptyList<com.emrg.app.model.DeviceInfo>())', 'List<com.emrg.app.model.DeviceInfo>')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     scope.launch {
         try {
@@ -139,7 +139,7 @@ fun SettingsScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
-    var danger by remember { mutableStateOf(false) }
+{var_decl('    ', 'danger', 'mutableStateOf(false)', 'Boolean')}
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Settings") }) },

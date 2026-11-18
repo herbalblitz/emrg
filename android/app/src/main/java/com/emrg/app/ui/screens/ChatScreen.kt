@@ -41,9 +41,9 @@ fun ChatScreen(
     val effectiveCwd = cwd.takeIf { it.isNotBlank() } ?: repository.currentWorkspace()
     val frames = repository.frames
 
-    var frameList by remember { mutableStateOf(emptyList<JsonObject>()) }
-    var input by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'frameList', 'mutableStateOf(emptyList<JsonObject>())', 'List<JsonObject>')}
+{var_decl('    ', 'input', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     LaunchedEffect(Unit) {
         scope.launch {

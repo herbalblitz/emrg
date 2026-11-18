@@ -24,9 +24,9 @@ fun EvolutionScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var count by remember { mutableStateOf(0) }
-    var records by remember { mutableStateOf(emptyList<com.emrg.app.model.EvolutionRecord>()) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'count', 'mutableStateOf(0)', 'Int')}
+{var_decl('    ', 'records', 'mutableStateOf(emptyList<com.emrg.app.model.EvolutionRecord>())', 'List<com.emrg.app.model.EvolutionRecord>')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     scope.launch {
         try {
@@ -63,9 +63,9 @@ fun TasksScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var tasks by remember { mutableStateOf(emptyList<com.emrg.app.model.TaskInfo>()) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var taskName by remember { mutableStateOf("") }
+{var_decl('    ', 'tasks', 'mutableStateOf(emptyList<com.emrg.app.model.TaskInfo>())', 'List<com.emrg.app.model.TaskInfo>')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+{var_decl('    ', 'taskName', 'mutableStateOf("")', 'String')}
 
     scope.launch {
         try {
@@ -119,8 +119,8 @@ fun SkillsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var skills by remember { mutableStateOf(emptyList<com.emrg.app.model.SkillInfo>()) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'skills', 'mutableStateOf(emptyList<com.emrg.app.model.SkillInfo>())', 'List<com.emrg.app.model.SkillInfo>')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     scope.launch {
         try {

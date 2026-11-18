@@ -27,10 +27,10 @@ fun SandboxScreen(
 ) {
     val scope = rememberCoroutineScope()
     val effectiveCwd = cwd.takeIf { it.isNotEmpty() }.orElse { repository.currentWorkspace() }
-    var mode by remember { mutableStateOf("workspace-write") }
-    var root by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf<String?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'mode', 'mutableStateOf("workspace-write")', 'String')}
+{var_decl('    ', 'root', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'result', 'mutableStateOf<String?>(null)', 'String?')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     fun apply() {
         error = null

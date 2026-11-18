@@ -27,10 +27,10 @@ fun FilesScreen(
     path: String = "/",
 ) {
     val scope = rememberCoroutineScope()
-    var current by remember { mutableStateOf(path) }
-    var entries by remember { mutableStateOf(emptyList<Triple<String, String, String>>()) }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'current', 'mutableStateOf(path)', 'String')}
+{var_decl('    ', 'entries', 'mutableStateOf(emptyList<Triple<String, String, String>>())', 'List<Triple<String, String, String>>')}
+{var_decl('    ', 'loading', 'mutableStateOf(false)', 'Boolean')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     fun refresh() {
         loading = true
@@ -83,9 +83,9 @@ fun EditorScreen(
     sessionId: String = "",
 ) {
     val scope = rememberCoroutineScope()
-    var content by remember { mutableStateOf("") }
-    var saving by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'content', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'saving', 'mutableStateOf(false)', 'Boolean')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Editor") }) },
@@ -131,7 +131,7 @@ fun EditorScreen(
                 },
                 enabled = !saving,
             ) {
-                Text(text = if (saving) "Saving…" else "Save")
+                Text(text = if (saving) "Saving\u2026" else "Save")
             }
         }
     }

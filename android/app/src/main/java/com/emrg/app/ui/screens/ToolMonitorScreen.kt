@@ -24,10 +24,10 @@ fun ToolMonitorScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var command by remember { mutableStateOf("") }
-    var running by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<String?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'command', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'running', 'mutableStateOf(false)', 'Boolean')}
+{var_decl('    ', 'result', 'mutableStateOf<String?>(null)', 'String?')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     fun run() {
         val cmd = command.trim()
@@ -44,7 +44,7 @@ fun ToolMonitorScreen(
                     mode = null,
                     timeout = 30,
                 )
-                result = "exit=${outcome.exitCode}\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\nSTDERR:\n${outcome.stderr}" else ""}"
+                result = "exit=${outcome.exitCode}\\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\\nSTDERR:\\n${outcome.stderr}" else ""}"
             } catch (e: GatewayRequestException) {
                 error = e.message
             }
@@ -71,7 +71,7 @@ fun ToolMonitorScreen(
                 onClick = { run() },
                 enabled = !running,
             ) {
-                Text(text = if (running) "Running…" else "Run")
+                Text(text = if (running) "Running\u2026" else "Run")
             }
             if (running) androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp))
             result?.let { r ->

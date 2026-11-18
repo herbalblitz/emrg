@@ -25,11 +25,11 @@ fun TerminalScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var command by remember { mutableStateOf("") }
-    var running by remember { mutableStateOf(false) }
-    var output by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var mode by remember { mutableStateOf("workspace-write") }
+{var_decl('    ', 'command', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'running', 'mutableStateOf(false)', 'Boolean')}
+{var_decl('    ', 'output', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+{var_decl('    ', 'mode', 'mutableStateOf("workspace-write")', 'String')}
 
     fun run() {
         val cmd = command.trim()
@@ -45,7 +45,7 @@ fun TerminalScreen(
                     mode = mode,
                     timeout = 60,
                 )
-                output += "\n$ cmd\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\n${outcome.stderr}" else ""}\n(exit ${outcome.exitCode})"
+                output += "\\n$ cmd\\n${outcome.stdout}${if (outcome.stderr.isNotEmpty()) "\\n${outcome.stderr}" else ""}\\n(exit ${outcome.exitCode})"
             } catch (e: GatewayRequestException) {
                 error = e.message
             }
@@ -100,7 +100,7 @@ fun TerminalScreen(
                     keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
                 )
                 Button(onClick = { run() }, enabled = !running) {
-                    Text(text = if (running) "Running…" else "Run")
+                    Text(text = if (running) "Running\u2026" else "Run")
                 }
             }
         }

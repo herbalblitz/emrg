@@ -24,9 +24,9 @@ fun MemoryScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var memories by remember { mutableStateOf(emptyList<com.emrg.app.model.MemoryEntry>()) }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'memories', 'mutableStateOf(emptyList<com.emrg.app.model.MemoryEntry>())', 'List<com.emrg.app.model.MemoryEntry>')}
+{var_decl('    ', 'loading', 'mutableStateOf(false)', 'Boolean')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     fun refresh() {
         loading = true
@@ -63,9 +63,9 @@ fun ModelsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var current by remember { mutableStateOf("") }
-    var models by remember { mutableStateOf(emptyList<com.emrg.app.model.ModelInfo>()) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'current', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'models', 'mutableStateOf(emptyList<com.emrg.app.model.ModelInfo>())', 'List<com.emrg.app.model.ModelInfo>')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     scope.launch {
         try {
@@ -102,11 +102,11 @@ fun RantScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var message by remember { mutableStateOf("") }
-    var agent by remember { mutableStateOf("") }
-    var submitting by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<Int?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'message', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'agent', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'submitting', 'mutableStateOf(false)', 'Boolean')}
+{var_decl('    ', 'result', 'mutableStateOf<Int?>(null)', 'Int?')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     fun submit() {
         val m = message.trim()
@@ -147,7 +147,7 @@ fun RantScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(onClick = { submit() }, enabled = !submitting) {
-                Text(text = if (submitting) "Sending…" else "Send rant")
+                Text(text = if (submitting) "Sending\u2026" else "Send rant")
             }
             result?.let { r -> androidx.compose.material3.Text(text = "Recorded ($r total)") }
         }

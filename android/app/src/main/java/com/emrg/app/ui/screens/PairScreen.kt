@@ -22,13 +22,13 @@ fun PairScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var hostText by remember { mutableStateOf("") }
-    var portText by remember { mutableStateOf("56032") }
-    var pinText by remember { mutableStateOf("") }
-    var codeText by remember { mutableStateOf("") }
-    var nameText by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var pairing by remember { mutableStateOf(false) }
+{var_decl('    ', 'hostText', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'portText', 'mutableStateOf("56032")', 'String')}
+{var_decl('    ', 'pinText', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'codeText', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'nameText', 'mutableStateOf("")', 'String')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
+{var_decl('    ', 'pairing', 'mutableStateOf(false)', 'Boolean')}
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Pair host") }) },
@@ -100,7 +100,7 @@ fun PairScreen(
                 },
                 enabled = !pairing,
             ) {
-                Text(text = if (pairing) "Pairing…" else "Pair")
+                Text(text = if (pairing) "Pairing\u2026" else "Pair")
             }
         }
     }

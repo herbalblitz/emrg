@@ -33,10 +33,10 @@ fun SessionsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var cwd by remember { mutableStateOf(repository.currentWorkspace()) }
-    var sessions by remember { mutableStateOf(emptyList<com.emrg.app.model.SessionSummary>()) }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+{var_decl('    ', 'cwd', 'mutableStateOf(repository.currentWorkspace())', 'String')}
+{var_decl('    ', 'sessions', 'mutableStateOf(emptyList<com.emrg.app.model.SessionSummary>())', 'List<com.emrg.app.model.SessionSummary>')}
+{var_decl('    ', 'loading', 'mutableStateOf(false)', 'Boolean')}
+{var_decl('    ', 'error', 'mutableStateOf<String?>(null)', 'String?')}
 
     if (cwd.isBlank()) {
         androidx.compose.material3.Scaffold(
@@ -99,7 +99,7 @@ fun SessionsScreen(
                     color = androidx.compose.material3.MaterialTheme.colorScheme.error,
                 )
             }
-            if (loading) LoadingContent(message = "Loading sessions…")
+            if (loading) LoadingContent(message = "Loading sessions\u2026")
             if (sessions.isEmpty() && !loading) {
                 EmptyContent(message = "No sessions in $cwd")
             } else {
