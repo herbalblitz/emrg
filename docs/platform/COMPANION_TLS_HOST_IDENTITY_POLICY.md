@@ -73,7 +73,7 @@ This document is a security specification, not evidence that these mechanisms ar
 
 Still not implemented: host UI consent, host identity display/QR generation, Windows ACL verification for directory/temp files, cross-process provisioning lock, rotation UX, or listener integration.
 
-Provisioning and context loading are now serialized with a process-local lock to prevent concurrent threads from generating competing pins. Cross-process locking remains unimplemented.
+Provisioning and context loading are serialized with both a process-local lock and an OS file lock (POSIX flock / Windows msvcrt locking) to prevent concurrent processes from generating competing pins. Lock files use restrictive POSIX mode 0600; Windows ACL review remains outstanding.
 
 ## CI platform coverage
 
@@ -82,3 +82,5 @@ The Companion security workflow now runs the Python companion suite on both Ubun
 ## Android descriptor fingerprint format
 
 The provisioner returns `fingerprint_sha256` as 32 uppercase hexadecimal byte pairs separated by colons, matching the Android pairing descriptor parser's accepted SHA-256 pin format. Keep this wire-format normalization consistent when generating the host QR descriptor.
+
+The lock file `.companion-identity.lock` is checked against symlinks and is created inside the protected identity directory. POSIX tests assert mode 0600; Windows behavior is exercised by CI but ACL inheritance has not been independently audited.
