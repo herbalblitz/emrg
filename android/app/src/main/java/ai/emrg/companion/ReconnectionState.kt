@@ -81,6 +81,10 @@ internal fun reduceReconnection(
         phase = ConnectionPhase.AUTH_FAILED,
         snapshot = null,
         lastError = "Device authorization is no longer valid",
+    ) else if (action.snapshot.protocolVersion.isBlank()) state.copy(
+        phase = ConnectionPhase.STATE_UNKNOWN,
+        snapshot = null,
+        lastError = "Host snapshot is missing protocol version",
     ) else state.copy(
         phase = ConnectionPhase.READY,
         snapshot = action.snapshot,
