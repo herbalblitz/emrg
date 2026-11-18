@@ -186,3 +186,10 @@ These are requirements for a future implementation, not evidence of an existing 
 - Unknown optional host capabilities are ignored. Unknown required capabilities, required capabilities omitted from the host offer, and unsupported protocol versions fail closed.
 - JVM tests cover compatible offers, optional future capabilities, unsupported major versions, unknown mandatory features and malformed offers.
 - **Not implemented:** handshake wire message, daemon capability advertisement, transport integration or remote snapshot validation.
+
+## Snapshot validation model milestone (2026-11-18)
+
+- Added transport-neutral validation for snapshot authorization, protocol version, nonblank session/request identifiers, optional event cursor, and optional workspace/cwd scope.
+- When the caller supplies an approved workspace ID or cwd, the snapshot must match exactly; mismatches fail validation.
+- Tests cover valid matching scope and invalid authorization/version, blank IDs/cursor/scope, and workspace/cwd mismatch.
+- **Not integrated into a remote reducer or transport:** callers must invoke this validator before treating a snapshot as reconciled. No host snapshot API exists yet.
