@@ -33,7 +33,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Private local SharedPreferences JSON snapshot for messages/draft; bounded to 60 messages, corrupt snapshot falls back safely (integration CI passed).
 - [x] Offline session state/store and Compose UI: bounded session list, isolated chat snapshots/drafts, select/create/rename/delete, safe last-session replacement (UI CI passed).
 - [ ] Navigation/state expansion, protocol fixtures.
-- [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke.
+- [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke (security proposal documented; implementation pending).
 
 ### M3 — Core workflows
 - [ ] Chat, streaming, cancellation, markdown/code.
