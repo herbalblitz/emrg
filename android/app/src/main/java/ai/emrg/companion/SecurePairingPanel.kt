@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun SecurePairingPanel() {
     var qrPayload by remember { mutableStateOf("") }
+    var scannerVisible by remember { mutableStateOf(false) }
     var endpoint by remember { mutableStateOf("") }
     var fingerprint by remember { mutableStateOf("") }
     var state by remember { mutableStateOf(PairingState()) }
