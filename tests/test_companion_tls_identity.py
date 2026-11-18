@@ -48,6 +48,7 @@ def test_identity_key_and_directory_are_private_on_posix(tmp_path):
     assert stat.S_IMODE(directory.stat().st_mode) == 0o700
     assert stat.S_IMODE(_key_path(directory).stat().st_mode) == 0o600
     assert stat.S_IMODE((directory / CERT_FILENAME).stat().st_mode) == 0o600
+    assert stat.S_IMODE((directory / ".companion-identity.lock").stat().st_mode) == 0o600
 
 
 def test_existing_identity_rejects_host_change_without_explicit_reset(tmp_path):
@@ -120,3 +121,14 @@ def test_concurrent_identity_provisioning_keeps_one_stable_pin(tmp_path):
     with ThreadPoolExecutor(max_workers=6) as pool:
         identities = list(pool.map(lambda _: provision_host_identity(directory, ["localhost"]), range(6)))
     assert len({identity.fingerprint_sha256 for identity in identities}) == 1
+
+def test_symlink_identity_lock_rejected(tmp_path):
+    if os.name == "nt":
+        pytest.skip("symlink creation requires elevated/developer permissions on Windows")
+    directory = tmp_path / "identity"
+    directory.mkdir()
+    target = tmp_path / "lock-target"
+    target.write_text("lock", encoding="utf-8")
+    (directory / ".companion-identity.lock").symlink_to(target)
+    with pytest.raises(CompanionTlsError, match="lock must not be a symlink"):
+        provision_host_identity(directory, ["localhost"])
