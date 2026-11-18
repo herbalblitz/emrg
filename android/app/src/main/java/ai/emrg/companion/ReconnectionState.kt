@@ -19,7 +19,44 @@ internal data class HostSnapshot(
     val sessionIds: Set<String>,
     val activeRequestIds: Set<String>,
     val eventCursor: String? = null,
+    val workspaceId: String? = null,
+    val cwd: String? = null,
 )
+
+internal data class SnapshotValidation(
+    val valid: Boolean,
+    val reason: String? = null,
+)
+
+/** Validate snapshot fields and enforce the workspace/cwd binding expected by the caller. */
+internal fun validateHostSnapshot(
+    snapshot: HostSnapshot,
+    expectedWorkspaceId: String? = null,
+    expectedCwd: String? = null,
+): SnapshotValidation {
+    if (!snapshot.authorized) return SnapshotValidation(false, "Device authorization is not valid")
+    if (!isSupportedProtocolVersion(snapshot.protocolVersion)) {
+        return SnapshotValidation(false, "Unsupported or missing protocol version")
+    }
+    if (snapshot.sessionIds.any { it.isBlank() }) return SnapshotValidation(false, "Snapshot contains blank session ID")
+    if (snapshot.activeRequestIds.any { it.isBlank() }) return SnapshotValidation(false, "Snapshot contains blank request ID")
+    if (snapshot.eventCursor != null && snapshot.eventCursor.isBlank()) {
+        return SnapshotValidation(false, "Snapshot event cursor is blank")
+    }
+    if (expectedWorkspaceId != null && snapshot.workspaceId != expectedWorkspaceId) {
+        return SnapshotValidation(false, "Snapshot workspace does not match approved workspace")
+    }
+    if (expectedCwd != null && snapshot.cwd != expectedCwd) {
+        return SnapshotValidation(false, "Snapshot cwd does not match approved working directory")
+    }
+    if (snapshot.workspaceId != null && snapshot.workspaceId.isBlank()) {
+        return SnapshotValidation(false, "Snapshot workspace ID is blank")
+    }
+    if (snapshot.cwd != null && snapshot.cwd.isBlank()) {
+        return SnapshotValidation(false, "Snapshot cwd is blank")
+    }
+    return SnapshotValidation(true)
+}
 
 internal data class ReconnectionState(
     val phase: ConnectionPhase = ConnectionPhase.DISCONNECTED,
