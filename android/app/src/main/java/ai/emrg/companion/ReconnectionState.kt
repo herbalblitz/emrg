@@ -73,7 +73,12 @@ internal sealed interface ReconnectionAction {
     data object Connect : ReconnectionAction
     data class AttemptStarted(val epoch: Long) : ReconnectionAction
     data class Authenticated(val epoch: Long) : ReconnectionAction
-    data class SnapshotReceived(val epoch: Long, val snapshot: HostSnapshot) : ReconnectionAction
+    data class SnapshotReceived(
+        val epoch: Long,
+        val snapshot: HostSnapshot,
+        val expectedWorkspaceId: String? = null,
+        val expectedCwd: String? = null,
+    ) : ReconnectionAction
     data class SnapshotUnavailable(val epoch: Long) : ReconnectionAction
     data class ConnectionLost(val epoch: Long, val reason: String? = null) : ReconnectionAction
     data class RetryScheduled(val epoch: Long, val attempt: Int) : ReconnectionAction
@@ -131,7 +136,11 @@ internal fun reduceReconnection(
         snapshot = null,
         lastError = "Unsupported host protocol version: ${action.snapshot.protocolVersion}",
     ) else {
-        val validation = validateHostSnapshot(action.snapshot)
+        val validation = validateHostSnapshot(
+            action.snapshot,
+            expectedWorkspaceId = action.expectedWorkspaceId,
+            expectedCwd = action.expectedCwd,
+        )
         if (!validation.valid) state.copy(
             phase = ConnectionPhase.STATE_UNKNOWN,
             snapshot = null,
