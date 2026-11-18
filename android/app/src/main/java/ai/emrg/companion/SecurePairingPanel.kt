@@ -39,7 +39,7 @@ internal fun SecurePairingPanel() {
         ) {
             Text("Secure host pairing", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Manual descriptor entry for now. QR scanning and daemon transport are not yet implemented.",
+                "Camera QR scanning is available. Live daemon transport is not yet implemented.",
                 style = MaterialTheme.typography.bodySmall
             )
             OutlinedTextField(
