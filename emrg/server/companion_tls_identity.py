@@ -259,10 +259,13 @@ def provision_host_identity(directory: Path, hosts: list[str] | tuple[str, ...],
 def create_identity_server_context(directory: Path) -> ssl.SSLContext:
     """Load the provisioned identity into TLS; temporary plaintext key is deleted immediately."""
     directory = Path(directory)
-    hosts = _load_and_validate(directory, _san_extension(
-        x509.load_pem_x509_certificate((directory / CERT_FILENAME).read_bytes())
-    ))
-    cert_path = hosts.certificate_path
+    try:
+        certificate = x509.load_pem_x509_certificate((directory / CERT_FILENAME).read_bytes())
+        san_hosts = _san_extension(certificate)
+    except Exception:
+        raise CompanionTlsError("stored TLS identity is invalid") from None
+    identity = _load_and_validate(directory, san_hosts)
+    cert_path = identity.certificate_path
     key_path = directory / (DPAPI_KEY_FILENAME if os.name == "nt" else KEY_FILENAME)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.minimum_version = TLS_MINIMUM_VERSION
