@@ -28,7 +28,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Initial chat state/UI and mock transport (offline-only; no network).
 - [x] Chat UI resets busy state and displays safe fallback when transport throws.
 - [x] Extract mock transport into a testable source unit and add deterministic unit tests for demo response and safe transport-failure fallback (CI verified).
-- [x] Pure chat state reducer: blank/duplicate submissions, response/failure transitions, draft lock while sending (CI verified).\n- [x] Activity saved-state restore for chat history and draft; bounded snapshot (60 messages), reset in-flight flag after recreation (tests added; CI pending).
+- [x] Pure chat state reducer: blank/duplicate submissions, response/failure transitions, draft lock while sending (CI verified).\n- [x] Activity saved-state restore for chat history and draft; bounded snapshot (60 messages), reset in-flight flag after recreation (tests added).\n- [x] Private local SharedPreferences JSON snapshot for messages/draft; bounded to 60 messages, corrupt snapshot falls back safely (CI pending).
 - [ ] Navigation/state expansion, protocol fixtures.
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke.
 
