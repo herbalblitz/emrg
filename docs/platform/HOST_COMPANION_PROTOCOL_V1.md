@@ -130,3 +130,8 @@ No automatic replay of chat-send requests on reconnect. A future status/snapshot
 6. Contract tests using the same JSON fixtures on Android and host.
 7. Windows firewall, clean-install, shutdown/restart and network exposure tests.
 8. Only then integrate Android WSS client with UI and end-to-end tests.
+
+
+## Host-side parser milestone
+
+Implemented `emrg/server/companion_protocol.py` as a strict frame parser/validation boundary with tests. It limits frame/prompt sizes, requires the auth envelope before authenticated messages, restricts message types, enforces scope/workspace for session/chat operations, and normalizes chat payloads while dropping client-supplied cwd/tools/sandbox. It does **not** verify credentials, bind sockets, dispatch requests, or provide a live remote server.
