@@ -1,77 +1,63 @@
 # Android + Windows Implementation Roadmap
 
-Target: preserve all existing EMRG features while delivering Android and Windows experiences.
+Target: preserve all original EMRG features while delivering robust Android and Windows experiences.
 
 ## Principles
-
-1. **Keep the engine:** Python runtime/daemon remains the source of truth.
-2. **Windows continuity:** maintain and improve the existing Electron GUI and packaged runtime.
-3. **Android companion:** native Kotlin/Compose client first; no unsafe direct local runtime port.
-4. **Protocol-first:** write and test a stable client contract before duplicating UI behavior.
-5. **Security-first:** authenticated pairing, encrypted transport, least privilege, visible approvals.
-6. **Incremental parity:** deliver feature slices and document limitations; never label incomplete parity as 100%.
+1. Python runtime/provider/tools/memory/skills/subagents/scheduler/session/sandbox remains source of truth.
+2. Preserve Electron desktop; rebuild weak components only after evidence and parity review.
+3. Android is native Kotlin/Compose companion initially; no unsafe direct local-runtime port.
+4. Protocol-first, security-first, incremental parity; never overclaim completeness.
 
 ## Milestones
+### M0 — Audit
+- [x] Initial repository/component inventory.
+- [x] Inspect daemon transport/auth and remote-access boundary.
+- [ ] Extract authoritative command/event payloads and Windows packaging baseline.
 
-### M0 — Repository and contract audit
-- Map daemon entry points, protocol envelopes, websocket/HTTP routes, auth and lifecycle.
-- Inventory GUI screens, actions, commands and state transitions.
-- Identify platform-specific Windows packaging/build/test coverage.
-- Baseline test and build results in CI (local execution unavailable in current environment).
-
-### M1 — Client protocol contract
-- Document message types, request IDs, streaming, errors, snapshots, reconnect, cancellation.
-- Add contract tests for malformed payloads, version mismatch and reconnect.
-- Design pairing/authentication without weakening existing local security.
+### M1 — Protocol
+- [x] Document local authentication and task fields; partial command/reply mapping.
+- [x] Record protocol/documentation transport mismatch.
+- [ ] Reconcile protocol.py docs with daemon behavior.
+- [ ] Contract fixtures/tests for malformed payload, optional fields, event lifecycle, reconnect.
+- [ ] Review pairing design without weakening local endpoint.
 
 ### M2 — Android foundation
-- Kotlin, Gradle, Compose, navigation, DI, networking, serialization.
-- Secure pairing screen; connection state and diagnostics.
-- Keystore token storage, TLS certificate handling, revoke/unpair.
-- Mock server and protocol tests; CI builds debug APK.
+- [x] Kotlin/Compose starter and CI workflow committed.
+- [ ] Gradle wrapper/reproducible build.
+- [ ] Navigation/state, fake transport, protocol fixtures.
+- [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke.
 
-### M3 — Android core workflows
-- Chat transcript, streaming, stop/cancel, markdown/code rendering.
-- Sessions: create, list, resume, rename.
-- Tool status and explicit approval/rejection.
-- Provider/connection settings and safe error handling.
+### M3 — Core workflows
+- [ ] Chat, streaming, cancellation, markdown/code.
+- [ ] Session create/list/resume/rename.
+- [ ] Tool events and approval.
+- [ ] Provider/settings and error states.
 
-### M4 — Android parity slices
-- Workspace browser via scoped storage / daemon capabilities.
-- Memory and skills.
-- Tasks and scheduled-task controls.
-- Rant/evolution history and status.
-- Diagnostics, export, device/session revocation.
-- Push/notification support only with explicit opt-in and background policy compliance.
+### M4 — Parity
+- [ ] Workspace via scoped storage/capabilities; memory; skills; scheduled tasks; evolution; diagnostics; opt-in notifications.
 
 ### M5 — Windows reliability
-- Baseline and fix existing Windows-specific tests.
-- Installer/update/uninstall and runtime bundling smoke tests.
-- Process lifecycle, daemon restart/reconnect, PATH and shell integration.
-- Sandbox/security regression tests.
-- Reproducible CI artifacts and checksums.
+- [ ] Windows tests baseline; packaging/install/update/uninstall.
+- [ ] Lifecycle/restart/reconnect, PATH/shell integration.
+- [ ] Sandbox/security regression and clean-machine smoke tests.
+- [ ] CI artifacts/checksums.
 
 ### M6 — Release gates
-- Linux unit and protocol tests.
-- Electron renderer/main tests, typecheck, packaging.
-- Windows clean-install, upgrade, launch, reconnect, uninstall tests.
-- Android lint, unit tests, instrumentation smoke tests, APK/AAB build.
-- Security review, dependency scan, signing and release notes.
+- [ ] Core/protocol tests; Electron tests/typecheck/package.
+- [ ] Windows clean install/upgrade/reconnect/uninstall.
+- [ ] Android lint/unit/instrumentation/APK/AAB.
+- [ ] Security/dependency review, signing and release notes.
 
-## Definition of done per feature
+## Definition of done
+Accessible UI; documented protocol; success/loading/empty/offline/error/cancel states; security/approval boundaries; automated tests; platform constraints; no secret or unbounded private logs.
 
-- UI flow exists and is accessible.
-- Protocol behavior is documented.
-- Success, loading, empty, offline, error and cancellation states are handled.
-- Security implications are explicit; approvals cannot be bypassed.
-- Automated tests cover normal and failure cases.
-- Windows/Android platform constraints are documented.
-- No secrets, personal data or unbounded logs in diagnostics.
+## Current work queue
+- [ ] Extract remaining protocol payload schemas and terminal/cancellation order.
+- [ ] Resolve transport mismatch in source documentation.
+- [ ] Test tools allowlist omission vs empty.
+- [ ] Build Android fake transport/state before remote networking.
+- [ ] Add wrapper and confirm CI result.
+- [ ] Inspect Windows packaging/test evidence for concrete defects.
 
-## Immediate work queue
-
-- [ ] Protocol inventory from `emrg/protocol.py`, server and daemon client.
-- [ ] Identify daemon transport/authentication and safe remote-access boundaries.
-- [ ] Android project scaffold (Kotlin + Compose).
-- [ ] Add CI Android build and lint.
-- [ ] Establish Windows packaging smoke tests and inspect existing gaps.
+Execution branch: `feat/android-windows-platform-audit`; do not work on `master`.
+Source review does not imply builds/tests ran.
