@@ -242,7 +242,7 @@ class ChatStateReducerTest {
         cancelled = reduceChatState(cancelled, ChatAction.BindRequest("cancel")).state
         cancelled = reduceChatState(cancelled, ChatAction.ProtocolSnapshot("cancel", StreamRequest(text = "partial", status = StreamStatus.CANCELLED))).state
         assertFalse(cancelled.isSending)
-        assertEquals("partial\\n[Stopped]", cancelled.messages.last().text)
+        assertEquals("partial\n[Stopped]", cancelled.messages.last().text)
         assertNull(cancelled.activeRequestId)
     }
 }
