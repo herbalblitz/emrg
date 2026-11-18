@@ -23,11 +23,14 @@ internal enum class StreamStatus { ACTIVE, COMPLETED, CANCELLED, FAILED }
 
 internal data class ProtocolStreamState(
     val requests: Map<String, StreamRequest> = emptyMap(),
+    /** Current transport generation; late events from an older socket must be ignored. */
+    val connectionEpoch: Long? = null,
 )
 
 internal sealed interface ProtocolStreamAction {
     data class Start(val requestId: String, val sessionId: String? = null) : ProtocolStreamAction
-    data class Receive(val frame: ProtocolFrame) : ProtocolStreamAction
+    data class Receive(val frame: ProtocolFrame, val connectionEpoch: Long? = null) : ProtocolStreamAction
+    data class SetConnectionEpoch(val epoch: Long) : ProtocolStreamAction
     data class Cancel(val requestId: String) : ProtocolStreamAction
     data object ConnectionLost : ProtocolStreamAction
 }
@@ -44,12 +47,14 @@ internal fun reduceProtocolStreams(
             )
         }
         is ProtocolStreamAction.Cancel -> finish(state, action.requestId, StreamStatus.CANCELLED)
+        is ProtocolStreamAction.SetConnectionEpoch -> state.copy(connectionEpoch = action.epoch)
         ProtocolStreamAction.ConnectionLost -> state.copy(requests = state.requests.mapValues { (_, request) ->
             if (request.status == StreamStatus.ACTIVE) {
                 request.copy(status = StreamStatus.FAILED, error = "Connection lost")
             } else request
         })
         is ProtocolStreamAction.Receive -> {
+            if (action.connectionEpoch != null && state.connectionEpoch != action.connectionEpoch) return state
             val frame = action.frame
             val id = frame.requestId ?: return state
             val existing = state.requests[id] ?: return state
