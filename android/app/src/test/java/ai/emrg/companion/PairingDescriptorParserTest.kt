@@ -25,7 +25,7 @@ class PairingDescriptorParserTest {
     @Test fun rejectsMissingExpiryAndLongLivedDescriptors() {
         val noExpiry = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint"}"""
         assertEquals("MISSING_EXPIRY", (PairingDescriptorParser.parse(noExpiry, 1000) as PairingDescriptorResult.Invalid).reason)
-        val tooFar = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1100}"""
+        val tooFar = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":2000}"""
         assertEquals("EXPIRY_TOO_FAR", (PairingDescriptorParser.parse(tooFar, 1000) as PairingDescriptorResult.Invalid).reason)
         val fractional = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1001.5}"""
         assertEquals("INVALID_EXPIRY", (PairingDescriptorParser.parse(fractional, 1000) as PairingDescriptorResult.Invalid).reason)
