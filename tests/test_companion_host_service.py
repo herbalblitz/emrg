@@ -51,3 +51,16 @@ def test_host_service_reject_and_revoke(tmp_path):
     assert host.revoke_device("phone")
     with pytest.raises(CompanionAuthenticationError):
         host.authenticate(_auth_frame("phone", token))
+
+
+def test_host_service_lifecycle_hook_invalidates_pending_requests(tmp_path):
+    host = CompanionHostService(tmp_path / "registry.json")
+    pending = [host.begin_pairing(workspace_id="ws", cwd="/w", scopes={"status"})
+               for _ in range(2)]
+    assert host.invalidate_pending_pairings() == 2
+    assert host.invalidate_pending_pairings() == 0
+    assert host.pending_pairings() == []
+    for item in pending:
+        with pytest.raises(ValueError, match="unavailable"):
+            host.redeem_pairing(pairing_id=item["pairing_id"],
+                                pairing_secret=item["pairing_secret"], device_id="d")
