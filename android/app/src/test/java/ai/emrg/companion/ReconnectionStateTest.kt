@@ -177,4 +177,29 @@ class ReconnectionStateTest {
         assertEquals("Snapshot contains blank session ID", state.lastError)
     }
 
+    @Test fun reducerRequiresSnapshotToMatchApprovedWorkspaceAndCwd() {
+        var state = reduceReconnection(ReconnectionState(), ReconnectionAction.Connect)
+        val epoch = state.connectionEpoch
+        state = reduceReconnection(state, ReconnectionAction.Authenticated(epoch))
+        val foreign = snapshot.copy(workspaceId = "workspace-other", cwd = "/other")
+        state = reduceReconnection(state, ReconnectionAction.SnapshotReceived(
+            epoch, foreign, expectedWorkspaceId = "workspace-approved", expectedCwd = "/approved",
+        ))
+        assertEquals(ConnectionPhase.STATE_UNKNOWN, state.phase)
+        assertNull(state.snapshot)
+        assertEquals("Snapshot workspace does not match approved workspace", state.lastError)
+    }
+
+    @Test fun reducerAcceptsSnapshotOnlyWhenApprovedWorkspaceAndCwdMatch() {
+        var state = reduceReconnection(ReconnectionState(), ReconnectionAction.Connect)
+        val epoch = state.connectionEpoch
+        state = reduceReconnection(state, ReconnectionAction.Authenticated(epoch))
+        val scoped = snapshot.copy(workspaceId = "workspace-approved", cwd = "/approved")
+        state = reduceReconnection(state, ReconnectionAction.SnapshotReceived(
+            epoch, scoped, expectedWorkspaceId = "workspace-approved", expectedCwd = "/approved",
+        ))
+        assertEquals(ConnectionPhase.READY, state.phase)
+        assertEquals(scoped, state.snapshot)
+    }
+
 }
