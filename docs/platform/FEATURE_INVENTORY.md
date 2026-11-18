@@ -100,4 +100,5 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 
 - [x] Host Companion defaults disabled; explicit enable gate protects pairing and auth entry points, and disable invalidates outstanding pairing transactions.
 - [x] Listener configuration validation rejects hostname/DNS inputs, wildcard binds, multicast/reserved addresses, privileged/out-of-range ports, and unbounded resource/timeout settings.
-- [ ] No actual WSS listener, accept loop, active-connection registry, or Android-to-host live integration yet.
+- [x] Dedicated opt-in WSS listener now binds only after explicit host enable; TLS context is loaded before bind, frames/connections/timeouts are bounded, auth is required as first frame, and shutdown stops accepting. Status-only transport response implemented; chat/session dispatch, active connection force-close on disable, local UI and Android live integration remain open.
+- [ ] CI verification and review of listener lifecycle/error behavior.
