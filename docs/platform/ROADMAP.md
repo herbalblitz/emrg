@@ -46,7 +46,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Protocol frame model/parser and request-stream reducer (JVM tests passed in CI #121).
 - [ ] Navigation/state expansion.
 - [x] Fail-closed Android pairing state model: WSS-only endpoint, SHA-256 host fingerprint confirmation, explicit host approval, host-bound scoped credential acceptance, revocation reset.
-- [x] Versioned QR descriptor parser and paste-validation UI (credential-free, WSS + fingerprint, expiry, strict field allowlist).
+- [x] Versioned QR descriptor parser and paste-validation UI (credential-free, WSS + fingerprint, mandatory expiry capped at 180 seconds, strict field allowlist).
 - [x] Camera QR scanning with CameraX + ML Kit, runtime permission flow, one-shot QR callback, lifecycle cleanup/race guard and user-visible startup failure state (APK build, unit tests, lint and artifact upload all passed CI #122).
 - [x] Define TLS host identity persistence, QR fingerprint trust, rotation/recovery, and fail-closed requirements in `COMPANION_TLS_HOST_IDENTITY_POLICY.md` (design only).\n- [x] Implement transport-free TLS primitives: DER SHA-256 fingerprinting, normalized pin validation, constant-time pin comparison, TLS 1.2+ server-context configuration and fail-closed certificate/key loading; unit tests added (CI pending).\n- [ ] TLS certificate provisioning/pinning in real transport; host-side pairing approval/revoke.
 - [x] Android Keystore AES-256-GCM credential store with alias-bound AAD, private encrypted-value persistence and delete/revoke path (unit tests passed).
@@ -117,3 +117,11 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Compose local pairing approval, safe pending-pairing metadata, credential issuance/authentication, device listing and revocation in `CompanionHostService`; unit tests added. **Service is transport-independent and exposes no listener; trusted-local UI boundary remains caller responsibility.**
 - [ ] Integrate credential registry with host approval, TLS listener, active-connection revocation and approved-workspace enforcement.
 - [ ] Integrate secure transport with Android connection/reconciliation UI and test against a real host implementation.
+
+### Companion hardening increment (2026-11-18)
+- [x] Host protocol parser rejects duplicate JSON keys and unknown client fields across auth/status/session/chat schemas; test cases committed.
+- [x] Android WSS auth envelope includes protocol version and a fresh client nonce.
+- [x] Android companion chat sends the v1 allowlisted `chat.send` envelope with the host-approved workspace; does not forward desktop task/cwd/tools fields.
+- [x] Client validates `auth_ok` protocol and exact approved workspace binding for chat-enabled pairing.
+- [x] QR descriptor parser requires integral finite expiry and enforces a maximum 180-second lifetime.
+- [ ] CI run for this increment; source-only changes are committed, Android workflow still running on the latest code commit.
