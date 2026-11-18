@@ -101,5 +101,5 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Host Companion defaults disabled; explicit enable gate protects pairing and auth entry points, and disable invalidates outstanding pairing transactions.
 - [x] Listener configuration validation rejects hostname/DNS inputs, wildcard binds, multicast/reserved addresses, privileged/out-of-range ports, and unbounded resource/timeout settings.
 - [x] Dedicated opt-in WSS listener binds only after explicit host enable; TLS context loads before bind, frame/connection/timeouts bounded, authentication required as first frame, and stop closes clients.
-- [x] Host-service disable lifecycle observer promptly closes active WSS clients; transport integration tests cover auth + scoped status and disable closure.
+- [x] Host-service disable lifecycle observer stops the listener, closes active WSS clients and invalidates pending pairings; transport tests cover auth + scoped status and disable shutdown.
 - [ ] Chat/session dispatch into daemon runtime, UI pairing/QR, Android live transport and full end-to-end remain open.
