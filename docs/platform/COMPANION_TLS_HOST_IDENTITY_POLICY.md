@@ -78,3 +78,7 @@ Provisioning and context loading are now serialized with a process-local lock to
 ## CI platform coverage
 
 The Companion security workflow now runs the Python companion suite on both Ubuntu and Windows. Windows execution is intended to exercise DPAPI-backed key protection and identity context loading; results are pending. POSIX file permission assertions run only on POSIX. This still does not establish Windows ACL hardening of the identity directory or temporary decrypted-key file.
+
+## Android descriptor fingerprint format
+
+The provisioner returns `fingerprint_sha256` as 32 uppercase hexadecimal byte pairs separated by colons, matching the Android pairing descriptor parser's accepted SHA-256 pin format. Keep this wire-format normalization consistent when generating the host QR descriptor.
