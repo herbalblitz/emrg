@@ -28,6 +28,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Initial chat state/UI and mock transport (offline-only; no network).
 - [x] Chat UI resets busy state and displays safe fallback when transport throws.
 - [x] Extract mock transport into a testable source unit and add deterministic unit tests for demo response and safe transport-failure fallback (CI verified).
+- [x] Pure chat state reducer: blank/duplicate submissions, response/failure transitions, draft lock while sending (tests added; CI pending).
 - [ ] Navigation/state expansion, protocol fixtures.
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke.
 
@@ -59,7 +60,7 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [ ] Extract remaining protocol payload schemas and terminal/cancellation order.
 - [ ] Resolve transport mismatch in source documentation.
 - [ ] Test tools allowlist omission vs empty.
-- [ ] Build Android fake transport/state before remote networking.
+- [ ] Build Android fake transport/state before remote networking. State reducer and transition tests now added; CI verification pending.
 - [ ] Add wrapper and confirm CI result.
 - [ ] Inspect Windows packaging/test evidence for concrete defects.
 
