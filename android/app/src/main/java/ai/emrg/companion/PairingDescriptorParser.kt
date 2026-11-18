@@ -18,6 +18,7 @@ internal sealed interface PairingDescriptorResult {
 internal object PairingDescriptorParser {
     private const val MAX_PAYLOAD_CHARS = 2048
     private val allowedFields = setOf("version", "endpoint", "fingerprint_sha256", "expires_at")
+    private val forbiddenCredentialFields = setOf("credential", "token", "secret", "password", "private_key", "authorization")
 
     fun parse(payload: String, nowEpochSeconds: Long): PairingDescriptorResult {
         if (payload.length !in 1..MAX_PAYLOAD_CHARS) return PairingDescriptorResult.Invalid("INVALID_LENGTH")
