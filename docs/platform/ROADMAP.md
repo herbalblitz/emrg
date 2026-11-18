@@ -18,8 +18,8 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Document local authentication/task fields and source-verified session command/reply schemas.
 - [x] Record protocol/documentation transport mismatch.
 - [x] Correct protocol.py module documentation to state that it models JSON payloads, not transport framing.
-- [x] Android protocol JSON fixtures + Kotlin frame parser tests for malformed/optional/unknown frames, streaming, tool lifecycle and terminal events (CI validation ongoing).
-- [x] Request stream reducer tracks request/session IDs, interleaved deltas, tool events, terminal/cancel/error and connection-loss transitions (CI validation ongoing).
+- [x] Android protocol JSON fixtures + Kotlin frame parser tests for malformed/optional/unknown frames, streaming, tool lifecycle and terminal events (CI passed in run 44239121243).
+- [x] Request stream reducer tracks request/session IDs, interleaved deltas, tool events, terminal/cancel/error and connection-loss transitions (CI passed in run 44239121243).
 - [x] Validated task/session command JSON builders and tests; tools omitted vs empty allowlist explicitly distinguished.
 - [ ] Reconnect policy and protocol negotiation/transport integration.
 - [ ] Review pairing design without weakening local endpoint.
@@ -41,7 +41,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 
 ### M3 — Core workflows
 - [ ] Chat markdown/code.
-- [x] Transport stream callback + Compose partial response rendering and Stop/cancel state (mock-only; CI validation pending).
+- [x] Transport stream callback + Compose partial response rendering and Stop/cancel state (mock-only; CI passed).
 - [ ] Session create/list/resume/rename.
 - [ ] Tool events and approval.
 - [ ] Provider/settings and error states.
@@ -66,7 +66,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 Accessible UI; documented protocol; success/loading/empty/offline/error/cancel states; security/approval boundaries; automated tests; platform constraints; no secret or unbounded private logs.
 
 ## Current work queue
-- [x] Add UI-level streaming callback, partial assistant text, stop/cancel handling and reducer tests; offline transport only, latest CI verification pending.
+- [x] Add UI-level streaming callback, partial assistant text, stop/cancel handling and reducer tests; offline transport only (CI passed in run 44239121243).
 - [x] Add protocol JSON fixtures, Kotlin frame model/parser and request-stream reducer; desktop command schemas audited and lifecycle documented. Android CI test verification is still in progress.
 - [x] Resolve transport mismatch in source documentation (protocol.py header corrected; contract doc explains current WebSocket transport).
 - [ ] Test tools allowlist omission vs empty.
@@ -82,4 +82,4 @@ CI first attempt (commit `34e23d1`) failed at Kotlin compile because Java compil
 Commit `5bd51cc` adds local mock chat UI; no host connection or tool execution. The mock transport is isolated in `ChatTransport.kt`; unit tests cover its explicit demo response and transport-error fallback. Earlier CI passed the mock transport and reducer baseline. Persistence integration run `44229919552` passed after the Compose context fix (`f6a0b6c`). Offline session store and state unit-test CI passed (`44231236886`, `44231252445`). Compose session UI and per-session chat update refactor committed; CI run `44232157705` succeeded (APK build/lint/tests).
 Session schemas and event lifecycle were source-inspected and documented in `CLIENT_PROTOCOL_CONTRACT.md`; desktop tests cover event dispatch and delta flush ordering. This is not an Android runtime protocol integration test. Source review does not imply builds/tests ran.
 
-Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests: `8b66bf4`, `4b5d1c9`, `3e64477`. Android JVM CI was enabled; CI exposed Compose Saver test misuse and an invalid local-session selection expectation. Snapshot encoding/decoding is now tested via pure codec helpers, and the selection test now asserts unknown IDs leave the active session unchanged. Streaming UI/state changes and fixes are pending CI verification.
+Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests: `8b66bf4`, `4b5d1c9`, `3e64477`. Android JVM CI was enabled; CI exposed Compose Saver test misuse and an invalid local-session selection expectation. Snapshot encoding/decoding is now tested via pure codec helpers, and the selection test now asserts unknown IDs leave the active session unchanged. Streaming UI/state changes and fixes passed CI in run `44239121243`.
