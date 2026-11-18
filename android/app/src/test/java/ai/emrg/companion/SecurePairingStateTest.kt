@@ -38,7 +38,7 @@ class SecurePairingStateTest {
     fun acceptsOnlyCredentialBoundToVerifiedHostAndNonEmptyScopes() {
         val candidate = reducePairingState(PairingState(), PairingAction.PairingQrReceived(endpoint, fingerprint))
         val verified = reducePairingState(candidate, PairingAction.HostIdentityConfirmed(fingerprint))
-        val host = PairedHost(endpoint, fingerprint, "device-1", "emrg.device.device-1", setOf(PairingScope.SEND_CHAT))
+        val host = PairedHost(endpoint, fingerprint, "device-1", "emrg.device.device-1", setOf(PairingScope.SEND_CHAT), "workspace-1", "/workspace/approved")
         val premature = reducePairingState(verified, PairingAction.CredentialIssued(host))
         assertEquals(PairingPhase.FAILED, premature.phase)
 
