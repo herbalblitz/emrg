@@ -6,6 +6,10 @@ certifi==2026.7.22
     # via
     #   httpcore
     #   httpx
+cffi==2.1.1
+    # via cryptography
+cryptography==50.0.2
+    # via emrg (pyproject.toml)
 h11==0.16.0
     # via httpcore
 httpcore==1.0.9
@@ -24,6 +28,8 @@ markupsafe==3.0.3
     # via jinja2
 mdurl==0.1.2
     # via markdown-it-py
+pycparser==3.12
+    # via cffi
 pygments==2.20.0
     # via rich
 pyyaml==6.0.3
