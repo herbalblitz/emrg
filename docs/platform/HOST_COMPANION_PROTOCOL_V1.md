@@ -155,3 +155,7 @@ The host identity provisioner currently creates self-signed certificates. Androi
 ## Nonce security caveat
 
 The client currently generates a fresh `client_nonce` and the host parser validates its presence/length, but the transport-independent authenticator does not yet use it for replay detection or a challenge-response. Treat it as a protocol field only—not replay protection. Before live WSS deployment, define a server challenge or a bounded per-device nonce/replay cache and test replay rejection.
+
+## Android exact-pin TLS trust implementation
+
+Android now creates a per-connection OkHttp client whose trust manager validates the pairing descriptor's exact SHA-256 leaf certificate pin during the TLS handshake, before the credential auth frame is sent. This supports self-signed certificates provisioned by the host identity module. The default OkHttp hostname verifier is retained, and the leaf certificate validity dates are checked. System CA trust is not required for the pinned certificate. Unit tests cover matching pins, mismatches, missing certificates and malformed pin strings. This remains client primitive code only; the host listener and UI flow are not connected.
