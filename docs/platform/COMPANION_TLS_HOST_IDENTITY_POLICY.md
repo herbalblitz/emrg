@@ -84,3 +84,5 @@ The Companion security workflow now runs the Python companion suite on both Ubun
 The provisioner returns `fingerprint_sha256` as 32 uppercase hexadecimal byte pairs separated by colons, matching the Android pairing descriptor parser's accepted SHA-256 pin format. Keep this wire-format normalization consistent when generating the host QR descriptor.
 
 The lock file `.companion-identity.lock` is checked against symlinks and is created inside the protected identity directory. POSIX tests assert mode 0600; Windows behavior is exercised by CI but ACL inheritance has not been independently audited.
+
+Cross-process identity initialization is now explicitly tested by launching two independent Python processes against the same empty identity directory and asserting they return the same pin. CI result pending.
