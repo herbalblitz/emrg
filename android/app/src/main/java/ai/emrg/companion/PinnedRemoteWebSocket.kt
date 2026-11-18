@@ -74,10 +74,7 @@ internal class PinnedRemoteWebSocket(
                 listener.onState(RemoteSocketState.AUTHENTICATING)
                 // This client frame is a proposed companion-auth contract; the daemon currently
                 // only supports its local desktop token auth and must not accept this yet.
-                val auth = JSONObject()
-                    .put("type", "auth")
-                    .put("device_id", host.deviceId)
-                    .put("credential", credential)
+                val auth = createAuthFrame(host.deviceId, credential)
                 if (!webSocket.send(auth.toString())) {
                     terminalState = RemoteSocketState.FAILED
                     listener.onState(RemoteSocketState.FAILED, "Authentication frame could not be sent")
@@ -151,6 +148,14 @@ internal class PinnedRemoteWebSocket(
     }
 
     companion object {
+        internal fun createAuthFrame(deviceId: String, credential: String): JSONObject =
+            JSONObject()
+                .put("type", "auth")
+                .put("protocol", "1.0")
+                .put("device_id", deviceId)
+                .put("credential", credential)
+                .put("client_nonce", java.util.UUID.randomUUID().toString())
+
         internal fun certificateFingerprint(certificate: Certificate): String {
             val digest = MessageDigest.getInstance("SHA-256").digest(certificate.encoded)
             return digest.joinToString(":") { "%02X".format(it) }
