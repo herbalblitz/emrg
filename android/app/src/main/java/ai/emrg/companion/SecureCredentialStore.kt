@@ -26,6 +26,7 @@ internal interface CredentialStore {
 internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStore {
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
+    @Synchronized
     override fun put(alias: String, credential: String) {
         requireValidAlias(alias)
         require(credential.isNotBlank()) { "Credential must not be blank" }
@@ -41,6 +42,7 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
         }
     }
 
+    @Synchronized
     override fun get(alias: String): String? {
         requireValidAlias(alias)
         val stored = preferences.getString(storageKey(alias), null) ?: return null
@@ -57,6 +59,7 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
         return String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8)
     }
 
+    @Synchronized
     override fun delete(alias: String) {
         requireValidAlias(alias)
         check(preferences.edit().remove(storageKey(alias)).commit()) {
