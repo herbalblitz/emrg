@@ -17,25 +17,28 @@ internal sealed interface PairingDescriptorResult {
 
 internal object PairingDescriptorParser {
     private const val MAX_PAYLOAD_CHARS = 2048
+    private val allowedFields = setOf("version", "endpoint", "fingerprint_sha256", "expires_at")
 
     fun parse(payload: String, nowEpochSeconds: Long): PairingDescriptorResult {
         if (payload.length !in 1..MAX_PAYLOAD_CHARS) return PairingDescriptorResult.Invalid("INVALID_LENGTH")
         return try {
             val json = JSONObject(payload)
+            val keys = json.keys()
+            while (keys.hasNext()) {
+                if (keys.next() !in allowedFields) return PairingDescriptorResult.Invalid("UNSUPPORTED_FIELD")
+            }
             if (json.optInt("version", -1) != 1) return PairingDescriptorResult.Invalid("UNSUPPORTED_VERSION")
             val endpoint = json.optString("endpoint", "").trim()
             val fingerprint = json.optString("fingerprint_sha256", "").trim()
             if (!isSecurePairingEndpoint(endpoint)) return PairingDescriptorResult.Invalid("INVALID_ENDPOINT")
             if (!isSha256Fingerprint(fingerprint)) return PairingDescriptorResult.Invalid("INVALID_FINGERPRINT")
             val expiry = if (json.has("expires_at")) {
-                val raw = json.optLong("expires_at", -1L)
+                val value = json.get("expires_at")
+                if (value !is Number) return PairingDescriptorResult.Invalid("INVALID_EXPIRY")
+                val raw = value.toLong()
                 if (raw <= nowEpochSeconds) return PairingDescriptorResult.Invalid("EXPIRED")
                 raw
             } else null
-            // Credential-like fields are expressly forbidden in QR payloads.
-            if (json.has("credential") || json.has("token") || json.has("secret")) {
-                return PairingDescriptorResult.Invalid("CREDENTIAL_IN_DESCRIPTOR")
-            }
             PairingDescriptorResult.Valid(
                 PairingDescriptor(1, endpoint, fingerprint.uppercase(), expiry)
             )
