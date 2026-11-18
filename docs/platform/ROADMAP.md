@@ -37,7 +37,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Offline session state/store and Compose UI: bounded session list, isolated chat snapshots/drafts, select/create/rename/delete, safe last-session replacement (UI CI passed).
 - [x] Protocol frame model/parser and request-stream reducer added (unit test CI validation ongoing).
 - [ ] Navigation/state expansion.
-- [x] Add fail-closed Android pairing state model: WSS-only endpoint, SHA-256 host fingerprint confirmation, explicit host approval, host-bound scoped credential acceptance, revocation reset (unit tests added; CI pending).\n- [ ] Pairing QR scanner/UI, TLS certificate pinning in a real transport, host-side approval/revoke implementation.
+- [x] Add fail-closed Android pairing state model: WSS-only endpoint, SHA-256 host fingerprint confirmation, explicit host approval, host-bound scoped credential acceptance, revocation reset (CI passed).\n- [ ] Pairing QR scanner/UI, TLS certificate pinning in a real transport, host-side approval/revoke implementation.
 - [x] Add Android Keystore AES-256-GCM credential store with alias-bound AAD, private encrypted-value persistence, and delete/revoke path (alias validation unit tests added; CI pending).
 
 ### M3 — Core workflows
