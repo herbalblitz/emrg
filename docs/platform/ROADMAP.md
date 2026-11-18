@@ -21,7 +21,13 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Android protocol JSON fixtures + Kotlin frame parser tests for malformed/optional/unknown frames, streaming, tool lifecycle and terminal events (CI passed run 44239121243).
 - [x] Request stream reducer tracks request/session IDs, interleaved deltas, tool events, terminal/cancel/error and connection-loss transitions (CI passed run 44239121243).
 - [x] Validated task/session command JSON builders and tests; tools omitted vs empty allowlist explicitly distinguished.
-- [x] Document reconnect/reconciliation safety requirements.\n- [x] Implement pure Android reconnect state model: epoch guards, auth/reconcile/ready/unknown/failure states, bounded retry schedule, foreground/manual-disconnect controls; JVM tests added.\n- [x] Guard protocol stream events by connection epoch and reject stale frames.\n- [x] Validate connection-epoch guard and bridge tests in CI #127 (run `44272379675` passed).\n- [ ] Integrate model with secure transport, host snapshot API, and protocol negotiation (not implemented; no live daemon connection).\n- [x] Add Android host-connection status panel with explicit offline/no-live-transport label and status text for all reducer phases; presentation tests added (CI verification pending).\n- [x] Document safe reconnect/reconciliation constraints: never replay non-idempotent commands; mark active streams interrupted and require authoritative host snapshot before resuming UI state (design-only).
+- [x] Document reconnect/reconciliation safety requirements.
+- [x] Implement pure Android reconnect state model: epoch guards, auth/reconcile/ready/unknown/failure states, bounded retry schedule, foreground/manual-disconnect controls; JVM tests added.
+- [x] Guard protocol stream events by connection epoch and reject stale frames.
+- [x] Validate connection-epoch guard and bridge tests in CI #127 (run `44272379675` passed).
+- [ ] Integrate model with secure transport, host snapshot API, and protocol negotiation (not implemented; no live daemon connection).
+- [x] Add Android host-connection status panel with explicit offline/no-live-transport label and status text for all reducer phases; presentation tests passed CI #129 (run `44273927462`).\n- [x] Require non-empty protocol version in host snapshot before READY; missing version fails closed to STATE_UNKNOWN (CI verification pending).
+- [x] Document safe reconnect/reconciliation constraints: never replay non-idempotent commands; mark active streams interrupted and require authoritative host snapshot before resuming UI state (design-only).
 - [x] Add Android protocol-event-to-chat bridge with request binding and mismatch isolation (CI passed run 44260106387).
 - [ ] Review pairing design without weakening local endpoint.
 
@@ -87,7 +93,8 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [ ] Windows clean-machine install/upgrade/reconnect/uninstall smoke.
 
 ## CI evidence
-- Run #122, commit `9c9922f43ce325f3292ee82674be91a18f6e18e9`: Android debug APK assembly, JVM unit tests, lint and APK artifact upload all succeeded. It validates scanner startup error UI plus parser/reducer tests; it is not an Android instrumentation or live daemon pairing test.\n- Run #121, commit `02b3145927568a41ec58c6c28fdfb2fd5746dcf0`: same pipeline passed for scanner call-site opt-in fix.
+- Run #129, commit `d7c6f71b9d996ff09b4795de13109893cbb73361`: connection status panel integration, APK assembly, JVM tests, lint and artifact upload passed.\n- Run #122, commit `9c9922f43ce325f3292ee82674be91a18f6e18e9`: Android debug APK assembly, JVM unit tests, lint and APK artifact upload all succeeded. It validates scanner startup error UI plus parser/reducer tests; it is not an Android instrumentation or live daemon pairing test.
+- Run #121, commit `02b3145927568a41ec58c6c28fdfb2fd5746dcf0`: same pipeline passed for scanner call-site opt-in fix.
 - Earlier CI runs: mock/session/streaming integration runs documented in the historical notes below.
 
 Execution branch: `feat/android-windows-platform-audit`; do not work on `master`.
