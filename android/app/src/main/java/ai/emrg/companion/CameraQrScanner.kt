@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -76,6 +77,7 @@ internal fun CameraQrScannerDialog(onQrDetected: (String) -> Unit, onDismiss: ()
     }
 }
 
+@OptIn(ExperimentalGetImage::class)
 @Composable
 private fun CameraPreviewScanner(modifier: Modifier, onQrDetected: (String) -> Unit) {
     val context = LocalContext.current
