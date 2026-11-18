@@ -194,4 +194,55 @@ class ChatStateReducerTest {
         assertEquals(ChatMessage("EMRG", "partial\n[Stopped]"), partial.messages.last())
     }
 
+
+    @Test
+    fun protocolSnapshotStreamsTextAndToolActivityForBoundRequest() {
+        var chat = reduceChatState(ChatUiState(draft = "prompt"), ChatAction.Submit).state
+        chat = reduceChatState(chat, ChatAction.BindRequest("req-1")).state
+        val tool = ToolCallState(callId = "t1", name = "lookup", label = "Lookup", arguments = "{\"q\":\"x\"}")
+        val snapshot = StreamRequest(text = "partial answer", toolCalls = listOf(tool))
+        chat = reduceChatState(chat, ChatAction.ProtocolSnapshot("req-1", snapshot)).state
+        assertEquals("partial answer", chat.streamingText)
+        assertEquals(snapshot.toolCalls, chat.toolCalls)
+        assertTrue(chat.isSending)
+    }
+
+    @Test
+    fun protocolSnapshotIgnoresEventsForUnboundOrDifferentRequest() {
+        val sending = reduceChatState(ChatUiState(draft = "prompt"), ChatAction.Submit).state
+        val bound = reduceChatState(sending, ChatAction.BindRequest("req-a")).state
+        val snapshot = StreamRequest(text = "should not leak")
+        assertEquals(bound, reduceChatState(bound, ChatAction.ProtocolSnapshot("req-b", snapshot)).state)
+        assertEquals(sending, reduceChatState(sending, ChatAction.ProtocolSnapshot("req-a", snapshot)).state)
+    }
+
+    @Test
+    fun protocolTerminalCompletionMovesStreamIntoHistoryAndClearsTransientState() {
+        var chat = reduceChatState(ChatUiState(draft = "prompt"), ChatAction.Submit).state
+        chat = reduceChatState(chat, ChatAction.BindRequest("req-1")).state
+        chat = reduceChatState(chat, ChatAction.ProtocolSnapshot("req-1", StreamRequest(text = "answer", toolCalls = listOf(ToolCallState(callId = "t", name = "tool"))))).state
+        chat = reduceChatState(chat, ChatAction.ProtocolSnapshot("req-1", StreamRequest(text = "answer-final", status = StreamStatus.COMPLETED))).state
+        assertFalse(chat.isSending)
+        assertEquals(ChatMessage("EMRG", "answer-final"), chat.messages.last())
+        assertEquals("", chat.streamingText)
+        assertTrue(chat.toolCalls.isEmpty())
+        assertNull(chat.activeRequestId)
+    }
+
+    @Test
+    fun protocolFailureAndCancellationUseChatTerminalTransitions() {
+        var failed = reduceChatState(ChatUiState(draft = "x"), ChatAction.Submit).state
+        failed = reduceChatState(failed, ChatAction.BindRequest("fail")).state
+        failed = reduceChatState(failed, ChatAction.ProtocolSnapshot("fail", StreamRequest(text = "partial", status = StreamStatus.FAILED, error = "daemon error"))).state
+        assertFalse(failed.isSending)
+        assertTrue(failed.messages.last().text.contains(CHAT_FAILURE_MESSAGE))
+        assertNull(failed.activeRequestId)
+
+        var cancelled = reduceChatState(ChatUiState(draft = "x"), ChatAction.Submit).state
+        cancelled = reduceChatState(cancelled, ChatAction.BindRequest("cancel")).state
+        cancelled = reduceChatState(cancelled, ChatAction.ProtocolSnapshot("cancel", StreamRequest(text = "partial", status = StreamStatus.CANCELLED))).state
+        assertFalse(cancelled.isSending)
+        assertEquals("partial\\n[Stopped]", cancelled.messages.last().text)
+        assertNull(cancelled.activeRequestId)
+    }
 }
