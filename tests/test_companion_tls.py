@@ -6,9 +6,9 @@ import pytest
 from emrg.server.companion_tls import (
     CompanionTlsError,
     certificate_fingerprint_sha256,
-    create_server_context,
     fingerprint_matches,
     normalize_fingerprint,
+    TLS_MINIMUM_VERSION,
 )
 
 
@@ -46,6 +46,5 @@ def test_server_context_fails_closed_for_missing_identity(tmp_path):
         create_server_context(tmp_path / "missing-cert.pem", tmp_path / "missing-key.pem")
 
 
-def test_server_context_enforces_tls_12_minimum_before_loading_identity():
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    assert context.minimum_version == ssl.TLSVersion.TLSv1_2
+def test_companion_tls_policy_minimum_is_tls_12():
+    assert TLS_MINIMUM_VERSION == ssl.TLSVersion.TLSv1_2
