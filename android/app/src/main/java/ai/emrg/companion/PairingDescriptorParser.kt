@@ -26,9 +26,14 @@ internal object PairingDescriptorParser {
             val json = JSONObject(payload)
             val keys = json.keys()
             while (keys.hasNext()) {
-                if (keys.next() !in allowedFields) return PairingDescriptorResult.Invalid("UNSUPPORTED_FIELD")
+                val key = keys.next()
+                if (key.lowercase() in forbiddenCredentialFields) return PairingDescriptorResult.Invalid("CREDENTIAL_IN_DESCRIPTOR")
+                if (key !in allowedFields) return PairingDescriptorResult.Invalid("UNSUPPORTED_FIELD")
             }
-            if (json.optInt("version", -1) != 1) return PairingDescriptorResult.Invalid("UNSUPPORTED_VERSION")
+            val versionValue = json.opt("version")
+            if (versionValue !is Number || versionValue.toDouble() != 1.0) {
+                return PairingDescriptorResult.Invalid("UNSUPPORTED_VERSION")
+            }
             val endpoint = json.optString("endpoint", "").trim()
             val fingerprint = json.optString("fingerprint_sha256", "").trim()
             if (!isSecurePairingEndpoint(endpoint)) return PairingDescriptorResult.Invalid("INVALID_ENDPOINT")
