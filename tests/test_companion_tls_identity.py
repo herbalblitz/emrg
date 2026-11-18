@@ -29,7 +29,8 @@ def test_provision_identity_and_persist_fingerprint_across_restarts(tmp_path):
     identity = provision_host_identity(tmp_path / "identity", hosts)
     again = provision_host_identity(tmp_path / "identity", hosts)
     assert identity.fingerprint_sha256 == again.fingerprint_sha256
-    assert len(identity.fingerprint_sha256) == 64
+    assert len(identity.fingerprint_sha256) == 95
+    assert all(len(part) == 2 for part in identity.fingerprint_sha256.split(":"))
     cert = x509.load_pem_x509_certificate(identity.certificate_path.read_bytes())
     sans = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
     assert sans.get_values_for_type(x509.DNSName) == ["localhost"]
