@@ -14,10 +14,22 @@ def test_pre_auth_accepts_auth_envelope_only():
 def test_pre_auth_rejects_invalid_envelopes(frame):
     with pytest.raises(CompanionProtocolError): validate_client_frame(frame)
 
+def test_pre_auth_rejects_unknown_fields():
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame(_auth(extra="ignored"))
+
+def test_duplicate_json_fields_rejected():
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame('{"type":"auth","type":"status","protocol":"1.0","device_id":"d","credential":"c","client_nonce":"n"}')
+
 def test_status_requires_request_id_after_auth():
     assert validate_client_frame('{"type":"status","request_id":"r"}',authenticated=True,scopes=frozenset({"status"}))["type"]=="status"
     with pytest.raises(CompanionProtocolError): validate_client_frame('{"type":"status"}',authenticated=True,scopes=frozenset({"status"}))
     with pytest.raises(CompanionProtocolError): validate_client_frame('{"type":"status","request_id":"r"}',authenticated=True)
+
+def test_status_rejects_unexpected_fields():
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame('{"type":"status","request_id":"r","workspace_id":"w"}',authenticated=True,scopes=frozenset({"status"}))
 
 def test_session_list_is_scope_and_workspace_bound():
     frame='{"type":"sessions.list","request_id":"r","workspace_id":"w"}'
@@ -25,11 +37,16 @@ def test_session_list_is_scope_and_workspace_bound():
     with pytest.raises(CompanionProtocolError): validate_client_frame(frame,authenticated=True,workspace_id="w")
     with pytest.raises(CompanionProtocolError): validate_client_frame(frame,authenticated=True,scopes=frozenset({"sessions.list"}),workspace_id="other")
 
-def test_chat_send_normalizes_and_drops_untrusted_privilege_fields():
-    frame={"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hello","session_id":None,"cwd":"C:/other","tools":["pwsh"],"sandbox":"danger-full-access"}
+def test_chat_send_normalizes_allowed_fields():
+    frame={"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hello","session_id":None}
     result=validate_client_frame(json.dumps(frame),authenticated=True,scopes=frozenset({"chat.send"}),workspace_id="w")
     assert result=={"type":"chat.send","request_id":"r","workspace_id":"w","session_id":None,"prompt":"hello"}
-    assert "cwd" not in result and "tools" not in result and "sandbox" not in result
+
+@pytest.mark.parametrize("field,value", [("cwd","C:/other"),("tools",["pwsh"]),("sandbox","danger-full-access"),("provider","remote")])
+def test_chat_rejects_privilege_or_unrecognized_fields(field,value):
+    frame={"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hello","session_id":None,field:value}
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame(json.dumps(frame),authenticated=True,scopes=frozenset({"chat.send"}),workspace_id="w")
 
 def test_chat_denies_missing_scope_or_wrong_workspace():
     frame='{"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hi"}'
