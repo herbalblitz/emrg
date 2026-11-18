@@ -27,7 +27,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [ ] Gradle wrapper/reproducible build.
 - [x] Initial chat state/UI and mock transport (offline-only; no network).
 - [x] Chat UI resets busy state and displays safe fallback when transport throws.
-- [x] Extract mock transport into a testable source unit and add a deterministic unit test (CI verification pending).
+- [x] Extract mock transport into a testable source unit and add deterministic unit tests for demo response and safe transport-failure fallback (CI verified).
 - [ ] Navigation/state expansion, protocol fixtures.
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke.
 
@@ -65,5 +65,5 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 
 Execution branch: `feat/android-windows-platform-audit`; do not work on `master`.
 CI first attempt (commit `34e23d1`) failed at Kotlin compile because Java compile target defaulted to 1.8 while Kotlin targeted 17. Fixed by setting both Java compatibility and Kotlin JVM target to 17 in `android/app/build.gradle.kts` (commit `9d74a53`); later CI runs for the fix and mock-chat UI both completed successfully.
-Commit `5bd51cc` adds local mock chat UI; no host connection or tool execution. The mock transport is now isolated in `ChatTransport.kt` with a unit test added; this latest change awaits CI.
+Commit `5bd51cc` adds local mock chat UI; no host connection or tool execution. The mock transport is isolated in `ChatTransport.kt`; unit tests cover its explicit demo response and transport-error fallback. Latest CI is green; source changes are reviewed, not locally built.
 Source review does not imply builds/tests ran.
