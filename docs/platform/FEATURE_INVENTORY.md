@@ -38,7 +38,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
 - [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI passed in run `44239121243`); no real daemon transport yet.
 - [x] Offline UI integration for response streaming, partial text display and Stop/cancel action (no live transport; CI passed in run `44239121243`).
-- [ ] Daemon session synchronization; tool approval UI
+- [x] Tool Activity component wired into transient chat state and Compose rendering; lifecycle reducer tests added (CI pending; protocol events not yet connected to live transport).\n- [ ] Daemon session synchronization; tool approval UI
 - [ ] SAF workspace; memory; skills; tasks; evolution
 - [ ] Opt-in notifications; settings/export; accessibility/offline states
 
