@@ -13,6 +13,24 @@ class PinnedRemoteWebSocketTest {
         override fun getPublicKey(): java.security.PublicKey? = null
     }
 
+    @Test fun authSuccessRequiresProtocolAndApprovedWorkspace() {
+        val host = PairedHost(
+            endpoint = "wss://host.example",
+            hostFingerprintSha256 = "AA:".repeat(31) + "AA",
+            deviceId = "phone",
+            credentialAlias = "cred",
+            scopes = setOf(PairingScope.SEND_CHAT),
+            approvedWorkspaceId = "workspace-expected",
+            approvedCwd = "/approved"
+        )
+        val matching = ProtocolFrame.parse("""{"type":"auth_ok","protocol":"1.0","workspace_id":"workspace-expected"}""")
+        val wrongWorkspace = ProtocolFrame.parse("""{"type":"auth_ok","protocol":"1.0","workspace_id":"other"}""")
+        val missingProtocol = ProtocolFrame.parse("""{"type":"auth_ok","workspace_id":"workspace-expected"}""")
+        assertEquals(true, PinnedRemoteWebSocket.isValidAuthSuccess(matching, host))
+        assertEquals(false, PinnedRemoteWebSocket.isValidAuthSuccess(wrongWorkspace, host))
+        assertEquals(false, PinnedRemoteWebSocket.isValidAuthSuccess(missingProtocol, host))
+    }
+
     @Test fun chatFrameUsesCompanionAllowlistAndHostApprovedWorkspace() {
         val command = TaskCommand("request-9", "/approved/path", "hi", "session-2", listOf("shell"), "now")
         val frame = PinnedRemoteWebSocket.companionChatFrame(command, "workspace-3")
