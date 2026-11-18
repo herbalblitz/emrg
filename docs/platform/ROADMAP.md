@@ -40,7 +40,8 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [ ] Pairing UI, diagnostics, secure credential storage, TLS and revoke (security proposal documented; implementation pending).
 
 ### M3 — Core workflows
-- [ ] Chat, streaming, cancellation, markdown/code.
+- [ ] Chat markdown/code.
+- [x] Transport stream callback + Compose partial response rendering and Stop/cancel state (mock-only; CI validation pending).
 - [ ] Session create/list/resume/rename.
 - [ ] Tool events and approval.
 - [ ] Provider/settings and error states.
@@ -65,6 +66,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 Accessible UI; documented protocol; success/loading/empty/offline/error/cancel states; security/approval boundaries; automated tests; platform constraints; no secret or unbounded private logs.
 
 ## Current work queue
+- [x] Add UI-level streaming callback, partial assistant text, stop/cancel handling and reducer tests; offline transport only, latest CI verification pending.
 - [x] Add protocol JSON fixtures, Kotlin frame model/parser and request-stream reducer; desktop command schemas audited and lifecycle documented. Android CI test verification is still in progress.
 - [x] Resolve transport mismatch in source documentation (protocol.py header corrected; contract doc explains current WebSocket transport).
 - [ ] Test tools allowlist omission vs empty.
@@ -80,4 +82,4 @@ CI first attempt (commit `34e23d1`) failed at Kotlin compile because Java compil
 Commit `5bd51cc` adds local mock chat UI; no host connection or tool execution. The mock transport is isolated in `ChatTransport.kt`; unit tests cover its explicit demo response and transport-error fallback. Earlier CI passed the mock transport and reducer baseline. Persistence integration run `44229919552` passed after the Compose context fix (`f6a0b6c`). Offline session store and state unit-test CI passed (`44231236886`, `44231252445`). Compose session UI and per-session chat update refactor committed; CI run `44232157705` succeeded (APK build/lint/tests).
 Session schemas and event lifecycle were source-inspected and documented in `CLIENT_PROTOCOL_CONTRACT.md`; desktop tests cover event dispatch and delta flush ordering. This is not an Android runtime protocol integration test. Source review does not imply builds/tests ran.
 
-Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests: `8b66bf4`, `4b5d1c9`, `3e64477`. Android JVM CI was enabled; one CI failure exposed an existing test call to Compose `Saver.save` without `SaverScope`, now corrected in `2202fef`/`ee353fc`. Do not claim current protocol tests pass until a run completes.
+Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests: `8b66bf4`, `4b5d1c9`, `3e64477`. Android JVM CI was enabled; one CI failure exposed an existing test call to Compose `Saver.save` without `SaverScope`. Replaced direct Saver invocation in tests with a serialization helper (`2843b11`, `5ae1421`). New streaming UI/state commits are under CI; do not claim they pass until runs complete.
