@@ -166,4 +166,15 @@ class ReconnectionStateTest {
         assertEquals("Unsupported or missing protocol version", validateHostSnapshot(snapshot.copy(protocolVersion = "3")).reason)
     }
 
+    @Test fun reducerNeverMarksSnapshotReadyWhenValidationFails() {
+        var state = reduceReconnection(ReconnectionState(), ReconnectionAction.Connect)
+        state = reduceReconnection(state, ReconnectionAction.Authenticated(state.connectionEpoch))
+        state = reduceReconnection(state, ReconnectionAction.SnapshotReceived(
+            state.connectionEpoch, snapshot.copy(sessionIds = setOf("")),
+        ))
+        assertEquals(ConnectionPhase.STATE_UNKNOWN, state.phase)
+        assertNull(state.snapshot)
+        assertEquals("Snapshot contains blank session ID", state.lastError)
+    }
+
 }
