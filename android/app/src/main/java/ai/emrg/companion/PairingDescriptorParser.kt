@@ -48,7 +48,7 @@ internal object PairingDescriptorParser {
             }
             val expiry = numeric.toLong()
             if (expiry <= nowEpochSeconds) return PairingDescriptorResult.Invalid("EXPIRED")
-            if (expiry - nowEpochSeconds > MAX_DESCRIPTOR_LIFETIME_SECONDS) {
+            if (numeric - nowEpochSeconds.toDouble() > MAX_DESCRIPTOR_LIFETIME_SECONDS.toDouble()) {
                 return PairingDescriptorResult.Invalid("EXPIRY_TOO_FAR")
             }
             PairingDescriptorResult.Valid(
