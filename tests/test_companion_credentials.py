@@ -90,3 +90,12 @@ def test_registry_file_and_new_parent_directory_are_private_on_posix(tmp_path: P
     CredentialRegistry(path).issue(device_id="phone", workspace_id="ws", cwd="/work", scopes={"status"})
     assert stat.S_IMODE(path.parent.stat().st_mode) == 0o700
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+def test_registry_rejects_invalid_unicode_and_scope_container(tmp_path: Path):
+    registry = CredentialRegistry(tmp_path / "credentials.json")
+    with pytest.raises(CredentialRegistryError):
+        registry.issue(device_id="\\ud800", workspace_id="ws", cwd="/work", scopes={"status"})
+    with pytest.raises(CredentialRegistryError):
+        registry.issue(device_id="device", workspace_id="ws", cwd="/work", scopes=["status"])
+    assert registry.verify(device_id="device", credential="\\ud800") is None
