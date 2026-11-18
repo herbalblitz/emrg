@@ -23,7 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun CompanionChatScreen() {
-    var chatState by remember { mutableStateOf(ChatUiState()) }
+    var chatState by rememberSaveable(stateSaver = ChatUiStateSaver) { mutableStateOf(ChatUiState()) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val transport = remember { DemoTransport() }
