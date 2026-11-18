@@ -64,3 +64,7 @@ The Python frame parser now converts invalid UTF-8 / lone-surrogate encoding fai
 ## Registry concurrent-write handling
 
 The credential registry now serializes read-modify-write issue/revoke operations and reads with a per-instance thread lock, preventing lost updates between concurrent host-service threads using the same registry instance. A regression test issues credentials concurrently for multiple devices and verifies all entries remain. This is process-local serialization only; cross-process file locking and Windows ACL hardening remain open requirements before listener integration.
+
+## Credential registry filesystem permission increment
+
+On POSIX, the registry now requests mode `0700` for a newly created containing directory and `0600` for the atomic temporary file before replacement. A test checks the effective directory/file modes. Existing directory permissions are not silently changed, and Windows ACL protection is still not implemented; do not treat this file registry as production-ready across platforms yet.
