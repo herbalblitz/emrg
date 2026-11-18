@@ -49,6 +49,11 @@ class PairingDescriptorParserTest {
         assertEquals("UNSUPPORTED_VERSION", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
     }
 
+    @Test fun rejectsCredentialFieldsCaseInsensitively() {
+        val json = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","TOKEN":"secret"}"""
+        assertEquals("CREDENTIAL_IN_DESCRIPTOR", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
+    }
+
     @Test fun rejectsUnknownFields() {
         val json = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","display_name":"Phone"}"""
         assertEquals("UNSUPPORTED_FIELD", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
