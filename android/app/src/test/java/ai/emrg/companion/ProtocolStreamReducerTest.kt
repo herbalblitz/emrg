@@ -70,9 +70,9 @@ class ProtocolStreamReducerTest {
     }
 
     @Test fun toolActivityStatusDistinguishesRunningFailedAndCompleted() {
-        val running = ToolCallState(callId = "r", name = "search")
-        val failed = ToolCallState(callId = "f", name = "write", failed = true, completed = true)
-        val completed = ToolCallState(callId = "c", name = "lookup", completed = true)
+        val running = ToolCallState(callId = "r", name = "search", label = null)
+        val failed = ToolCallState(callId = "f", name = "write", label = null, failed = true, completed = true)
+        val completed = ToolCallState(callId = "c", name = "lookup", label = null, completed = true)
         assertEquals("Running", toolActivityStatus(running))
         assertEquals("Failed", toolActivityStatus(failed))
         assertEquals("Completed", toolActivityStatus(completed))
