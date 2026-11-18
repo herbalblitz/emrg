@@ -27,7 +27,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 ## Android
 - [x] Native Kotlin/Compose scaffold with interactive mock chat, send/receive and demo/offline state (no real host connection)
 - [x] Mock transport extracted with tests for demo response and transport failure fallback (CI passed)
-- [x] Chat state reducer with tests for blank/duplicate submits, draft lock, response/failure and stale response.
+- [x] Chat state reducer with tests for blank/duplicate submits, draft lock, response/failure and stale response.\n- [x] Activity saved-state snapshot restores chat messages/draft, caps saved history to 60, clears transient sending state (CI pending).
 - [x] Safe chat error fallback preserves coroutine cancellation (tests added; CI pending)
 - [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for the latest verified run
 - [ ] Pair/revoke; secure transport; diagnostics/reconnect
