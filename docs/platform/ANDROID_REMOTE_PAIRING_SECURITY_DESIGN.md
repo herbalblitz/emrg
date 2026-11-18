@@ -86,3 +86,7 @@ Before implementation:
 ## QR descriptor parser implementation note
 
 The Android parser accepts only the versioned credential-free descriptor allowlist, requires an expiry timestamp, rejects expired descriptors, rejects non-integral/non-finite timestamps, and caps the descriptor lifetime at 180 seconds. This is parser/UI groundwork only; it does not prove host identity or pair a device until the real TLS host and approval flow exist.
+
+## Endpoint validation hardening
+
+The WSS pairing endpoint validator now rejects URL user-info, query strings, fragments, non-WSS schemes, missing hosts, and invalid/zero ports. This prevents credential-like query parameters from being smuggled in the QR endpoint and catches malformed socket targets before the pairing state advances. Unit tests cover these rejection cases; the Android workflow is pending.
