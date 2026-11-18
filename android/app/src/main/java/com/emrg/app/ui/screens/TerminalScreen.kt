@@ -11,9 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberMutableStateOf
@@ -28,11 +26,26 @@ fun TerminalScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var command by remember { mutableStateOf("") }
-    var running by remember { mutableStateOf(false) }
-    var output by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var mode by remember { rememberMutableStateOf("workspace-write") }
+    val __command = remember { ("") }
+    var command: String
+        get() = __command.value
+        set(value) { __command.value = value }
+    val __running = remember { (false) }
+    var running: String
+        get() = __running.value
+        set(value) { __running.value = value }
+    val __output = remember { ("") }
+    var output: String
+        get() = __output.value
+        set(value) { __output.value = value }
+    val __error = remember { (null) }
+    var error: String
+        get() = __error.value
+        set(value) { __error.value = value }
+    val __mode = remember { ("workspace-write") }
+    var mode: String
+        get() = __mode.value
+        set(value) { __mode.value = value }
 
     fun run() {
         val cmd = command.trim()
@@ -56,7 +69,10 @@ fun TerminalScreen(
         }
     }
 
-    var expanded by remember { rememberMutableStateOf(false) }
+    val __expanded = remember { (false) }
+    var expanded: String
+        get() = __expanded.value
+        set(value) { __expanded.value = value }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Terminal") }) },

@@ -16,9 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -43,9 +41,18 @@ fun ChatScreen(
     val effectiveCwd = cwd.takeIf { it.isNotBlank() } ?: repository.currentWorkspace()
     val frames = repository.frames
 
-    var frameList by remember { mutableStateOf(emptyList<JsonObject>()) }
-    var input by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    val __frameList = remember { (emptyList<JsonObject>()) }
+    var frameList: String
+        get() = __frameList.value
+        set(value) { __frameList.value = value }
+    val __input = remember { ("") }
+    var input: String
+        get() = __input.value
+        set(value) { __input.value = value }
+    val __error = remember { (null) }
+    var error: String
+        get() = __error.value
+        set(value) { __error.value = value }
 
     LaunchedEffect(Unit) {
         scope.launch {
