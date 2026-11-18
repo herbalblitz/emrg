@@ -6,7 +6,7 @@ on:
       - "android/**"
       - ".github/workflows/android.yml"
   push:
-    branches: [master]
+    branches: [master, 'feat/**']
     paths:
       - "android/**"
       - ".github/workflows/android.yml"
