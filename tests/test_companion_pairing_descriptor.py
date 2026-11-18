@@ -85,3 +85,10 @@ def test_descriptor_expiry_never_outlives_host_certificate(tmp_path):
         now_epoch_seconds=int(datetime.now(timezone.utc).timestamp())
     ))
     assert descriptor["expires_at"] <= int(cert_expiry.timestamp())
+
+def test_descriptor_canonicalizes_hostname_case_and_trailing_dot(tmp_path):
+    identity = provision_host_identity(tmp_path / "tls", ["localhost"])
+    descriptor = json.loads(create_pairing_descriptor(
+        identity, "WSS://LOCALHOST.:8443/", now_epoch_seconds=10
+    ))
+    assert descriptor["endpoint"] == "wss://localhost:8443"
