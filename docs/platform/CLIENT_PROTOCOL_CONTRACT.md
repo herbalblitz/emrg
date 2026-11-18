@@ -171,3 +171,10 @@ These are requirements for a future implementation, not evidence of an existing 
 - Android UI now displays the reconnection model's phase and fail-closed explanation, including disconnected, connecting, authenticating, reconciling, ready, unknown state, retry, auth failure and host identity mismatch.
 - The status panel is model-backed but remains offline. It explicitly states that live transport is not implemented and does not expose a connect action or falsely claim connectivity.
 - Presentation tests added; CI verification for this newest panel commit is pending.
+
+## Reconnect protocol-version gate (2026-11-18)
+
+- The Android reconnect reducer accepts protocol major version `1` (either `1` or `1.x`) and treats minor versions as backward-compatible for this client contract.
+- Blank, malformed, prerelease-like, or unknown-major versions fail closed to `STATE_UNKNOWN`; the snapshot is discarded and controls must not be considered reconciled.
+- This is a client-side compatibility policy only. The daemon does not yet negotiate capabilities or expose the remote snapshot endpoint.
+- Tests cover accepted/rejected version strings and ensure a `2.0` snapshot is not retained. CI verification is pending.
