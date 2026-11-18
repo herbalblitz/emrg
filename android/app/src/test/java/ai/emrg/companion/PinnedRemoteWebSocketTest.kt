@@ -13,6 +13,27 @@ class PinnedRemoteWebSocketTest {
         override fun getPublicKey(): java.security.PublicKey? = null
     }
 
+    @Test fun chatFrameUsesCompanionAllowlistAndHostApprovedWorkspace() {
+        val command = TaskCommand("request-9", "/approved/path", "hi", "session-2", listOf("shell"), "now")
+        val frame = PinnedRemoteWebSocket.companionChatFrame(command, "workspace-3")
+        assertEquals("chat.send", frame.getString("type"))
+        assertEquals("request-9", frame.getString("request_id"))
+        assertEquals("workspace-3", frame.getString("workspace_id"))
+        assertEquals("hi", frame.getString("prompt"))
+        assertEquals("session-2", frame.getString("session_id"))
+        assertEquals(false, frame.has("cwd"))
+        assertEquals(false, frame.has("tools"))
+        assertEquals(false, frame.has("timestamp"))
+    }
+
+    @Test fun chatFrameRequiresApprovedWorkspace() {
+        val command = TaskCommand("r", "/approved/path", "hi")
+        try {
+            PinnedRemoteWebSocket.companionChatFrame(command, "")
+            throw AssertionError("empty workspace should be rejected")
+        } catch (_: IllegalArgumentException) { }
+    }
+
     @Test fun authFrameIncludesRequiredProtocolAndFreshNonce() {
         val first = PinnedRemoteWebSocket.createAuthFrame("device-7", "credential-test")
         val second = PinnedRemoteWebSocket.createAuthFrame("device-7", "credential-test")
