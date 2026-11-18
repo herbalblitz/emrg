@@ -8,6 +8,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import time
+from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 from emrg.server.companion_tls import CompanionTlsError, normalize_fingerprint
@@ -58,10 +59,14 @@ def create_pairing_descriptor(identity: HostTlsIdentity, endpoint: str, *,
     now = int(time.time()) if now_epoch_seconds is None else now_epoch_seconds
     if isinstance(now, bool) or not isinstance(now, int):
         raise CompanionTlsError("invalid pairing descriptor time")
+    certificate_expiry = int(identity.expires_at.timestamp())
+    if certificate_expiry <= now:
+        raise CompanionTlsError("host TLS identity is expired")
+    descriptor_expiry = min(now + ttl_seconds, certificate_expiry)
     descriptor = {
         "version": DESCRIPTOR_VERSION,
         "endpoint": normalized_endpoint,
         "fingerprint_sha256": formatted_fingerprint,
-        "expires_at": now + ttl_seconds,
+        "expires_at": descriptor_expiry,
     }
     return json.dumps(descriptor, separators=(",", ":"), ensure_ascii=True)
