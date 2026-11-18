@@ -138,4 +138,32 @@ class ReconnectionStateTest {
         assertEquals("Host snapshot is missing protocol version", state.lastError)
     }
 
+    @Test fun snapshotValidationAcceptsMatchingApprovedWorkspaceAndCwd() {
+        val candidate = snapshot.copy(workspaceId = "workspace-a", cwd = "/project/a")
+        val result = validateHostSnapshot(candidate, expectedWorkspaceId = "workspace-a", expectedCwd = "/project/a")
+        assertTrue(result.valid)
+        assertNull(result.reason)
+    }
+
+    @Test fun snapshotValidationRejectsWorkspaceOrCwdMismatch() {
+        val candidate = snapshot.copy(workspaceId = "workspace-b", cwd = "/project/b")
+        assertEquals("Snapshot workspace does not match approved workspace",
+            validateHostSnapshot(candidate, expectedWorkspaceId = "workspace-a").reason)
+        assertEquals("Snapshot cwd does not match approved working directory",
+            validateHostSnapshot(candidate, expectedCwd = "/project/a").reason)
+    }
+
+    @Test fun snapshotValidationRejectsBlankIdentifiersAndCursor() {
+        assertEquals("Snapshot contains blank session ID", validateHostSnapshot(snapshot.copy(sessionIds = setOf(" "))).reason)
+        assertEquals("Snapshot contains blank request ID", validateHostSnapshot(snapshot.copy(activeRequestIds = setOf(""))).reason)
+        assertEquals("Snapshot event cursor is blank", validateHostSnapshot(snapshot.copy(eventCursor = " ")).reason)
+        assertEquals("Snapshot workspace ID is blank", validateHostSnapshot(snapshot.copy(workspaceId = "")).reason)
+        assertEquals("Snapshot cwd is blank", validateHostSnapshot(snapshot.copy(cwd = " ")).reason)
+    }
+
+    @Test fun snapshotValidationRejectsUnauthorizedOrUnsupportedVersion() {
+        assertEquals("Device authorization is not valid", validateHostSnapshot(snapshot.copy(authorized = false)).reason)
+        assertEquals("Unsupported or missing protocol version", validateHostSnapshot(snapshot.copy(protocolVersion = "3")).reason)
+    }
+
 }
