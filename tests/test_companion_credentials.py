@@ -1,4 +1,6 @@
 import json
+import os
+import stat
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -79,3 +81,12 @@ def test_concurrent_issuance_preserves_all_device_records(tmp_path: Path):
     assert set(device_ids) == {item["device_id"] for item in registry.list_devices()}
     for device_id, token in issued.items():
         assert registry.verify(device_id=device_id, credential=token)["workspace_id"] == "workspace"
+
+
+def test_registry_file_and_new_parent_directory_are_private_on_posix(tmp_path: Path):
+    if os.name != "posix":
+        pytest.skip("POSIX permission bits are not meaningful on this platform")
+    path = tmp_path / "private-registry" / "credentials.json"
+    CredentialRegistry(path).issue(device_id="phone", workspace_id="ws", cwd="/work", scopes={"status"})
+    assert stat.S_IMODE(path.parent.stat().st_mode) == 0o700
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
