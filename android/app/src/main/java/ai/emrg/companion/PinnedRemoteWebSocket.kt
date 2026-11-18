@@ -14,6 +14,37 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 import java.util.concurrent.TimeUnit
 
+/** Trust only the exact certificate approved by QR/user confirmation. */
+internal class ExactPinTrustManager(expectedFingerprint: String) : X509TrustManager {
+    private val expected = normalizePin(expectedFingerprint)
+
+    override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String) {
+        if (chain.isEmpty()) throw java.security.cert.CertificateException("Missing peer certificate")
+        val leaf = chain[0]
+        try {
+            leaf.checkValidity()
+        } catch (_: Exception) {
+            throw java.security.cert.CertificateException("Pinned certificate is expired or not yet valid")
+        }
+        val actual = MessageDigest.getInstance("SHA-256").digest(leaf.encoded)
+        if (!MessageDigest.isEqual(actual, expected)) {
+            throw java.security.cert.CertificateException("Peer certificate pin mismatch")
+        }
+    }
+
+    override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String) {
+        throw java.security.cert.CertificateException("Client certificates are not supported")
+    }
+
+    override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+
+    private fun normalizePin(value: String): ByteArray =
+        value.replace(":", "").replace(" ", "").trim().uppercase()
+            .takeIf { it.matches(Regex("[0-9A-F]{64}")) }
+            ?.chunked(2)?.map { it.toInt(16).toByte() }?.toByteArray()
+            ?: throw IllegalArgumentException("Host certificate fingerprint is invalid")
+}
+
 /** Events from a paired host socket. Authentication is not considered ready until host auth_ok. */
 internal interface RemoteSocketListener {
     fun onState(state: RemoteSocketState, safeMessage: String? = null)
@@ -206,37 +237,6 @@ internal class PinnedRemoteWebSocket(
             return base.newBuilder()
                 .sslSocketFactory(context.socketFactory, trustManager)
                 .build()
-        }
-
-        /** Trust only the exact certificate approved by QR/user confirmation. */
-        internal class ExactPinTrustManager(expectedFingerprint: String) : X509TrustManager {
-            private val expected = normalizePin(expectedFingerprint)
-
-            override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String) {
-                if (chain.isEmpty()) throw java.security.cert.CertificateException("Missing peer certificate")
-                val leaf = chain[0]
-                try {
-                    leaf.checkValidity()
-                } catch (_: Exception) {
-                    throw java.security.cert.CertificateException("Pinned certificate is expired or not yet valid")
-                }
-                val actual = MessageDigest.getInstance("SHA-256").digest(leaf.encoded)
-                if (!MessageDigest.isEqual(actual, expected)) {
-                    throw java.security.cert.CertificateException("Peer certificate pin mismatch")
-                }
-            }
-
-            override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String) {
-                throw java.security.cert.CertificateException("Client certificates are not supported")
-            }
-
-            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-
-            private fun normalizePin(value: String): ByteArray =
-                value.replace(":", "").replace(" ", "").trim().uppercase()
-                    .takeIf { it.matches(Regex("[0-9A-F]{64}")) }
-                    ?.chunked(2)?.map { it.toInt(16).toByte() }?.toByteArray()
-                    ?: throw IllegalArgumentException("Host certificate fingerprint is invalid")
         }
 
         private fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
