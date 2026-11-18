@@ -11,13 +11,15 @@ internal data class ChatUiState(
     ),
     val draft: String = "",
     val isSending: Boolean = false,
-    val streamingText: String = ""
+    val streamingText: String = "",
+    val toolCalls: List<ToolCallState> = emptyList()
 )
 
 internal sealed interface ChatAction {
     data class DraftChanged(val value: String) : ChatAction
     data object Submit : ChatAction
     data class ResponseDelta(val text: String) : ChatAction
+    data class ToolCallsUpdated(val calls: List<ToolCallState>) : ChatAction
     data class ResponseReceived(val text: String) : ChatAction
     data object RequestFailed : ChatAction
     data object Cancel : ChatAction
@@ -63,18 +65,22 @@ internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransi
                     messages = state.messages + ChatMessage("You", prompt),
                     draft = "",
                     isSending = true,
-                    streamingText = ""
+                    streamingText = "",
+                    toolCalls = emptyList()
                 ),
                 promptToSend = prompt
             )
         }
+        is ChatAction.ToolCallsUpdated ->
+            if (!state.isSending) ChatTransition(state)
+            else ChatTransition(state.copy(toolCalls = action.calls))
         is ChatAction.ResponseDelta ->
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(state.copy(streamingText = state.streamingText + action.text))
         is ChatAction.ResponseReceived ->
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(
-                state.copy(messages = state.messages + ChatMessage("EMRG", action.text.ifEmpty { state.streamingText }), isSending = false, streamingText = "")
+                state.copy(messages = state.messages + ChatMessage("EMRG", action.text.ifEmpty { state.streamingText }), isSending = false, streamingText = "", toolCalls = emptyList())
             )
         ChatAction.Cancel ->
             if (!state.isSending) ChatTransition(state)
@@ -82,12 +88,13 @@ internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransi
                 state.copy(
                     messages = state.messages + (if (state.streamingText.isNotEmpty()) listOf(ChatMessage("EMRG", state.streamingText + "\n[Stopped]")) else emptyList()),
                     isSending = false,
-                    streamingText = ""
+                    streamingText = "",
+                    toolCalls = emptyList()
                 )
             )
         ChatAction.RequestFailed ->
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(
-                state.copy(messages = state.messages + ChatMessage("EMRG", if (state.streamingText.isEmpty()) CHAT_FAILURE_MESSAGE else state.streamingText + "\n" + CHAT_FAILURE_MESSAGE), isSending = false, streamingText = "")
+                state.copy(messages = state.messages + ChatMessage("EMRG", if (state.streamingText.isEmpty()) CHAT_FAILURE_MESSAGE else state.streamingText + "\n" + CHAT_FAILURE_MESSAGE), isSending = false, streamingText = "", toolCalls = emptyList())
             )
     }
