@@ -163,3 +163,7 @@ Android now creates a per-connection OkHttp client whose trust manager validates
 ## Host authentication replay guard
 
 `CompanionAuthenticator` verifies the credential first, then atomically records the device/nonce pair. A repeated pair is rejected; expired cache entries are pruned; if the bounded cache is full, new auth is denied rather than evicting an unexpired nonce. Tests cover reuse, TTL expiration, capacity exhaustion, and simultaneous duplicate requests. Client nonce minimum length is 16 bytes. This guard is process-local and does not replace a handshake challenge.
+
+## Host QR descriptor generation
+
+A host-side descriptor generator now emits the Android v1 JSON fields only: version, WSS endpoint, SHA-256 fingerprint and expiry. It requires endpoint hostname to be covered by the provisioned certificate SAN, rejects non-WSS/userinfo/query/fragment/path endpoints, formats pins as colon-separated uppercase byte pairs, and limits lifetime to 180 seconds. No credential is present. QR rendering and host UI consent remain future integration tasks.
