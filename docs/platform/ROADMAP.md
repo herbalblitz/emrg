@@ -153,3 +153,4 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Host QR descriptor primitive added: Android v1 fields only, WSS endpoint/SAN match, colon SHA-256 pin, no credential, TTL <=180s. Descriptor tests added and included in CI; host UI/QR rendering integration remains open.
 - Companion descriptor CI run `44325571922` Linux leg passed **89 tests**, including new host QR descriptor validation (SAN matching, endpoint safety, credential-free schema and TTL limits). Windows leg is still running.
 - Companion descriptor CI run `44325571922` fully passed on both platforms: Ubuntu **89 passed**; Windows **85 passed, 4 skipped**. Includes descriptor generator and all four platform packaging locks generated on each runner; Windows-specific DPAPI and file-lock tests passed.
+- [x] QR descriptor expiry is capped at host TLS certificate expiration and already-expired identity descriptors are rejected; tests added.
