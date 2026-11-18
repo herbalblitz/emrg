@@ -124,6 +124,23 @@ class ChatStateReducerTest {
     }
 
     @Test
+    fun savedSnapshotDoesNotRestoreTransientToolActivity() {
+        val state = ChatUiState(
+            messages = listOf(ChatMessage("You", "run tool")),
+            draft = "next",
+            isSending = true,
+            streamingText = "partial",
+            toolCalls = listOf(ToolCallState(callId = "c1", name = "search", label = "Search"))
+        )
+        val restored = restoreChatUiStateFromSnapshot(saveChatUiState(state))
+        assertFalse(restored.isSending)
+        assertEquals("", restored.streamingText)
+        assertTrue(restored.toolCalls.isEmpty())
+        assertEquals(state.messages, restored.messages)
+        assertEquals(state.draft, restored.draft)
+    }
+
+    @Test
     fun staleResponseWhenNotSendingIsIgnored() {
         val initial = ChatUiState()
         assertEquals(initial, reduceChatState(initial, ChatAction.ResponseReceived("stale")).state)
