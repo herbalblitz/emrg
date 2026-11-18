@@ -220,7 +220,7 @@ class ChatStateReducerTest {
     fun protocolTerminalCompletionMovesStreamIntoHistoryAndClearsTransientState() {
         var chat = reduceChatState(ChatUiState(draft = "prompt"), ChatAction.Submit).state
         chat = reduceChatState(chat, ChatAction.BindRequest("req-1")).state
-        chat = reduceChatState(chat, ChatAction.ProtocolSnapshot("req-1", StreamRequest(text = "answer", toolCalls = listOf(ToolCallState(callId = "t", name = "tool"))))).state
+        chat = reduceChatState(chat, ChatAction.ProtocolSnapshot("req-1", StreamRequest(text = "answer", toolCalls = listOf(ToolCallState(callId = "t", name = "tool", label = "Tool"))))).state
         chat = reduceChatState(chat, ChatAction.ProtocolSnapshot("req-1", StreamRequest(text = "answer-final", status = StreamStatus.COMPLETED))).state
         assertFalse(chat.isSending)
         assertEquals(ChatMessage("EMRG", "answer-final"), chat.messages.last())
