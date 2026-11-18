@@ -25,7 +25,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [ ] Sandbox, upgrades/rollback, clean-machine smoke, CI artifact/checksum
 
 ## Android
-- [x] Native Kotlin/Compose scaffold committed (no connection/features)
+- [x] Native Kotlin/Compose scaffold with interactive mock chat, send/receive and demo/offline state (no real host connection)
 - [x] CI workflow committed (run result not yet verified)
 - [ ] Pair/revoke; secure transport; diagnostics/reconnect
 - [ ] Chat/stream/cancel; sessions; tool activity/approvals
