@@ -147,3 +147,7 @@ Implemented `emrg/server/companion_protocol.py` as a strict frame parser/validat
 ## Strict frame schema hardening
 
 Host-side parser tests now include duplicate JSON key rejection and unknown-field rejection for the auth, status, sessions.list and chat.send frame schemas. The Android WSS client auth envelope now includes `protocol: 1.0` and a per-connection random client nonce, matching the host validator's required auth fields. This remains a client primitive/specification boundary; a live WSS host is not yet available.
+
+## TLS trust integration gate
+
+The host identity provisioner currently creates self-signed certificates. Android's current OkHttp client uses system certificate validation before the post-handshake fingerprint check, so it will not connect to an untrusted self-signed identity as-is. Before a live listener/client integration, select and implement a reviewed trust strategy: either certificates rooted in a trusted CA or a narrowly scoped trust manager that validates the exact user-confirmed pin and endpoint SAN/hostname. Never install a global trust-all manager or send credentials before the pin has been verified during TLS handshake.
