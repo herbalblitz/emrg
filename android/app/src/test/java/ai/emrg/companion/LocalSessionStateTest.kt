@@ -27,7 +27,7 @@ class LocalSessionStateTest {
     @Test
     fun switchingSessionChangesActiveIdOnlyForKnownId() {
         val state = createLocalSession(newLocalSessionsState("one"), "two")
-        assertEquals("one", selectLocalSession(state, "missing").activeId)
+        assertEquals("two", selectLocalSession(state, "missing").activeId)
         assertEquals("two", selectLocalSession(state, "two").activeId)
     }
 
