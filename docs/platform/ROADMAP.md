@@ -130,3 +130,6 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Companion parser converts invalid UTF-8/lone-surrogate encoding errors into safe protocol rejections; malformed-Unicode tests added.
 - [x] Android WSS client auth/chat frames now match the companion v1 field schema and enforce workspace binding; QR descriptor lifetime/endpoint validation hardened (Android test rerun pending).
 - [x] Host companion frame parser rejects duplicate/unknown fields and malformed Unicode; credential registry adds same-process locking, POSIX private directory/file modes and bounded text validation (Python tests added; no CI run for feature branch yet).
+- [x] Host TLS identity provisioning module added: P-256 self-signed certificate, SAN validation, exact host binding, key/cert/signature/usage/expiry checks, stable fingerprint, explicit reset and TLS context loading (no socket).
+- [x] Windows key protection uses DPAPI; POSIX identity directory/files request 0700/0600. Tests cover persistence, reset, corrupt/partial state, mismatch, permissions and no-listener context.
+- [ ] Run host Python tests/CI, update `uv.lock` and platform packaging dependency locks for cryptography, and review Windows DPAPI/temp ACL/cross-process race behavior before using this identity in a listener.
