@@ -107,6 +107,23 @@ class ChatStateReducerTest {
     }
 
     @Test
+    fun toolActivityUpdatesDuringActiveRequestAndClearsOnCompletion() {
+        val started = reduceChatState(ChatUiState(draft = "run"), ChatAction.Submit).state
+        val calls = listOf(ToolCallState(callId = "c1", name = "search", label = "Search"))
+        val active = reduceChatState(started, ChatAction.ToolCallsUpdated(calls)).state
+        assertEquals(calls, active.toolCalls)
+        val completed = reduceChatState(active, ChatAction.ResponseReceived("done")).state
+        assertTrue(completed.toolCalls.isEmpty())
+    }
+
+    @Test
+    fun toolActivityUpdatesAreIgnoredWhenNoRequestIsActive() {
+        val initial = ChatUiState()
+        val calls = listOf(ToolCallState(callId = "c1", name = "search", label = "Search"))
+        assertEquals(initial, reduceChatState(initial, ChatAction.ToolCallsUpdated(calls)).state)
+    }
+
+    @Test
     fun staleResponseWhenNotSendingIsIgnored() {
         val initial = ChatUiState()
         assertEquals(initial, reduceChatState(initial, ChatAction.ResponseReceived("stale")).state)
