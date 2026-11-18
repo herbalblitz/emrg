@@ -27,13 +27,13 @@ internal const val MAX_SAVED_MESSAGES = 60
 internal fun restoreChatUiState(messages: List<ChatMessage>, draft: String): ChatUiState =
     ChatUiState(messages = messages.takeLast(MAX_SAVED_MESSAGES), draft = draft, isSending = false)
 
+internal fun saveChatUiState(state: ChatUiState): Map<String, Any> = mapOf(
+    "messages" to state.messages.takeLast(MAX_SAVED_MESSAGES).flatMap { listOf(it.role, it.text) },
+    "draft" to state.draft
+)
+
 internal val ChatUiStateSaver = mapSaver(
-    save = { state ->
-        mapOf(
-            "messages" to state.messages.takeLast(MAX_SAVED_MESSAGES).flatMap { listOf(it.role, it.text) },
-            "draft" to state.draft
-        )
-    },
+    save = { state -> saveChatUiState(state) },
     restore = { saved ->
         val rawMessages = saved["messages"] as? List<*>
         val messages = rawMessages.orEmpty().chunked(2).mapNotNull { pair ->
