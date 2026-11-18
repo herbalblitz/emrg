@@ -24,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -49,7 +48,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun CompanionChatScreen() {
-    var chatState by rememberSaveable(stateSaver = ChatUiStateSaver) { mutableStateOf(ChatUiState()) }
+    val historyStore = remember { ChatHistoryStore(androidx.compose.ui.platform.LocalContext.current.applicationContext) }
+    var chatState by remember { mutableStateOf(historyStore.load()) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val transport = remember { DemoTransport() }
@@ -57,15 +57,18 @@ private fun CompanionChatScreen() {
     fun dispatch(action: ChatAction) {
         val transition = reduceChatState(chatState, action)
         chatState = transition.state
+        historyStore.save(chatState)
         transition.promptToSend?.let { prompt ->
             scope.launch {
                 try {
                     val response = sendSafely(transport, prompt)
                     chatState = reduceChatState(chatState, ChatAction.ResponseReceived(response)).state
+                    historyStore.save(chatState)
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
                     chatState = reduceChatState(chatState, ChatAction.RequestFailed).state
+                    historyStore.save(chatState)
                 } finally {
                     if (chatState.messages.isNotEmpty()) {
                         listState.animateScrollToItem(chatState.messages.lastIndex)
