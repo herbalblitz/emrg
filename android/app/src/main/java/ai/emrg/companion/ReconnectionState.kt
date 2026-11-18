@@ -56,6 +56,10 @@ internal fun reconnectBackoffMillis(attempt: Int): Long {
 
 internal const val MAX_RECONNECT_ATTEMPTS = 6
 
+/** Current contract accepts protocol major 1; minor versions are backward-compatible. */
+internal fun isSupportedProtocolVersion(version: String): Boolean =
+    Regex("^1(?:\\.(?:0|[1-9][0-9]*))?$", RegexOption.IGNORE_CASE).matches(version)
+
 internal fun reduceReconnection(
     state: ReconnectionState,
     action: ReconnectionAction,
@@ -85,6 +89,10 @@ internal fun reduceReconnection(
         phase = ConnectionPhase.STATE_UNKNOWN,
         snapshot = null,
         lastError = "Host snapshot is missing protocol version",
+    ) else if (!isSupportedProtocolVersion(action.snapshot.protocolVersion)) state.copy(
+        phase = ConnectionPhase.STATE_UNKNOWN,
+        snapshot = null,
+        lastError = "Unsupported host protocol version: ${action.snapshot.protocolVersion}",
     ) else state.copy(
         phase = ConnectionPhase.READY,
         snapshot = action.snapshot,
