@@ -67,6 +67,14 @@ class ProtocolStreamReducerTest {
         assertFalse(call.failed)
     }
 
+    @Test fun emptyTerminalContentPreservesAccumulatedStream() {
+        var s = reduceProtocolStreams(ProtocolStreamState(), start("r"))
+        s = reduceProtocolStreams(s, frame("""{"request_id":"r","content":"partial","delta":true}"""))
+        s = reduceProtocolStreams(s, frame("""{"request_id":"r","content":"","done":true}"""))
+        assertEquals("partial", s.requests["r"]!!.text)
+        assertEquals(StreamStatus.COMPLETED, s.requests["r"]!!.status)
+    }
+
     @Test fun ignoresFramesWithoutMatchingActiveRequest() {
         val initial = ProtocolStreamState()
         assertEquals(initial, reduceProtocolStreams(initial, frame("""{"request_id":"missing","content":"x","delta":true}""")))
