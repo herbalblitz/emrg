@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
@@ -32,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,27 +51,32 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun CompanionChatScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val historyStore = remember(context) { ChatHistoryStore(context.applicationContext) }
-    var chatState by remember { mutableStateOf(historyStore.load()) }
+    val sessionStore = remember(context) { LocalSessionStore(context.applicationContext) }
+    var sessionsState by remember { mutableStateOf(sessionStore.load()) }
+    var chatState by remember { mutableStateOf(sessionsState.active.chat) }
+    var renameDraft by remember { mutableStateOf(sessionsState.active.title) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val transport = remember { DemoTransport() }
 
+    fun persistChat(state: ChatUiState) {
+        chatState = state
+        sessionsState = updateActiveLocalChat(sessionsState, state)
+        sessionStore.save(sessionsState)
+    }
+
     fun dispatch(action: ChatAction) {
         val transition = reduceChatState(chatState, action)
-        chatState = transition.state
-        historyStore.save(chatState)
+        persistChat(transition.state)
         transition.promptToSend?.let { prompt ->
             scope.launch {
                 try {
                     val response = sendSafely(transport, prompt)
-                    chatState = reduceChatState(chatState, ChatAction.ResponseReceived(response)).state
-                    historyStore.save(chatState)
+                    persistChat(reduceChatState(chatState, ChatAction.ResponseReceived(response)).state)
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
-                    chatState = reduceChatState(chatState, ChatAction.RequestFailed).state
-                    historyStore.save(chatState)
+                    persistChat(reduceChatState(chatState, ChatAction.RequestFailed).state)
                 } finally {
                     if (chatState.messages.isNotEmpty()) {
                         listState.animateScrollToItem(chatState.messages.lastIndex)
@@ -79,9 +86,39 @@ private fun CompanionChatScreen() {
         }
     }
 
+    fun selectSession(id: String) {
+        if (chatState.isSending) return
+        sessionsState = selectLocalSession(sessionsState, id)
+        chatState = sessionsState.active.chat
+        renameDraft = sessionsState.active.title
+        sessionStore.save(sessionsState)
+    }
+
+    fun createSession() {
+        if (chatState.isSending || sessionsState.sessions.size >= MAX_LOCAL_SESSIONS) return
+        sessionsState = createLocalSession(sessionsState, UUID.randomUUID().toString())
+        chatState = sessionsState.active.chat
+        renameDraft = sessionsState.active.title
+        sessionStore.save(sessionsState)
+    }
+
+    fun renameCurrent() {
+        sessionsState = renameLocalSession(sessionsState, sessionsState.activeId, renameDraft)
+        renameDraft = sessionsState.active.title
+        sessionStore.save(sessionsState)
+    }
+
+    fun deleteCurrent() {
+        if (chatState.isSending) return
+        sessionsState = deleteLocalSession(sessionsState, sessionsState.activeId, UUID.randomUUID().toString())
+        chatState = sessionsState.active.chat
+        renameDraft = sessionsState.active.title
+        sessionStore.save(sessionsState)
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -99,10 +136,45 @@ private fun CompanionChatScreen() {
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Text(
-                "Mock mode only. No host is connected; pairing and remote execution are intentionally disabled.",
+                "Offline preview. Sessions are stored on this device; no host is connected or synchronized.",
                 modifier = Modifier.padding(12.dp),
                 style = MaterialTheme.typography.bodySmall
             )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Sessions", style = MaterialTheme.typography.titleMedium)
+            Button(enabled = !chatState.isSending && sessionsState.sessions.size < MAX_LOCAL_SESSIONS, onClick = { createSession() }) {
+                Text("New")
+            }
+            Button(enabled = !chatState.isSending, onClick = { deleteCurrent() }) {
+                Text("Delete")
+            }
+        }
+
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(sessionsState.sessions, key = { it.id }) { session ->
+                Button(
+                    enabled = !chatState.isSending,
+                    onClick = { selectSession(session.id) }
+                ) {
+                    Text(if (session.id == sessionsState.activeId) "• " + session.title else session.title)
+                }
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = renameDraft,
+                onValueChange = { renameDraft = it },
+                modifier = Modifier.weight(1f),
+                label = { Text("Session name") },
+                enabled = !chatState.isSending,
+                singleLine = true
+            )
+            Button(enabled = !chatState.isSending && renameDraft.isNotBlank(), onClick = { renameCurrent() }) {
+                Text("Rename")
+            }
         }
 
         LazyColumn(
