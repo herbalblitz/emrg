@@ -73,3 +73,10 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] TLS context loader, TLS 1.2 minimum, no socket creation; process-local provisioning/context lock.
 - [ ] Python tests/CI, lockfile regeneration and Windows DPAPI/ACL review.
 - [ ] Android trust strategy for self-signed pins, local host UI confirmation, QR generation and live listener integration.
+
+## Authentication replay defense
+
+- [x] Require client auth nonce minimum length 16 bytes.
+- [x] Add process-local per-device replay cache with 10-minute expiry, capacity bound and thread-safe atomic consume.
+- [x] Duplicate nonce and cache exhaustion reject authentication.
+- [ ] Decide restart persistence or challenge-response requirements and implement transport handshake before production listener.
