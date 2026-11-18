@@ -123,3 +123,10 @@ All commands below are JSON WebSocket frames sent after authentication. Command 
 - Unit tests cover concurrent/interleaved IDs, stream ordering, idempotent terminal handling, cancellation/error, connection loss and tool lifecycle.
 - This reducer is state logic only; no WebSocket/daemon transport or live host is connected.
 - CI failure on the previous test-enabled run was traced to existing Compose Saver tests calling `Saver.save` without a `SaverScope`. The test harness is being corrected and revalidated.
+
+
+## Android command payload builders (2026-11-18)
+
+- Added validated, transport-neutral `TaskCommand` and `SessionCommand` JSON builders for task, list/resume/rename/clear/delete/rewind operations.
+- Tests cover required fields, optional session/timestamp/title fields, tools omitted versus explicit empty allowlist, and invalid inputs.
+- Builders are payload-only: no authentication, WebSocket send, command authorization, or remote file access is implemented.
