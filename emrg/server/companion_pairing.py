@@ -20,6 +20,7 @@ from emrg.server.companion_credentials import CredentialRegistry
 PAIRING_TTL_SECONDS = 180
 PAIRING_MAX_ATTEMPTS = 5
 PAIRING_SECRET_BYTES = 24
+PAIRING_MAX_PENDING = 32
 
 
 class PairingError(ValueError):
@@ -55,6 +56,8 @@ class PairingTransactions:
         now = self._clock()
         with self._lock:
             self._purge_expired(now)
+            if len(self._pending) >= PAIRING_MAX_PENDING:
+                raise PairingError("pairing capacity reached")
             self._pending[pairing_id] = _Pending(
                 secret_hash=hashlib.sha256(secret.encode()).digest(),
                 created_at=now, workspace_id=workspace_id, cwd=cwd,
@@ -116,6 +119,13 @@ class PairingTransactions:
     def cancel(self, pairing_id: str) -> bool:
         with self._lock:
             return self._pending.pop(pairing_id, None) is not None
+
+    def cancel_all(self) -> int:
+        """Invalidate all pending transactions, e.g. when companion service stops."""
+        with self._lock:
+            count = len(self._pending)
+            self._pending.clear()
+            return count
 
     def _purge_expired(self, now: float) -> None:
         expired = [key for key, item in self._pending.items()
