@@ -1,5 +1,8 @@
 package ai.emrg.companion
 
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.mapSaver
+
 internal data class ChatMessage(val role: String, val text: String)
 
 internal data class ChatUiState(
@@ -18,6 +21,29 @@ internal sealed interface ChatAction {
 }
 
 internal data class ChatTransition(val state: ChatUiState, val promptToSend: String? = null)
+
+internal const val MAX_SAVED_MESSAGES = 60
+
+internal fun restoreChatUiState(messages: List<ChatMessage>, draft: String): ChatUiState =
+    ChatUiState(messages = messages.takeLast(MAX_SAVED_MESSAGES), draft = draft, isSending = false)
+
+internal val ChatUiStateSaver: Saver<ChatUiState, Any> = mapSaver(
+    save = { state ->
+        mapOf(
+            "messages" to state.messages.takeLast(MAX_SAVED_MESSAGES).flatMap { listOf(it.role, it.text) },
+            "draft" to state.draft
+        )
+    },
+    restore = { saved ->
+        val rawMessages = saved["messages"] as? List<*>
+        val messages = rawMessages.orEmpty().chunked(2).mapNotNull { pair ->
+            val role = pair.getOrNull(0) as? String
+            val text = pair.getOrNull(1) as? String
+            if (role != null && text != null) ChatMessage(role, text) else null
+        }
+        restoreChatUiState(messages, saved["draft"] as? String ?: "")
+    }
+)
 
 internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransition =
     when (action) {
