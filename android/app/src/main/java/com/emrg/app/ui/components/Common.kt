@@ -45,9 +45,6 @@ fun EmrgAppBar(
                 )
             }
         },
-        colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
     )
 }
 
