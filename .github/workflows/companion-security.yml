@@ -41,7 +41,7 @@ jobs:
       - name: Sync project dependencies
         run: uv sync
       - name: Generate platform requirements locks
-        if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
+        if: github.event_name == 'push'
         run: |
           uv pip compile pyproject.toml --python-version 3.13 --python-platform x86_64-pc-windows-msvc -o packaging/requirements-windows-x64.lock
           uv pip compile pyproject.toml --python-version 3.13 --python-platform x86_64-unknown-linux-gnu -o packaging/requirements-linux-x86_64.lock
