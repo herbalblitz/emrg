@@ -199,3 +199,10 @@ These are requirements for a future implementation, not evidence of an existing 
 - Request-stream reducer now refuses to reuse a request ID already present in state, including terminal/interrupted requests; retry must use a fresh ID and explicit user intent. This is local reducer protection, not server-side idempotency.
 
 - Credential revocation handling: if encrypted credential deletion fails, pairing enters `FAILED` but retains the credential alias/host reference for retry; it must not falsely report `REVOKED` or discard the cleanup handle. A successful retry clears pairing state.
+
+## Android secure WebSocket transport primitive (2026-11-18)
+
+- Added an OkHttp WSS client primitive with system TLS validation and an additional exact SHA-256 **leaf certificate** fingerprint check against the pairing descriptor. The device credential is not sent until the identity check passes.
+- The client uses a proposed `auth` frame carrying device ID and the device-scoped credential, and waits for `auth_ok` before enabling chat-task sends. It only exposes `TaskCommand` sends and checks the `SEND_CHAT` scope; arbitrary daemon command sending is not exposed.
+- This proposed companion authentication frame is **not supported by the existing daemon**. The daemon currently authenticates its desktop loopback token. No Windows host listener, device credential issuance/verification, remote pairing server, or live end-to-end connection has been implemented. This Android transport primitive must not be presented as usable against current EMRG.
+- No automatic reconnect/replay is implemented. Transport callbacks currently report safe status strings and parsed frames; integration with UI/reconciliation remains pending.
