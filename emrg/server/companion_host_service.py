@@ -22,19 +22,39 @@ class CompanionHostService:
         self.pairings = PairingTransactions(self.registry)
         self.authenticator = CompanionAuthenticator(self.registry)
         self._enabled = False
+        self._state_callbacks: set[Any] = set()
 
     @property
     def enabled(self) -> bool:
         """Whether local policy currently permits companion operations."""
         return self._enabled
 
+    def add_state_callback(self, callback) -> None:
+        """Register a lifecycle observer (transport/UI); callbacks are synchronous."""
+        if not callable(callback):
+            raise TypeError("callback must be callable")
+        self._state_callbacks.add(callback)
+
+    def remove_state_callback(self, callback) -> None:
+        self._state_callbacks.discard(callback)
+
+    def _notify_state(self) -> None:
+        for callback in tuple(self._state_callbacks):
+            try:
+                callback(self._enabled)
+            except Exception:
+                # Observers cannot prevent local enable/disable policy changes.
+                continue
+
     def enable(self) -> None:
         """Explicit local opt-in; does not create a listener."""
         self._enabled = True
+        self._notify_state()
 
     def disable(self) -> int:
         """Disable immediately and invalidate all pending pairing QR transactions."""
         self._enabled = False
+        self._notify_state()
         return self.pairings.cancel_all()
 
     def _require_enabled(self) -> None:
