@@ -94,8 +94,14 @@ internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransi
                         isSending = false, streamingText = "", toolCalls = emptyList(), activeRequestId = null
                     )
                 )
-                StreamStatus.CANCELLED -> reduceChatState(state, ChatAction.Cancel)
-                StreamStatus.FAILED -> reduceChatState(state, ChatAction.RequestFailed)
+                StreamStatus.CANCELLED -> reduceChatState(state.copy(
+                    streamingText = action.request.text.ifEmpty { state.streamingText },
+                    toolCalls = action.request.toolCalls
+                ), ChatAction.Cancel)
+                StreamStatus.FAILED -> reduceChatState(state.copy(
+                    streamingText = action.request.text.ifEmpty { state.streamingText },
+                    toolCalls = action.request.toolCalls
+                ), ChatAction.RequestFailed)
             }
         }
         is ChatAction.ResponseDelta ->
@@ -113,12 +119,13 @@ internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransi
                     messages = state.messages + (if (state.streamingText.isNotEmpty()) listOf(ChatMessage("EMRG", state.streamingText + "\n[Stopped]")) else emptyList()),
                     isSending = false,
                     streamingText = "",
-                    toolCalls = emptyList()
+                    toolCalls = emptyList(),
+                    activeRequestId = null
                 )
             )
         ChatAction.RequestFailed ->
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(
-                state.copy(messages = state.messages + ChatMessage("EMRG", if (state.streamingText.isEmpty()) CHAT_FAILURE_MESSAGE else state.streamingText + "\n" + CHAT_FAILURE_MESSAGE), isSending = false, streamingText = "", toolCalls = emptyList())
+                state.copy(messages = state.messages + ChatMessage("EMRG", if (state.streamingText.isEmpty()) CHAT_FAILURE_MESSAGE else state.streamingText + "\n" + CHAT_FAILURE_MESSAGE), isSending = false, streamingText = "", toolCalls = emptyList(), activeRequestId = null)
             )
     }
