@@ -104,7 +104,7 @@ internal fun reduceChatState(state: ChatUiState, action: ChatAction): ChatTransi
         is ChatAction.ResponseReceived ->
             if (!state.isSending) ChatTransition(state)
             else ChatTransition(
-                state.copy(messages = state.messages + ChatMessage("EMRG", action.text.ifEmpty { state.streamingText }), isSending = false, streamingText = "", toolCalls = emptyList())
+                state.copy(messages = state.messages + ChatMessage("EMRG", action.text.ifEmpty { state.streamingText }), isSending = false, streamingText = "", toolCalls = emptyList(), activeRequestId = null)
             )
         ChatAction.Cancel ->
             if (!state.isSending) ChatTransition(state)
