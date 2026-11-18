@@ -35,7 +35,8 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for the latest verified run (session UI commit `1132f69` / run `44232157705`)
 - [ ] Pair/revoke; secure transport; diagnostics/reconnect (proposal only documented)
 - [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
-- [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI pending); no real daemon transport yet.\n- [ ] UI integration for chat streaming/cancel; daemon session synchronization; tool approval UI
+- [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI pending); no real daemon transport yet.
+- [ ] UI integration for chat streaming/cancel; daemon session synchronization; tool approval UI
 - [ ] SAF workspace; memory; skills; tasks; evolution
 - [ ] Opt-in notifications; settings/export; accessibility/offline states
 
