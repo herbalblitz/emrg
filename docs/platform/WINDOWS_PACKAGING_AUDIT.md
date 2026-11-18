@@ -11,7 +11,7 @@ Source-inspected only unless a CI run is explicitly cited.
 - Release workflow runs the GUI build, bundles git/gh, builds the installer, and creates a Windows ZIP copy of the installer EXE.
 - `.github/workflows/test.yml` has a Windows runner job and an Inno Setup compile smoke test that generates a stub payload, renders the installer script, compiles it, and checks the output executable/version resource.
 
-## Not yet proven / remaining gates
+## CI evidence confirmed on the feature branch\n\n- Windows runner `windows-2025` executes Python tests, GUI unit tests and an Inno Setup compile smoke test on PR CI. The installer smoke is a script-compile/output-resource check using a stub payload; it does not install or launch the product.\n- Android CI #122 is green, but this does not provide Windows runtime validation.\n\n## Not yet proven / remaining gates
 
 - Clean Windows machine install, first launch, daemon start/stop/restart and reconnect.
 - Upgrade over a previous version; rollback/uninstall behavior and stale process cleanup.
