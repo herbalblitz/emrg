@@ -151,3 +151,7 @@ Host-side parser tests now include duplicate JSON key rejection and unknown-fiel
 ## TLS trust integration gate
 
 The host identity provisioner currently creates self-signed certificates. Android's current OkHttp client uses system certificate validation before the post-handshake fingerprint check, so it will not connect to an untrusted self-signed identity as-is. Before a live listener/client integration, select and implement a reviewed trust strategy: either certificates rooted in a trusted CA or a narrowly scoped trust manager that validates the exact user-confirmed pin and endpoint SAN/hostname. Never install a global trust-all manager or send credentials before the pin has been verified during TLS handshake.
+
+## Nonce security caveat
+
+The client currently generates a fresh `client_nonce` and the host parser validates its presence/length, but the transport-independent authenticator does not yet use it for replay detection or a challenge-response. Treat it as a protocol field only—not replay protection. Before live WSS deployment, define a server challenge or a bounded per-device nonce/replay cache and test replay rejection.
