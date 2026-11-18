@@ -1,4 +1,5 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -62,3 +63,19 @@ def test_registry_write_failure_does_not_return_token(tmp_path: Path, monkeypatc
     with pytest.raises(CredentialRegistryError):
         registry.issue(device_id="d", workspace_id="w", cwd="/work", scopes={"status"})
     assert not (tmp_path / "credentials.json").exists()
+
+
+def test_concurrent_issuance_preserves_all_device_records(tmp_path: Path):
+    registry = CredentialRegistry(tmp_path / "credentials.json")
+    device_ids = [f"device-{i}" for i in range(12)]
+
+    def issue(device_id):
+        return device_id, registry.issue(device_id=device_id, workspace_id="workspace",
+                                        cwd="/approved", scopes={"status"})
+
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        issued = dict(pool.map(issue, device_ids))
+
+    assert set(device_ids) == {item["device_id"] for item in registry.list_devices()}
+    for device_id, token in issued.items():
+        assert registry.verify(device_id=device_id, credential=token)["workspace_id"] == "workspace"
