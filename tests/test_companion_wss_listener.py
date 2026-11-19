@@ -105,6 +105,9 @@ def test_wss_session_authenticates_and_returns_scoped_status(tmp_path):
         credential = host.registry.issue(device_id="phone-1", workspace_id="ws-1",
                                         cwd="/workspace", scopes={"status"})
         listener = _listener(tmp_path, host)
+        dispatched = []
+        monkeypatch.setattr(host, "request_pairing_v2", lambda **kw: dispatched.append(("request", kw)))
+        monkeypatch.setattr(host, "redeem_pairing_v2", lambda **kw: dispatched.append(("redeem", kw)))
 
         class Socket:
             def __init__(self, frames):
@@ -671,7 +674,7 @@ def test_close_during_listener_start_prevents_late_bind_and_unregisters_callback
         "signature": "A" * 86,
     },
 ])
-def test_wss_does_not_accept_unauthenticated_pairing_v2_frames(tmp_path, frame):
+def test_wss_does_not_accept_unauthenticated_pairing_v2_frames(tmp_path, frame, monkeypatch):
     """Pairing v2 must not bypass auth until a dedicated pinned-TLS adapter exists."""
     from emrg.server.companion_auth import CompanionAuthenticationError
 
@@ -697,6 +700,7 @@ def test_wss_does_not_accept_unauthenticated_pairing_v2_frames(tmp_path, frame):
         # The frame was rejected by the existing auth gate and never reached
         # the host-local v2 request/redeem APIs.
         assert host.pending_pairings_v2() == []
-        assert host.redeem_pairing_v2 if tx["pairing_id"] else False
+        assert dispatched == []
+        assert tx["pairing_id"]
 
     asyncio.run(run())
