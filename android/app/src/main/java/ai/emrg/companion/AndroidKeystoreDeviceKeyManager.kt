@@ -2,10 +2,12 @@ package ai.emrg.companion
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import java.security.AlgorithmParameters
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.Signature
 import java.security.spec.ECGenParameterSpec
+import java.security.spec.ECParameterSpec
 import java.security.interfaces.ECPublicKey
 import java.util.Base64
 
@@ -51,7 +53,7 @@ internal class AndroidKeystoreDeviceKeyManager : CompanionDeviceKeyManager {
         }
         val publicKey = entry.certificate.publicKey as? ECPublicKey
             ?: throw IllegalStateException("Device public key is invalid")
-        check(publicKey.params.curve.field.fieldSize == 256) {
+        check(isP256(publicKey.params)) {
             "Device key is not P-256"
         }
         return Base64.getUrlEncoder().withoutPadding().encodeToString(publicKey.encoded)
@@ -80,6 +82,20 @@ internal class AndroidKeystoreDeviceKeyManager : CompanionDeviceKeyManager {
         if (keyStore.containsAlias(alias)) {
             keyStore.deleteEntry(alias)
         }
+    }
+
+    private fun isP256(actual: ECParameterSpec): Boolean {
+        val expected = try {
+            AlgorithmParameters.getInstance("EC").apply {
+                init(ECGenParameterSpec(P256_CURVE))
+            }.getParameterSpec(ECParameterSpec::class.java)
+        } catch (_: Exception) {
+            return false
+        }
+        return actual.curve == expected.curve &&
+            actual.generator == expected.generator &&
+            actual.order == expected.order &&
+            actual.cofactor == expected.cofactor
     }
 
     private fun loadKeyStore(): KeyStore =
