@@ -42,7 +42,7 @@ internal fun SecurePairingPanel() {
         ) {
             Text("Secure host pairing", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Camera QR scanning is available. Live daemon transport is not yet implemented.",
+                "QR identity validation is available. Live daemon pairing transport is not yet implemented.",
                 style = MaterialTheme.typography.bodySmall
             )
             Button(onClick = { scannerVisible = true }) { Text("Scan QR with camera") }
