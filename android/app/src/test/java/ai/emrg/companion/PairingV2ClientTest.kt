@@ -115,4 +115,41 @@ class PairingV2ClientTest {
             client.createRedeemFrame(b64(32), b64(16), b64(64))
         }
     }
+
+    @Test
+    fun refusesChallengeWithWrongJsonFieldTypes() {
+        val keys = FakeDeviceKeys()
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val pairingId = b64(32)
+        val challengeId = b64(16)
+        client.createRequestFrame(pairingId)
+        val raw = challenge(pairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
+            .toString(Charsets.UTF_8)
+            .replace("\\\"protocol\\\":\\\"2.0\\\"", "\\\"protocol\\\":2.0")
+            .toByteArray(Charsets.UTF_8)
+        assertThrows(IllegalArgumentException::class.java) {
+            client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(raw))
+        }
+    }
+
+    @Test
+    fun refusesChallengeWithUnexpectedScopeOrChallengeId() {
+        val keys = FakeDeviceKeys()
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val pairingId = b64(32)
+        val challengeId = b64(16)
+        client.createRequestFrame(pairingId)
+        val wrongId = challenge(pairingId, b64(16), "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
+        assertThrows(IllegalArgumentException::class.java) {
+            client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(wrongId))
+        }
+        val raw = challenge(pairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
+            .toString(Charsets.UTF_8)
+            .replace("\\\"sessions.list\\\"", "\\\"untrusted.scope\\\"")
+            .toByteArray(Charsets.UTF_8)
+        assertThrows(IllegalArgumentException::class.java) {
+            client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(raw))
+        }
+    }
+
 }
