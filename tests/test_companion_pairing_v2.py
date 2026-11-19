@@ -184,3 +184,14 @@ def test_pairing_v2_rejects_padded_challenge_and_signature(tmp_path):
     with pytest.raises(PairingV2Error, match="invalid proof"):
         pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
                         challenge_id=request["challenge_id"], signature=signature + "=")
+
+def test_pairing_v2_cancel_rejects_noncanonical_identifier(tmp_path):
+    pairing, _, _, _, _ = _setup(tmp_path)
+    tx = pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
+    pairing_id = tx["pairing_id"]
+
+    assert pairing.cancel(pairing_id + "=") is False
+    assert pairing.cancel(pairing_id + " ") is False
+    assert len(pairing.pending_requests()) == 0
+    assert pairing.cancel(pairing_id) is True
+    assert len(pairing.pending_requests()) == 0
