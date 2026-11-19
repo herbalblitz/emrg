@@ -86,7 +86,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Android per-connection exact leaf SHA-256 pin trust manager supports pinned self-signed host certificates; validity dates are enforced during TLS handshake and default hostname verification remains active.
 - [x] Host fingerprint string is colon-delimited uppercase bytes for Android QR/parser compatibility.
 - [x] Host auth nonce is minimum 16 bytes and consumed once per device with bounded 10-minute process-local replay cache; capacity exhaustion fails closed.
-- [ ] Android trust tests/build CI final confirmation; host UI and Android live integration are still not wired.
+- [x] Android pinned-certificate trust and pairing transport build/JVM tests are covered by Android CI; [ ] trusted-local host approval UI, physical-device Keystore validation, and real host pairing E2E remain open.
 
 ## Host QR descriptor generation
 
@@ -153,9 +153,9 @@ Implemented in source:
 - The current QR panel requests only the read-only `status` scope. `chat.send` is intentionally not enabled.
 
 Not yet complete:
-- QR scanner/panel is not wired to the controller.
+- QR scanner/panel is wired to `PairingV2SessionController` with explicit fingerprint confirmation and lifecycle-safe cancellation/retry.
 - No physical-device Android Keystore validation or Android ↔ Windows end-to-end pairing has been completed.
-- No live authenticated status/session-list transport is claimed; remote chat/tool execution remains unavailable.
+- The panel currently requests only read-only `status`; authenticated status/session-list UI operations and remote chat/tool execution remain unavailable.
 
 
 ## Pairing v2 UI integration status (2026-11-19)
