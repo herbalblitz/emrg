@@ -3,6 +3,10 @@ package ai.emrg.companion
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import java.nio.ByteBuffer
+import java.nio.CharBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -111,9 +115,18 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
         internal fun isValidCredentialAlias(alias: String): Boolean =
             alias.matches(Regex("[A-Za-z0-9._-]{1,64}"))
 
-        internal fun isValidCredential(credential: String): Boolean =
-            credential.isNotBlank() &&
-                credential.toByteArray(StandardCharsets.UTF_8).size in 1..MAX_CREDENTIAL_BYTES
+        internal fun isValidCredential(credential: String): Boolean {
+            if (credential.isBlank()) return false
+            return try {
+                val encoded: ByteBuffer = StandardCharsets.UTF_8.newEncoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .encode(CharBuffer.wrap(credential))
+                encoded.remaining() in 1..MAX_CREDENTIAL_BYTES
+            } catch (_: CharacterCodingException) {
+                false
+            }
+        }
 
         private const val MAX_CREDENTIAL_BYTES = 512
 
