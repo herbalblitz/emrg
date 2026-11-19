@@ -124,3 +124,12 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Added platform-independent JVM regression tests for canonical round-trip, malformed separators/whitespace, invalid lengths and noncanonical Base64.
 - [x] Android Companion CI #206 passed: APK assembly, unit tests, lint and artifact upload.
 - [ ] Validate actual Android Keystore encryption/decryption and key deletion on supported physical Android devices; JVM CI does not exercise the platform Keystore provider.
+
+
+### Android credential issuance and persistence bounds
+
+- [x] Enforce the host registry's 512-byte UTF-8 credential maximum at the Android coordinator and encrypted store boundary.
+- [x] Explicitly require randomized AES-GCM encryption in the Android Keystore key specification.
+- [x] Add JVM boundary tests for blank, exact-limit, oversized ASCII, multibyte UTF-8, and no-persistence-on-rejection cases.
+- [ ] Await Android CI for source/test commits `f137081b` through `69ca6a82`; the queued latest run must pass before this slice is CI-verified.
+- [ ] Exercise real Android Keystore put/get/delete on supported physical devices.
