@@ -2,7 +2,7 @@
 
 Branch: feat/android-windows-platform-audit
 
-Status: source audit complete; host-side pairing/auth composition exists, but trusted local UI and remote host transport are not implemented.
+Status: host-side pairing/auth composition, TLS identity provisioning, and a standalone opt-in WSS listener exist. The listener is not yet wired into daemon lifecycle/configuration, trusted local pairing UI is absent, and Android v2 pairing/auth is not end-to-end integrated.
 
 ## Verified existing daemon boundary
 
@@ -30,14 +30,18 @@ The daemon's current WebSocket listener is created in EmrgServer.serve() using a
 - Transport-independent operations redeem pairing and authenticate the first frame.
 - Tests cover the approved pairing-to-auth path and reject/revoke behavior.
 - The service opens no sockets. Access control for local UI callers is not enforced by this Python class.
+- A separate `CompanionWssListener` implementation exists in `emrg/server/companion_wss_listener.py`; it is explicitly started by its caller and currently dispatches only authenticated `status` and bounded read-only `sessions.list` requests.
+- The listener uses TLS and host-service identity checks, bounds connection resources, closes clients on disable, and does not route remote requests through the desktop daemon's unrestricted `_handle_client` dispatcher.
+- The listener currently authenticates using the existing v1 companion credential path. It does not yet expose the v2 Ed25519 request/challenge/redeem flow as a network endpoint, nor does it execute remote chat.
+- `companion_tls_identity.py` provisions and validates a persistent host certificate/key identity; it is more than a design-only policy. Cross-process provisioning coordination and Windows ACL/temp-file hardening remain release gates.
 
 ## Suggested implementation sequence
 
-- H1: Implement host-side pairing manager composition and a trusted local approval interface, without opening a socket.
-- H2: Define TLS identity persistence, rotation, and user-verifiable fingerprint presentation. **Design specification committed in `COMPANION_TLS_HOST_IDENTITY_POLICY.md`; implementation remains open.**
-- H3: Implement a disabled-by-default dedicated WSS listener and narrow protocol adapter, initially status-only.
-- H4: Add scoped session listing, then chat with host-side task construction and approval/sandbox enforcement.
-- H5: Test device revocation, pending-pairing expiry, listener disable, reconnect reconciliation, rate limits, malformed frames, and Android-to-host end-to-end flows on Windows and Linux.
+- H1: Host-side pairing manager composition is implemented; trusted local approval UI and its authenticated local control adapter remain open.
+- H2: TLS identity policy and persistent certificate/key provisioning are implemented. User-verifiable fingerprint presentation, cross-process provisioning coordination, and Windows ACL/temp-file hardening remain open.
+- H3: A separate opt-in WSS listener and narrow adapter exist for authenticated status and bounded read-only session listing. Daemon lifecycle/configuration integration, v2 pairing over WSS, and production network exposure gates remain open.
+- H4: Scoped session listing is implemented in the standalone listener. Remote chat, host-side task construction, and approval/sandbox enforcement remain unimplemented.
+- H5: Continue testing revocation, pending-pairing expiry, listener disable, reconnect reconciliation, rate limits, malformed frames, and Android-to-host end-to-end flows on Windows and Linux.
 
 No milestone above is complete until tests and CI evidence exist.
 
@@ -83,9 +87,9 @@ The Android client now installs a per-connection exact SHA-256 leaf-pin trust ma
 Pending transactions are now bounded to 32 concurrent entries. Expired entries are purged before capacity is evaluated; when capacity remains full, creation fails closed with a safe error. The host composition exposes `invalidate_pending_pairings()` as a lifecycle hook to clear all QR/pairing transactions when a future companion service is disabled or stopped. Tests cover capacity, expiry freeing capacity, and invalidation of all pending requests. This hook is not yet wired to a listener/UI lifecycle because those components do not exist.
 
 
-## Listener configuration policy primitive
+## Listener configuration and implementation status
 
-`companion_listener_policy.py` validates explicit unicast IP-literal bind addresses, rejects wildcard and multicast/reserved addresses, enforces non-privileged ports, and bounds resource/time settings. It intentionally does not perform DNS, open sockets, start a listener, or modify firewall rules. An actual listener and its lifecycle tests remain unimplemented.
+`companion_listener_policy.py` validates explicit unicast IP-literal bind addresses, rejects wildcard and multicast/reserved addresses, enforces non-privileged ports, and bounds resource/time settings. `companion_wss_listener.py` implements a separately started TLS WebSocket listener using that policy, bounded connection handling, authenticated first-frame processing, per-request identity revalidation, status, and bounded read-only session listing. It does not open the desktop daemon listener to LAN, expose chat/tool execution, or implement v2 network pairing. The remaining gap is integration with daemon configuration/startup/shutdown and trusted local UI controls; standalone listener tests are not equivalent to end-to-end desktop/mobile integration.
 
 ## Electron host UI integration re-audit (2026-11-19)
 
@@ -113,3 +117,19 @@ This audit deliberately does not add renderer controls without a functioning, ac
 - The tests establish one terminal winner: successful cancellation yields no credential; successful redemption yields one registered credential and cancellation returns false.
 - These tests validate host-side primitives only. They do not validate Electron IPC, a live WSS listener, Android Keystore, or end-to-end pairing.
 
+
+
+## Corrected implementation status (2026-11-19)
+
+The earlier sections above were written incrementally and some statements became stale as implementation advanced. This section is the current source-verified status:
+
+| Area | Current state | Remaining boundary |
+|---|---|---|
+| Pairing and credential host core | Implemented, with v1/v2 transaction primitives and race tests | Trusted local UI/control adapter |
+| TLS host identity | Persistent provisioning and validation implemented | Cross-process locking, Windows ACL/temp-file hardening, trusted fingerprint display |
+| Dedicated WSS transport | Standalone opt-in listener implemented | Daemon lifecycle/config integration; v2 pairing network route |
+| Remote operations | Authenticated status and bounded read-only session listing | Chat and approval/sandbox integration |
+| Electron UI | Existing secure preload bridge; no Companion controls | Main-process adapter, allowlisted IPC, renderer approval/device screens |
+| Android | QR parser, secure credential storage and pinned WSS primitive | Device-key lifecycle, v2 handshake, live transport integration and physical-device verification |
+
+The standalone WSS listener must not be described as absent, but it must also not be described as a complete Companion service. No live Android-to-host pairing or remote chat claim is supported by the current code.
