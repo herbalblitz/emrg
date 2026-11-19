@@ -253,3 +253,5 @@ The WSS listener dispatches only authenticated `status` and read-only `sessions.
 ### Listener startup/shutdown race boundary
 
 The WSS listener does not publish a newly-bound server if local Companion policy is disabled or `stop()` is called while the asynchronous socket bind is still in progress. The returned server is closed and awaited before startup fails. A regression test exercises disable-during-startup to prevent a late bind from resurrecting the listener after local shutdown.
+
+The listener also rejects a second concurrent `start()` while the first bind is pending. This prevents two independent WSS servers from being bound by racing lifecycle calls; the in-progress state is cleared on both successful and failed startup.
