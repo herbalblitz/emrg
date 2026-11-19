@@ -213,3 +213,15 @@ These are requirements for a future implementation, not evidence of an existing 
 ## Host companion protocol proposal (2026-11-18)
 
 The isolated remote host API, pairing lifecycle, auth frames, capabilities, workspace-scoped session/chat operations, stream events, replay policy and implementation gates are drafted in `HOST_COMPANION_PROTOCOL_V1.md`. This is a design/spec milestone only. No listener, credential verifier, TLS host identity management, pairing approval UI or daemon bridge exists yet. The existing local loopback endpoint remains unchanged and must not be exposed.
+
+
+## Companion WSS implemented subset (2026-11-19)
+
+The opt-in Companion WSS listener currently supports:
+- First-frame device credential authentication with the paired device's granted scopes.
+- `status` requests with the `status` scope.
+- `sessions.list` requests with the `sessions.list` scope and exact paired `workspace_id`.
+
+For `sessions.list`, the host resolves the filesystem path exclusively from the authenticated device credential registry record. The client cannot supply or override `cwd`; a request for a different workspace is rejected before dispatch. The response is correlated as `sessions.result` and includes the approved workspace ID and session metadata. This is read-only metadata access; it does not resume sessions, read transcripts, or execute tasks.
+
+Chat dispatch, cancellation, tool approvals, filesystem operations, pairing UI/QR rendering, Android live transport and end-to-end tests remain unimplemented. Do not treat the current WSS subset as a general remote daemon API.
