@@ -81,7 +81,7 @@ class CompanionWssListener:
         tls = create_server_context(self._cert_file, self._key_file)
         self._closing = False
         self._loop = asyncio.get_running_loop()
-        self._server = await serve(
+        server = await serve(
             self._handle,
             self._config.bind_address,
             self._config.port,
@@ -93,6 +93,14 @@ class CompanionWssListener:
             ping_timeout=20,
             close_timeout=self._config.close_timeout_seconds,
         )
+        # Host policy may be disabled (or stop() called) while serve() is
+        # awaiting socket startup. Do not publish a newly-bound server after
+        # that shutdown signal has already been observed.
+        if self._closing or not self._host.enabled:
+            server.close()
+            await server.wait_closed()
+            raise CompanionTlsError("companion disabled during listener startup")
+        self._server = server
 
     async def stop(self) -> None:
         """Stop accepting, close clients, and wait boundedly for handlers."""
