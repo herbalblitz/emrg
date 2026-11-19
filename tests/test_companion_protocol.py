@@ -148,3 +148,27 @@ def test_v2_pairing_frames_remain_rejected_by_v1_pre_auth_gate():
     with pytest.raises(CompanionProtocolError):
         validate_client_frame(json.dumps(frame))
     assert validate_pairing_v2_frame(json.dumps(frame))["type"] == "pairing.request"
+
+@pytest.mark.parametrize("device_id", [
+    "android device", "android/forged", "x" * 129,
+])
+def test_pairing_v2_rejects_noncanonical_device_ids(device_id):
+    import base64
+    from emrg.server.companion_protocol import validate_pairing_v2_frame
+    enc = lambda size: base64.urlsafe_b64encode(bytes(size)).rstrip(b"=").decode()
+    frame = {"type": "pairing.request", "protocol": "2.0",
+             "pairing_id": enc(32), "device_id": device_id,
+             "public_key": enc(32)}
+    with pytest.raises(CompanionProtocolError):
+        validate_pairing_v2_frame(json.dumps(frame))
+
+
+@pytest.mark.parametrize("device_id", ["android-1", "device_2", "host.phone:3"])
+def test_pairing_v2_accepts_supported_device_id_characters(device_id):
+    import base64
+    from emrg.server.companion_protocol import validate_pairing_v2_frame
+    enc = lambda size: base64.urlsafe_b64encode(bytes(size)).rstrip(b"=").decode()
+    frame = {"type": "pairing.request", "protocol": "2.0",
+             "pairing_id": enc(32), "device_id": device_id,
+             "public_key": enc(32)}
+    assert validate_pairing_v2_frame(json.dumps(frame))["device_id"] == device_id
