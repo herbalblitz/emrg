@@ -57,6 +57,10 @@ const api = {
   registerAgent: (payload) => ipcRenderer.invoke("emrg:registerAgent", payload),
   removeAgent: (payload) => ipcRenderer.invoke("emrg:removeAgent", payload),
   listTasks: () => ipcRenderer.invoke("emrg:listTasks"),
+  // Trusted local Companion approval controls; no arbitrary operation is exposed.
+  companionStatus: () => ipcRenderer.invoke("emrg:companionStatus"),
+  companionPendingPairings: () => ipcRenderer.invoke("emrg:companionPendingPairings"),
+  companionDecidePairing: (payload) => ipcRenderer.invoke("emrg:companionDecidePairing", payload),
   // 间隔下限由 daemon 上报（issue #2490）——渲染层不留第二份数字
   taskLimits: () => ipcRenderer.invoke("emrg:taskLimits"),
   triggerTask: (payload) => ipcRenderer.invoke("emrg:triggerTask", payload),
