@@ -93,3 +93,52 @@ def test_session_list_rejects_client_supplied_path_or_extra_fields():
                 json.dumps({**base, **extra}), authenticated=True,
                 scopes=frozenset({"sessions.list"}),
                 workspace_id="workspace-approved")
+
+
+def test_pairing_v2_request_and_redeem_frames_have_strict_shapes():
+    from emrg.server.companion_protocol import validate_pairing_v2_frame
+    request = {"type": "pairing.request", "protocol": "2.0",
+               "pairing_id": "A" * 43, "device_id": "android-1",
+               "public_key": "B" * 43}
+    assert validate_pairing_v2_frame(json.dumps(request)) == request
+    redeem = {"type": "pairing.redeem", "protocol": "2.0",
+              "pairing_id": "A" * 43, "device_id": "android-1",
+              "challenge_id": "C" * 22, "signature": "D" * 86}
+    assert validate_pairing_v2_frame(json.dumps(redeem)) == redeem
+
+
+@pytest.mark.parametrize("mutate", [
+    {"protocol": "1.0"},
+    {"extra": "ignored"},
+    {"pairing_id": "short"},
+    {"public_key": "!" * 43},
+    {"device_id": ""},
+])
+def test_pairing_v2_request_rejects_malformed_or_unknown_fields(mutate):
+    from emrg.server.companion_protocol import validate_pairing_v2_frame
+    frame = {"type": "pairing.request", "protocol": "2.0",
+             "pairing_id": "A" * 43, "device_id": "android-1",
+             "public_key": "B" * 43}
+    frame.update(mutate)
+    with pytest.raises(CompanionProtocolError):
+        validate_pairing_v2_frame(json.dumps(frame))
+
+
+def test_pairing_v2_redeem_rejects_missing_fields_duplicate_keys_and_wrong_type():
+    from emrg.server.companion_protocol import validate_pairing_v2_frame
+    with pytest.raises(CompanionProtocolError):
+        validate_pairing_v2_frame('{"type":"pairing.redeem","protocol":"2.0"}')
+    with pytest.raises(CompanionProtocolError):
+        validate_pairing_v2_frame('{"type":"pairing.request","type":"pairing.redeem"}')
+    with pytest.raises(CompanionProtocolError):
+        validate_pairing_v2_frame('{"type":"auth","protocol":"2.0"}')
+
+
+def test_v2_pairing_frames_remain_rejected_by_v1_pre_auth_gate():
+    from emrg.server.companion_protocol import validate_pairing_v2_frame
+    frame = {"type": "pairing.request", "protocol": "2.0",
+             "pairing_id": "A" * 43, "device_id": "android-1",
+             "public_key": "B" * 43}
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame(json.dumps(frame))
+    assert validate_pairing_v2_frame(json.dumps(frame))["type"] == "pairing.request"
