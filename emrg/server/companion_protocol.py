@@ -6,6 +6,7 @@ any handler runs. Keep secrets out of exceptions and logs.
 """
 from __future__ import annotations
 
+import base64
 import json
 from typing import Any
 
@@ -156,10 +157,10 @@ def encode_server_frame(frame: dict[str, Any]) -> bytes:
 
 
 _PAIRING_V2_BASE64URL = {
-    "pairing_id": 43,       # 32 random bytes, unpadded URL-safe base64
-    "public_key": 43,       # 32-byte Ed25519 public key
-    "challenge_id": 22,     # 16 random bytes, unpadded URL-safe base64
-    "signature": 86,        # 64-byte Ed25519 signature
+    "pairing_id": (43, 32),       # encoded length, decoded bytes
+    "public_key": (43, 32),       # encoded length, decoded bytes
+    "challenge_id": (22, 16),     # encoded length, decoded bytes
+    "signature": (86, 64),        # encoded length, decoded bytes
 }
 
 
@@ -186,11 +187,19 @@ def validate_pairing_v2_frame(payload: str | bytes) -> dict[str, Any]:
         raise CompanionProtocolError("unsupported pairing protocol")
     for name in required:
         _required_string(frame, name, max_bytes=128 if name == "device_id" else 128)
-    for name, expected_length in _PAIRING_V2_BASE64URL.items():
+    for name, (encoded_length, decoded_length) in _PAIRING_V2_BASE64URL.items():
         if name in frame:
             value = frame[name]
-            if (not isinstance(value, str) or len(value) != expected_length
+            if (not isinstance(value, str) or len(value) != encoded_length
                     or any(char not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
                            for char in value)):
+                raise CompanionProtocolError("invalid pairing field")
+            try:
+                decoded = base64.b64decode(
+                    value + "=" * (-len(value) % 4), altchars=b"-_", validate=True)
+            except ValueError:
+                raise CompanionProtocolError("invalid pairing field") from None
+            canonical = base64.urlsafe_b64encode(decoded).rstrip(b"=").decode("ascii")
+            if len(decoded) != decoded_length or canonical != value:
                 raise CompanionProtocolError("invalid pairing field")
     return frame
