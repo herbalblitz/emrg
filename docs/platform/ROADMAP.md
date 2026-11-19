@@ -206,3 +206,12 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Increased pairing transaction identifier entropy to 256 random bits (32 CSPRNG bytes encoded URL-safe).
 - Added regression coverage for identifier length and concurrent redemption: a single approved transaction must issue exactly one credential when multiple redemption attempts race.
 - Companion security CI is being used to validate the implementation on Ubuntu and Windows; do not treat the run triggered by the code-only commit as validation of the subsequent test commit.
+
+
+### Pairing transaction CI result (2026-11-19)
+
+- Companion security CI #97 passed on commit `50fec84a` on both Ubuntu and Windows.
+- Ubuntu: 156 tests passed.
+- Windows: 152 tests passed, 4 skipped.
+- The run includes the 256-bit pairing ID change and concurrent redemption regression test. The test asserts that eight simultaneous redemption attempts against one approved transaction yield exactly one credential.
+- The run was triggered by the test commit and therefore validates the pairing implementation and tests at `50fec84a`; the following documentation-only commit does not change executable code.
