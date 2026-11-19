@@ -53,12 +53,13 @@ class PairingV2ClientTest {
         publicKeyDigest: String,
         expiresAt: Long,
     ): ByteArray = ("{\"challenge_id\":\"" + challengeId +
+        "\",\"client_nonce\":\"" + activeClientNonce +
         "\",\"device_id\":\"" + deviceId +
         "\",\"expires_at\":" + expiresAt +
         ",\"host_identity\":\"host-identity\",\"nonce\":\"" + b64(32) +
         "\",\"pairing_id\":\"" + pairingId +
         "\",\"protocol\":\"2.0\",\"public_key_sha256\":\"" + publicKeyDigest +
-        "\",\"scopes\":[\"status\",\"sessions.list\"],\"workspace_id\":\"workspace-1\"}")
+        "\",\"scopes\":[\"status\"],\"workspace_id\":\"workspace-1\"}")
         .toByteArray(Charsets.UTF_8)
 
     @Test
@@ -67,7 +68,7 @@ class PairingV2ClientTest {
         val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
         val pairingId = b64(32)
         val challengeId = b64(16)
-        val request = client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }.also { activeClientNonce = it.getString("client_nonce") }
+        val request = client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         assertEquals("pairing.request", request.getString("type"))
         assertEquals("2.0", request.getString("protocol"))
         assertEquals("P-256", request.getString("key_algorithm"))
