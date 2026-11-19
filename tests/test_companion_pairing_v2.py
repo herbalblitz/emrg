@@ -113,3 +113,43 @@ def test_pairing_v2_rejects_noncanonical_or_wrong_length_keys(tmp_path):
         pairing.request(pairing_id=tx["pairing_id"], device_id="android", public_key="not-base64!")
     with pytest.raises(PairingV2Error, match="invalid device key"):
         pairing.request(pairing_id=tx["pairing_id"], device_id="android", public_key=_b64(b"short"))
+
+
+def test_pairing_v2_concurrent_redemption_issues_exactly_one_credential(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+
+    pairing, registry, _, private, public = _setup(tmp_path)
+    tx, request = _request(pairing, public)
+    signature = _signature(private, request)
+    assert pairing.approve(tx["pairing_id"], approved=True)
+
+    def redeem():
+        try:
+            return pairing.redeem(
+                pairing_id=tx["pairing_id"], device_id="android-device",
+                challenge_id=request["challenge_id"], signature=signature)
+        except PairingV2Error:
+            return None
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(lambda _: redeem(), range(8)))
+
+    issued = [token for token in results if token is not None]
+    assert len(issued) == 1
+    identity = registry.verify(device_id="android-device", credential=issued[0])
+    assert identity is not None
+    assert identity["workspace_id"] == "workspace"
+    assert identity["scopes"] == frozenset({"status", "sessions.list"})
+    assert len(pairing.pending_requests()) == 0
+
+
+def test_pairing_v2_pending_capacity_is_bounded_and_cancel_all_clears(tmp_path):
+    pairing, _, _, _, _ = _setup(tmp_path)
+    for _ in range(32):
+        pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
+    with pytest.raises(PairingV2Error, match="capacity"):
+        pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
+    assert pairing.cancel_all() == 32
+    assert pairing.cancel_all() == 0
+    fresh = pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
+    assert fresh["pairing_id"]
