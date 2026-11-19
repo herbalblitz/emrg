@@ -21,7 +21,6 @@ class PairingV2SessionControllerTest {
     ) : PairingV2SessionTransport {
         var challengeListener: PairingV2FlowListener? = null
         var challenge: PairingV2Challenge? = null
-        var approved = false
 
         override fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle {
             challengeListener = listener
@@ -29,17 +28,11 @@ class PairingV2SessionControllerTest {
             return PairingV2ExchangeHandle { }
         }
 
-        override fun confirmHostApproval(challenge: PairingV2Challenge): Boolean {
-            if (this.challenge != challenge) return false
-            approved = true
-            return true
-        }
-
-        override fun redeemAfterHostApproval(
+        override fun redeem(
             challenge: PairingV2Challenge,
             listener: PairingV2FlowListener,
         ): PairingV2ExchangeHandle {
-            check(approved)
+            check(this.challenge == challenge)
             listener.onCredential("a".repeat(64))
             return PairingV2ExchangeHandle { }
         }
@@ -81,7 +74,7 @@ class PairingV2SessionControllerTest {
     )
 
     @Test
-    fun credentialIsPersistedOnlyAfterChallengeApprovalAndStateValidation() {
+    fun credentialIsPersistedOnlyAfterHostIssuesAValidCredential() {
         val store = Store()
         val coordinator = approvedCoordinator(store)
         val transport = FakeTransport().apply { challenge = this@PairingV2SessionControllerTest.challenge }
@@ -90,7 +83,7 @@ class PairingV2SessionControllerTest {
 
         controller.requestPairingChallenge(listener)
         assertEquals(challenge, listener.challenge)
-        controller.redeemAfterConfirmedHostApproval(listener)
+        controller.redeemChallenge(listener)
 
         assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
         assertEquals("a".repeat(64), store.values["host-credential"])
