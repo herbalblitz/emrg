@@ -138,6 +138,13 @@ def test_pairing_v2_redeem_rejects_missing_fields_duplicate_keys_and_wrong_type(
         validate_pairing_v2_frame('{"type":"auth","protocol":"2.0"}')
 
 
+def test_pairing_v2_rejects_duplicate_keys_after_json_escape_decoding():
+    from emrg.server.companion_protocol import validate_pairing_v2_frame
+    payload = '{"type":"pairing.request","\\u0074ype":"pairing.redeem","protocol":"2.0"}'
+    with pytest.raises(CompanionProtocolError):
+        validate_pairing_v2_frame(payload)
+
+
 def test_v2_pairing_frames_remain_rejected_by_v1_pre_auth_gate():
     from emrg.server.companion_protocol import validate_pairing_v2_frame
     import base64
