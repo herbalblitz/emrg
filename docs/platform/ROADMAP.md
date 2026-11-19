@@ -185,3 +185,10 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Android Companion CI run #191 passed on commit `fdd5d1bb`: debug APK assembly, JVM unit tests, lint and debug APK artifact upload.
 - [x] Recorded the client-side security gate and its limitations in `CLIENT_PROTOCOL_CONTRACT.md` (documentation commit `85732af9`).
 - [ ] Still required before usable remote Companion: real host-approved pairing/credential issuance flow, Android pairing coordinator + encrypted credential-store integration, live WSS connection/UI lifecycle, host protocol compatibility/negotiation, daemon chat/task bridge, cancellation and tool-approval lifecycle, and end-to-end tests. The current demo chat remains offline and must not be presented as connected.
+
+
+### Pairing integration audit (2026-11-19)
+- [x] Remove Android self-approval affordance; UI now waits for host-side approval rather than locally transitioning to HOST_APPROVED (commit `a85ea4c3`; Android CI #192 pending at audit time).
+- [x] Confirm host-side primitives enforce local approval, one-time redemption, expiry, attempt limits and device credential issuance; current descriptor is credential-free.
+- [ ] Design and implement versioned QR transaction binding (pairing ID/one-time secret exchange without embedding the issued device credential), trusted local host approval UI, and pinned-TLS redemption endpoint.
+- [ ] Connect Android coordinator to the real host response and persist only the credential issued by that host; add cross-platform end-to-end tests. Do not mark pairing complete until these gates pass.
