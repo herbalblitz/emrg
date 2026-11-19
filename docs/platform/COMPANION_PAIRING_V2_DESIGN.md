@@ -417,3 +417,16 @@ pairing.credential response to the pinned WSS client.
 Python regression tests cover response-loss retry, concurrent duplicate
 redemption returning one identical token, and retry after a credential registry
 write failure. These tests do not replace Android/host end-to-end validation.
+
+## Android flow/controller integration update (2026-11-19)
+
+The Android source now composes the Pairing v2 proof client and pinned WSS exchange in `PairingV2Flow`, then connects that flow to the pairing reducer and encrypted credential store through `PairingV2SessionController`.
+
+Security and state guarantees implemented:
+- The controller rejects construction unless its endpoint, TLS fingerprint, pairing ID, and device ID match the immutable identity exposed by the transport. Its requested scope set must exactly match the signed transport request.
+- The host's trusted-local approval remains authoritative. Android does not have a local approval action and does not transition to `HOST_APPROVED` merely because a user taps a client-side control.
+- Before host approval, the WSS route returns a generic unavailable result. The controller leaves the reducer in `AWAITING_HOST_APPROVAL`; a retry is allowed and the flow reuses the exact signed redeem frame, matching the host's idempotent redemption behavior.
+- Only a valid host-issued credential response is passed through `HostApproved` and `CredentialIssued`; the coordinator validates and persists it before the listener receives `onPaired`.
+- The Android controller currently enables only `status` and `sessions.list`. `chat.send` remains disabled until the signed pairing and host authorization contract safely binds the workspace and working directory.
+
+Remaining integration gates: connect the QR scanner/panel and lifecycle-aware retry UI to this controller; validate non-exportable Android Keystore behavior on physical devices; and complete Android-to-Windows end-to-end tests. This implementation does not by itself mean live pairing or authenticated remote operations are release-ready.
