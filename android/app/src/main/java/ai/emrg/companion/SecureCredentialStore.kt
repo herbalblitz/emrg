@@ -3,7 +3,6 @@ package ai.emrg.companion
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import android.util.Base64
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -35,7 +34,7 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey(alias))
         cipher.updateAAD(alias.toByteArray(StandardCharsets.UTF_8))
         val ciphertext = cipher.doFinal(credential.toByteArray(StandardCharsets.UTF_8))
-        val encoded = encode(cipher.iv) + "." + encode(ciphertext)
+        val encoded = CredentialEnvelope.encode(cipher.iv, ciphertext)
 
         check(preferences.edit().putString(storageKey(alias), encoded).commit()) {
             "Credential storage write failed"
@@ -46,12 +45,9 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
     override fun get(alias: String): String? {
         requireValidAlias(alias)
         val stored = preferences.getString(storageKey(alias), null) ?: return null
-        val parts = stored.split('.', limit = 2)
-        if (parts.size != 2) throw IllegalStateException("Stored credential format is invalid")
-
-        val iv = decode(parts[0])
-        val ciphertext = decode(parts[1])
-        require(iv.size == GCM_IV_BYTES) { "Stored credential IV is invalid" }
+        val envelope = CredentialEnvelope.decode(stored)
+        val iv = envelope.iv
+        val ciphertext = envelope.ciphertext
 
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, getKey(alias), GCMParameterSpec(GCM_TAG_BITS, iv))
@@ -102,9 +98,6 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
     private fun storageKey(alias: String) = STORAGE_PREFIX + alias
     private fun keyAlias(alias: String) = KEY_PREFIX + alias
 
-    private fun encode(bytes: ByteArray) = Base64.encodeToString(bytes, Base64.NO_WRAP)
-    private fun decode(value: String) = Base64.decode(value, Base64.NO_WRAP)
-
     companion object {
         private const val PREFERENCES_NAME = "emrg_secure_credentials"
         private const val STORAGE_PREFIX = "credential:"
@@ -113,7 +106,6 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val AES_KEY_BITS = 256
         private const val GCM_TAG_BITS = 128
-        private const val GCM_IV_BYTES = 12
 
         internal fun isValidCredentialAlias(alias: String): Boolean =
             alias.matches(Regex("[A-Za-z0-9._-]{1,64}"))
