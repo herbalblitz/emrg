@@ -133,3 +133,12 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Add JVM boundary tests for blank, exact-limit, oversized ASCII, multibyte UTF-8, and no-persistence-on-rejection cases.
 - [ ] Await Android CI for source/test commits `f137081b` through `69ca6a82`; the queued latest run must pass before this slice is CI-verified.
 - [ ] Exercise real Android Keystore put/get/delete on supported physical devices.
+
+
+## Pairing v2 Android WSS transport status (2026-11-19)
+
+- [x] One-shot Android WSS exchange primitive uses the QR-pinned TLS leaf certificate before sending the Pairing v2 request or redeem frame.
+- [x] Response envelope is size-bounded and correlated to pairing ID, expected response type, and device ID for credential issuance.
+- [x] JVM regression tests and Android CI #267 passed on commit `2fbdf7d0d92c` (APK assembly, unit tests, lint, artifact upload).
+- [ ] Production integration with `PairingV2Client`, `SecurePairingCoordinator`, host approval/redeem lifecycle, and QR UI remains open; no end-to-end pairing is claimed.
+- [ ] Physical-device Android Keystore validation and full Android-to-Windows host integration remain open.
