@@ -28,6 +28,17 @@ def _token_hash(token: str, salt: str) -> str:
     return hashlib.sha256((salt + token).encode("utf-8")).hexdigest()
 
 
+def _record_generation(record: dict[str, Any]) -> str | None:
+    """Return a rotation-sensitive opaque ID, including for legacy registry entries."""
+    generation = record.get("generation")
+    if isinstance(generation, str) and generation:
+        return generation
+    salt, verifier = record.get("salt"), record.get("verifier")
+    if not isinstance(salt, str) or not isinstance(verifier, str):
+        return None
+    return hashlib.sha256((salt + ":" + verifier).encode("utf-8")).hexdigest()
+
+
 def _bounded_text(value: object, max_bytes: int, error: str) -> str:
     if not isinstance(value, str) or not value:
         raise CredentialRegistryError(error)
@@ -116,8 +127,8 @@ class CredentialRegistry:
         if (not isinstance(scopes, list) or not all(isinstance(s, str) for s in scopes)
                 or not isinstance(workspace_id, str) or not isinstance(cwd, str)):
             return None
-        generation = record.get("generation")
-        if not isinstance(generation, str) or not generation:
+        generation = _record_generation(record)
+        if generation is None:
             return None
         return {"device_id": device_id, "workspace_id": workspace_id,
                 "cwd": cwd, "scopes": frozenset(scopes), "generation": generation}
@@ -141,8 +152,7 @@ class CredentialRegistry:
         return (
             record.get("workspace_id") == identity.get("workspace_id")
             and record.get("cwd") == identity.get("cwd")
-            and isinstance(record.get("generation"), str)
-            and record.get("generation") == identity.get("generation")
+            and _record_generation(record) == identity.get("generation")
             and isinstance(scopes, list)
             and frozenset(scopes) == frozenset(identity.get("scopes", ()))
         )
