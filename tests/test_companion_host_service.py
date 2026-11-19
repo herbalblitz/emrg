@@ -97,17 +97,18 @@ def test_host_service_lifecycle_hook_invalidates_pending_requests(tmp_path):
 def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
     import base64
     from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
 
     host = CompanionHostService(tmp_path / "registry-v2.json")
     host.enable()
     tx = host.begin_pairing_v2(
         host_identity="tls-fingerprint", workspace_id="ws",
         cwd="/safe/work", scopes={"status"})
-    private = Ed25519PrivateKey.generate()
+    private = ec.generate_private_key(ec.SECP256R1())
     public = private.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw)
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo)
     public_text = base64.urlsafe_b64encode(public).rstrip(b"=").decode("ascii")
     challenge = host.request_pairing_v2(
         pairing_id=tx["pairing_id"], device_id="android-v2",
@@ -118,7 +119,7 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
     assert host.decide_pairing_v2(tx["pairing_id"], approved=True)
     payload = base64.urlsafe_b64decode(
         challenge["challenge"] + "=" * (-len(challenge["challenge"]) % 4))
-    signature = base64.urlsafe_b64encode(private.sign(payload)).rstrip(b"=").decode("ascii")
+    signature = base64.urlsafe_b64encode(private.sign(payload, ec.ECDSA(hashes.SHA256()))).rstrip(b"=").decode("ascii")
     token = host.redeem_pairing_v2(
         pairing_id=tx["pairing_id"], device_id="android-v2",
         challenge_id=challenge["challenge_id"], signature=signature)
@@ -137,17 +138,18 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
 def test_host_service_can_cancel_one_v2_pairing_from_local_control_plane(tmp_path):
     import base64
     from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
 
     host = CompanionHostService(tmp_path / "registry-v2-cancel.json")
     host.enable()
     tx = host.begin_pairing_v2(
         host_identity="tls-fingerprint", workspace_id="ws",
         cwd="/safe/work", scopes={"status"})
-    private = Ed25519PrivateKey.generate()
+    private = ec.generate_private_key(ec.SECP256R1())
     public = private.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw)
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo)
     public_text = base64.urlsafe_b64encode(public).rstrip(b"=").decode("ascii")
     host.request_pairing_v2(
         pairing_id=tx["pairing_id"], device_id="android-v2",
@@ -267,17 +269,18 @@ def test_host_service_cancel_serializes_with_v2_redemption(tmp_path):
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
     from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
 
     host = CompanionHostService(tmp_path / "registry-v2-cancel-race.json")
     host.enable()
     tx = host.begin_pairing_v2(
         host_identity="tls-fingerprint", workspace_id="ws",
         cwd="/safe/work", scopes={"status"})
-    private = Ed25519PrivateKey.generate()
+    private = ec.generate_private_key(ec.SECP256R1())
     public = private.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw)
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo)
     public_text = base64.urlsafe_b64encode(public).rstrip(b"=").decode("ascii")
     challenge = host.request_pairing_v2(
         pairing_id=tx["pairing_id"], device_id="android-v2",
@@ -285,7 +288,8 @@ def test_host_service_cancel_serializes_with_v2_redemption(tmp_path):
     assert host.decide_pairing_v2(tx["pairing_id"], approved=True)
     signature = base64.urlsafe_b64encode(
         private.sign(base64.urlsafe_b64decode(
-            challenge["challenge"] + "=" * (-len(challenge["challenge"]) % 4)))
+            challenge["challenge"] + "=" * (-len(challenge["challenge"]) % 4)),
+            ec.ECDSA(hashes.SHA256()))
     ).rstrip(b"=").decode("ascii")
     start = Barrier(2)
 
