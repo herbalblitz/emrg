@@ -16,9 +16,12 @@ from websockets.asyncio.server import serve
 from websockets.exceptions import ConnectionClosed
 
 from emrg.server.companion_host_service import CompanionHostService
+from emrg.server.companion_pairing import PairingError
+from emrg.server.companion_pairing_v2 import PairingV2Error
 from emrg.server.companion_listener_policy import CompanionListenerConfig
 from emrg.server.companion_protocol import (
     CompanionProtocolError, encode_server_frame, validate_client_frame,
+    validate_pairing_v2_frame,
 )
 from emrg.server.companion_tls import create_server_context, CompanionTlsError
 from emrg.session import Session
@@ -190,9 +193,66 @@ class CompanionWssListener:
             self._active -= 1
             self._semaphore.release()
 
+    async def _handle_pairing_v2(self, websocket, frame: dict[str, Any]) -> None:
+        """Handle one pinned-TLS pairing frame; approval remains host-local."""
+        if not self._host.enabled or self._closing:
+            await websocket.close(code=1008, reason="Companion disabled")
+            return
+        try:
+            if frame["type"] == "pairing.request":
+                result = self._host.request_pairing_v2(
+                    pairing_id=frame["pairing_id"],
+                    device_id=frame["device_id"],
+                    public_key=frame["public_key"],
+                )
+                response = {
+                    "type": "pairing.challenge",
+                    "protocol": "2.0",
+                    "pairing_id": frame["pairing_id"],
+                    **result,
+                }
+            else:
+                credential = self._host.redeem_pairing_v2(
+                    pairing_id=frame["pairing_id"],
+                    device_id=frame["device_id"],
+                    challenge_id=frame["challenge_id"],
+                    signature=frame["signature"],
+                )
+                response = {
+                    "type": "pairing.credential",
+                    "protocol": "2.0",
+                    "pairing_id": frame["pairing_id"],
+                    "device_id": frame["device_id"],
+                    "credential": credential,
+                }
+        except (PairingError, PairingV2Error):
+            # Never disclose transaction existence, approval state, or proof
+            # failure. Approval and rejection remain host-local operations.
+            response = {
+                "type": "pairing.error",
+                "protocol": "2.0",
+                "pairing_id": frame["pairing_id"],
+                "code": "pairing_unavailable",
+            }
+        await websocket.send(encode_server_frame(response))
+
     async def _session(self, websocket) -> None:
         first = await asyncio.wait_for(
             websocket.recv(), timeout=self._config.handshake_timeout_seconds)
+        # Pairing v2 is a one-frame TLS endpoint. The Android client must
+        # validate the host certificate pin before sending either frame.
+        # These frames never establish an authenticated companion session.
+        try:
+            initial = json.loads(first)
+        except (TypeError, UnicodeDecodeError, json.JSONDecodeError):
+            initial = None
+        if isinstance(initial, dict) and initial.get("type") in {
+            "pairing.request", "pairing.redeem"
+        }:
+            frame = validate_pairing_v2_frame(first)
+            await self._handle_pairing_v2(websocket, frame)
+            return
+
         identity = self._host.authenticate(first)
         # Validate envelope again to guarantee exact auth-frame shape.
         validate_client_frame(first, authenticated=False)
