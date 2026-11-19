@@ -12,6 +12,15 @@ internal interface PairingV2FrameExchange {
     ): PairingV2ExchangeHandle
 }
 
+internal interface PairingV2SessionTransport {
+    fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle
+    fun confirmHostApproval(challenge: PairingV2Challenge): Boolean
+    override fun redeemAfterHostApproval(
+        challenge: PairingV2Challenge,
+        listener: PairingV2FlowListener,
+    ): PairingV2ExchangeHandle
+}
+
 internal interface PairingV2FlowListener {
     fun onChallenge(challenge: PairingV2Challenge)
     fun onCredential(credential: String)
@@ -31,13 +40,13 @@ internal class PairingV2Flow(
     private val pairingId: String,
     private val client: PairingV2Client,
     private val exchange: PairingV2FrameExchange,
-) {
+) : PairingV2SessionTransport {
     private var acceptedChallenge: PairingV2Challenge? = null
     private var hostApprovalConfirmed = false
     private var cachedRedeemFrame: JSONObject? = null
 
     @Synchronized
-    fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle {
+    override fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle {
         acceptedChallenge = null
         hostApprovalConfirmed = false
         cachedRedeemFrame = null
@@ -72,7 +81,7 @@ internal class PairingV2Flow(
      * The host still independently enforces approval; this flag is not proof to the server.
      */
     @Synchronized
-    fun confirmHostApproval(challenge: PairingV2Challenge): Boolean {
+    override fun confirmHostApproval(challenge: PairingV2Challenge): Boolean {
         if (acceptedChallenge != challenge) return false
         hostApprovalConfirmed = true
         return true
