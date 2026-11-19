@@ -242,3 +242,9 @@ The WSS `sessions.list` response does not forward raw session metadata. It expos
 The local pairing transaction rejects empty, malformed UTF-8, or oversized identity inputs before retaining a pending request: workspace IDs are limited to 128 UTF-8 bytes and workspace paths to 4096 bytes. Scope collections must be non-empty sets containing only the explicitly supported scope names. Redemption bounds pairing IDs to 128 bytes, pairing secrets to 512 bytes, and device IDs to 128 bytes. These checks bound the in-memory pairing surface; they do not replace local approval, TLS, or device authorization.
 Approval and cancellation lookups also reject malformed or oversized pairing IDs without raising unexpected type errors. Approval decisions must be actual booleans; a pending request cannot be re-decided after approval or rejection.
 The currently unimplemented `chat.send` frame validator also rejects empty, non-string, oversized, or invalid-UTF-8 `session_id` values before returning normalized request data. The listener does not yet dispatch these chat frames.
+
+
+
+### WSS dispatch allowlist and negative-path tests
+
+The WSS listener dispatches only authenticated `status` and read-only `sessions.list` requests. A correctly scoped `chat.send` frame is currently answered with `not_implemented`; it is not forwarded to a chat executor. Requests without the required scope are rejected at protocol validation before the corresponding host operation runs. Tests cover both properties so adding protocol validation for a future operation cannot silently enable its execution.
