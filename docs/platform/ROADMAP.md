@@ -261,3 +261,12 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Added pending-transaction capacity coverage: the 33rd pending request is rejected at the 32-transaction limit; cancel_all() clears the pending set and capacity becomes available again.
 - Companion security CI [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797) passed on commit `e2efde59653c`: Ubuntu **172 passed**; Windows **168 passed, 4 skipped**.
 - These results validate host-side pairing v2 transaction and protocol tests on both platforms. They do not validate live WSS pairing, trusted host UI, Android Keystore integration, or end-to-end pairing; those remain open.
+
+
+### Android credential-envelope hardening CI (2026-11-19)
+
+- Android credential persistence now uses a strict, platform-independent envelope codec while preserving the existing standard padded Base64 `IV.ciphertext` storage format.
+- The decoder requires exactly one separator, canonical Base64, a 12-byte AES-GCM IV and at least a 16-byte authentication-tag-bearing ciphertext; malformed or noncanonical values fail closed.
+- Android Companion CI [#206](https://github.com/herbalblitz/emrg/actions/runs/44454840217) passed on commit `16c24854`: debug APK assembly, JVM unit tests, lint and APK artifact upload all succeeded.
+- Android CI #204 failed on the intermediate source commit `af227532`, which referenced the codec before its follow-up implementation commit; #206 is the completed run containing the implementation and regression tests.
+- The CI result validates JVM tests and APK build/lint, not Android Keystore behavior on physical devices. Pairing v2 device-key integration and live host pairing remain release gates.
