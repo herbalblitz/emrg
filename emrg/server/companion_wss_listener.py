@@ -144,8 +144,8 @@ class CompanionWssListener:
                 frame_data, authenticated=True,
                 scopes=frozenset(identity["scopes"]),
                 workspace_id=identity["workspace_id"])
-            # Status is intentionally non-sensitive and reports transport health
-            # only. Other authorized protocol scopes are not wired to handlers yet.
+            # Only explicitly implemented, read-only operations are dispatched.
+            # Chat and all mutating/privileged operations remain unavailable.
             if frame["type"] == "status":
                 response: dict[str, Any] = {
                     "type": "status.result", "request_id": frame["request_id"],
