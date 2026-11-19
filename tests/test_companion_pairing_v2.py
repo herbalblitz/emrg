@@ -34,7 +34,8 @@ def _request(pairing, public_key):
     transaction = pairing.begin(workspace_id="workspace", cwd="/safe/work",
                                 scopes={"status", "sessions.list"})
     device = pairing.request(pairing_id=transaction["pairing_id"],
-                             device_id="android-device", public_key=public_key)
+                             device_id="android-device", public_key=public_key,
+                             requested_scopes=["status", "sessions.list"], client_nonce=_b64(b"n" * 32))
     return transaction, device
 
 
@@ -90,7 +91,7 @@ def test_pairing_v2_rejects_second_device_request_and_duplicate_approval(tmp_pat
     tx, _ = _request(pairing, public)
     with pytest.raises(PairingV2Error, match="already received"):
         pairing.request(pairing_id=tx["pairing_id"], device_id="second-device",
-                        public_key=public)
+                        public_key=public, requested_scopes=["status"], client_nonce=_b64(b"n" * 32))
     assert pairing.approve(tx["pairing_id"], approved=True)
     assert not pairing.approve(tx["pairing_id"], approved=False)
 
@@ -110,9 +111,9 @@ def test_pairing_v2_rejects_noncanonical_or_wrong_length_keys(tmp_path):
     pairing, _, _, _, _ = _setup(tmp_path)
     tx = pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
     with pytest.raises(PairingV2Error, match="invalid device key"):
-        pairing.request(pairing_id=tx["pairing_id"], device_id="android", public_key="not-base64!")
+        pairing.request(pairing_id=tx["pairing_id"], device_id="android", public_key="not-base64!", requested_scopes=["status"], client_nonce=_b64(b"n" * 32))
     with pytest.raises(PairingV2Error, match="invalid device key"):
-        pairing.request(pairing_id=tx["pairing_id"], device_id="android", public_key=_b64(b"short"))
+        pairing.request(pairing_id=tx["pairing_id"], device_id="android", public_key=_b64(b"short"), requested_scopes=["status"], client_nonce=_b64(b"n" * 32))
 
 
 def test_pairing_v2_concurrent_redemption_issues_exactly_one_credential(tmp_path):
@@ -160,16 +161,16 @@ def test_pairing_v2_rejects_padded_or_noncanonical_base64url(tmp_path):
     tx = pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
     with pytest.raises(PairingV2Error, match="invalid device key"):
         pairing.request(pairing_id=tx["pairing_id"], device_id="android-device",
-                        public_key=public + "=")
+                        public_key=public + "=", requested_scopes=["status"], client_nonce=_b64(b"n" * 32))
     with pytest.raises(PairingV2Error, match="pairing unavailable"):
         pairing.request(pairing_id=tx["pairing_id"] + "=", device_id="android-device",
-                        public_key=public)
+                        public_key=public, requested_scopes=["status"], client_nonce=_b64(b"n" * 32))
     with pytest.raises(PairingV2Error, match="invalid device"):
         pairing.request(pairing_id=tx["pairing_id"], device_id="android device",
-                        public_key=public)
+                        public_key=public, requested_scopes=["status"], client_nonce=_b64(b"n" * 32))
     with pytest.raises(PairingV2Error, match="invalid device"):
         pairing.request(pairing_id=tx["pairing_id"], device_id="android\nforged",
-                        public_key=public)
+                        public_key=public, requested_scopes=["status"], client_nonce=_b64(b"n" * 32))
 
 
 def test_pairing_v2_rejects_padded_challenge_and_signature(tmp_path):
