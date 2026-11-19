@@ -295,9 +295,8 @@ supply a test signer without pretending that a software test key is Android
 Keystore-backed. The Android implementation remains the production signer.
 
 The Android v2 helper is not yet wired to `SecurePairingCoordinator` or the
-pinned WebSocket. The host WSS adapter prototype exists, but its request frame
-is not yet fully aligned with the design contract (`requested_scopes` and
-`client_nonce` are missing end-to-end). Host approval remains a separate
+pinned WebSocket. The host WSS adapter and Android transport-neutral request helper now carry
+`requested_scopes` and `client_nonce` end-to-end. Host approval remains a separate
 trusted-local action. Live Pairing v2 must remain unavailable until wire-contract
 alignment, coordinator and transport integration, physical-device Keystore tests
 (including API 26), process-restart persistence, and end-to-end Python/Android
@@ -329,3 +328,27 @@ This is still only a transport adapter prototype: the wire request does not yet
 carry or enforce `requested_scopes` and `client_nonce`, and Android does not
 yet connect its coordinator to this route. Those are explicit blockers, not
 implicitly satisfied requirements.
+
+
+### Pairing v2 request scope and nonce contract alignment (2026-11-19)
+
+The unauthenticated WSS request frame now requires both `requested_scopes`
+and `client_nonce`. The protocol validator rejects missing/extra fields,
+unknown or duplicate scopes, and non-canonical Base64URL nonces shorter than
+128 bits. Android generates a fresh 256-bit nonce with `SecureRandom` and
+includes its selected scope set in the request.
+
+The host accepts only non-empty requested scopes that are a subset of the
+scope ceiling configured when the host-local pairing transaction is created.
+The effective requested set, rather than the broader ceiling, is shown in
+pending local approval state and becomes the issued credential's scopes.
+The nonce and requested scopes are included in the exact challenge bytes
+signed by the device key. The host keeps a bounded, TTL-scoped nonce replay
+cache; Android checks that the challenge echoes its request nonce and exact
+requested scope set before signing.
+
+Python tests cover malformed scope/nonce fields, scope escalation, nonce
+replay across transactions, challenge binding, and WSS request/redeem.
+Android JVM tests cover request generation and challenge nonce/scope binding.
+This aligns the request contract but does not connect the Android coordinator
+to the pinned WSS transport or constitute physical-device/end-to-end validation.
