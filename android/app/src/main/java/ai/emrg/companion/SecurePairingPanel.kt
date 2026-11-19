@@ -31,6 +31,8 @@ internal fun SecurePairingPanel() {
     var scannerVisible by remember { mutableStateOf(false) }
     var endpoint by remember { mutableStateOf("") }
     var fingerprint by remember { mutableStateOf("") }
+    var pairingId by remember { mutableStateOf<String?>(null) }
+    var descriptorVersion by remember { mutableStateOf<Int?>(null) }
     var state by remember { mutableStateOf(PairingState()) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
