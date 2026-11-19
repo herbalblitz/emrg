@@ -20,8 +20,9 @@ internal class PairingV2SessionController(
     private val pairingId: String,
     private val deviceId: String,
     private val credentialAlias: String,
-    private val scopes: Set<PairingScope> = setOf(PairingScope.READ_STATUS),
+    scopes: Set<PairingScope> = setOf(PairingScope.READ_STATUS),
 ) {
+    private val scopes: Set<PairingScope> = scopes.toSet()
     private var challenge: PairingV2Challenge? = null
 
     init {
