@@ -1,4 +1,4 @@
-"""Host-approved v2 companion pairing bound to an Ed25519 device key.
+"""Host-approved v2 companion pairing bound to a P-256 device key.
 
 This module is transport-independent. A WSS adapter must expose request/redeem
 only over the pinned TLS connection and expose approve/reject only to trusted
@@ -18,14 +18,16 @@ from dataclasses import dataclass
 from typing import Callable
 
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from emrg.server.companion_credentials import CredentialRegistry
 
 PAIRING_V2_TTL_SECONDS = 180
 PAIRING_V2_ID_BYTES = 32
-ED25519_PUBLIC_KEY_BYTES = 32
-ED25519_SIGNATURE_BYTES = 64
+P256_PUBLIC_KEY_MAX_BYTES = 256
+P256_SIGNATURE_MIN_BYTES = 64
+P256_SIGNATURE_MAX_BYTES = 80
 _BASE64URL_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 _DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
@@ -61,6 +63,20 @@ def _decode(value: object, expected: int, error: str) -> bytes:
     except (ValueError, TypeError):
         raise PairingV2Error(error) from None
     if len(raw) != expected or _encode(raw) != value:
+        raise PairingV2Error(error)
+    return raw
+
+
+def _decode_bounded(value: object, max_bytes: int, error: str) -> bytes:
+    if not isinstance(value, str) or not value or len(value) > (max_bytes * 8 + 5) // 6:
+        raise PairingV2Error(error)
+    if not _BASE64URL_RE.fullmatch(value):
+        raise PairingV2Error(error)
+    try:
+        raw = base64.b64decode(value + "=" * (-len(value) % 4), altchars=b"-_", validate=True)
+    except (ValueError, TypeError):
+        raise PairingV2Error(error) from None
+    if not raw or len(raw) > max_bytes or _encode(raw) != value:
         raise PairingV2Error(error)
     return raw
 
@@ -130,7 +146,13 @@ class PairingV2Transactions:
                 public_key: str) -> dict[str, str]:
         _pairing_id(pairing_id)
         _device_id(device_id)
-        raw_key = _decode(public_key, ED25519_PUBLIC_KEY_BYTES, "invalid device key")
+        raw_key = _decode_bounded(public_key, P256_PUBLIC_KEY_MAX_BYTES, "invalid device key")
+        try:
+            parsed_key = serialization.load_der_public_key(raw_key)
+        except (ValueError, TypeError):
+            raise PairingV2Error("invalid device key") from None
+        if not isinstance(parsed_key, ec.EllipticCurvePublicKey) or not isinstance(parsed_key.curve, ec.SECP256R1):
+            raise PairingV2Error("invalid device key")
         now = self._clock()
         with self._lock:
             self._purge(now)
@@ -207,7 +229,9 @@ class PairingV2Transactions:
         _pairing_id(pairing_id)
         _device_id(device_id)
         _decode(challenge_id, 16, "invalid challenge")
-        raw_signature = _decode(signature, ED25519_SIGNATURE_BYTES, "invalid proof")
+        raw_signature = _decode_bounded(signature, P256_SIGNATURE_MAX_BYTES, "invalid proof")
+        if len(raw_signature) < P256_SIGNATURE_MIN_BYTES:
+            raise PairingV2Error("invalid proof")
         with self._lock:
             self._purge(self._clock())
             item = self._pending.get(pairing_id)
@@ -220,7 +244,10 @@ class PairingV2Transactions:
                 raise PairingV2Error("device proof rejected")
             payload = self._challenge_payload(pairing_id, item)
             try:
-                Ed25519PublicKey.from_public_bytes(item.public_key).verify(raw_signature, payload)
+                public_key = serialization.load_der_public_key(item.public_key)
+                if not isinstance(public_key, ec.EllipticCurvePublicKey) or not isinstance(public_key.curve, ec.SECP256R1):
+                    raise ValueError("unsupported device key")
+                public_key.verify(raw_signature, payload, ec.ECDSA(hashes.SHA256()))
             except (InvalidSignature, ValueError):
                 raise PairingV2Error("device proof rejected") from None
             del self._pending[pairing_id]
