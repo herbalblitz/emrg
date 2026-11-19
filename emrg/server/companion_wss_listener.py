@@ -231,6 +231,8 @@ class CompanionWssListener:
                     pairing_id=frame["pairing_id"],
                     device_id=frame["device_id"],
                     public_key=frame["public_key"],
+                    requested_scopes=frame["requested_scopes"],
+                    client_nonce=frame["client_nonce"],
                 )
                 response = {
                     "type": "pairing.challenge",
