@@ -215,3 +215,10 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Windows: 152 tests passed, 4 skipped.
 - The run includes the 256-bit pairing ID change and concurrent redemption regression test. The test asserts that eight simultaneous redemption attempts against one approved transaction yield exactly one credential.
 - The run was triggered by the test commit and therefore validates the pairing implementation and tests at `50fec84a`; the following documentation-only commit does not change executable code.
+
+
+### Pairing v2 host core prototype (2026-11-19)
+
+- Added transport-independent Ed25519 device-key-bound pairing transactions and host-service lifecycle methods.
+- Added tests for local approval, exact device binding, invalid signatures, duplicate device requests, expiry, cancellation, credential issuance, and host disable cleanup.
+- WSS listener and Android are not wired to the prototype; QR v2 and TLS identity plumbing remain incomplete.
