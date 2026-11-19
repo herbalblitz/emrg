@@ -42,7 +42,8 @@ def _remote_session_metadata(records: object) -> list[dict[str, Any]]:
             if isinstance(value, str):
                 item[key] = value[:limit]
         count = record.get("message_count")
-        if isinstance(count, int) and not isinstance(count, bool) and count >= 0:
+        if (isinstance(count, int) and not isinstance(count, bool)
+                and 0 <= count <= 2**31 - 1):
             item["message_count"] = count
         safe.append(item)
     return safe
