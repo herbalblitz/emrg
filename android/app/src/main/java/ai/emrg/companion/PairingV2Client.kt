@@ -28,6 +28,7 @@ internal class PairingV2Client(
 ) {
     private var publicKeyBytes: ByteArray? = null
     private var activePairingId: String? = null
+    private var activePairingId: String? = null
 
     @Synchronized
     fun createRequestFrame(pairingId: String): JSONObject {
