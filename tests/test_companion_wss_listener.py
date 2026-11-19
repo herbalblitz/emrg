@@ -222,15 +222,16 @@ def test_wss_rechecks_device_revocation_before_each_request(tmp_path):
 def test_wss_rejects_existing_identity_after_credential_rotation(tmp_path):
     host = CompanionHostService(tmp_path / "registry.json")
     host.enable()
-    identity = {
-        "device_id": "phone-rotate", "workspace_id": "ws-rotate",
-        "cwd": str(tmp_path), "scopes": frozenset({"status"}),
-    }
+    credential = host.registry.issue(device_id="phone-rotate", workspace_id="ws-rotate",
+                                     cwd=str(tmp_path), scopes={"status"})
+    identity = host.authenticate(json.dumps({
+        "type": "auth", "protocol": "1.0", "device_id": "phone-rotate",
+        "credential": credential, "client_nonce": "nonce-rotate-123456",
+    }))
+    assert host.is_identity_current(identity)
+    # Rotation with identical workspace and scopes must still invalidate old sockets.
     host.registry.issue(device_id="phone-rotate", workspace_id="ws-rotate",
                         cwd=str(tmp_path), scopes={"status"})
-    assert host.is_identity_current(identity)
-    host.registry.issue(device_id="phone-rotate", workspace_id="ws-rotate",
-                        cwd=str(tmp_path), scopes={"sessions.list"})
     assert not host.is_identity_current(identity)
 
 
