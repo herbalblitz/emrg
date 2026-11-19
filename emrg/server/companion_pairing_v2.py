@@ -64,6 +64,7 @@ class _PendingV2:
     workspace_id: str
     cwd: str
     scopes: frozenset[str]
+    expires_at: int
     device_id: str | None = None
     public_key: bytes | None = None
     challenge: bytes | None = None
@@ -99,7 +100,8 @@ class PairingV2Transactions:
             if len(self._pending) >= 32:
                 raise PairingV2Error("pairing capacity reached")
             self._pending[pairing_id] = _PendingV2(
-                now, workspace_id, cwd, frozenset(scopes))
+                now, workspace_id, cwd, frozenset(scopes),
+                int(time.time()) + PAIRING_V2_TTL_SECONDS)
         return {"pairing_id": pairing_id, "expires_in": PAIRING_V2_TTL_SECONDS}
 
     def request(self, *, pairing_id: str, device_id: str,
@@ -137,7 +139,7 @@ class PairingV2Transactions:
             "host_identity": self._host_identity,
             "workspace_id": item.workspace_id,
             "scopes": sorted(item.scopes),
-            "expires_at_monotonic_ms": int((item.created_at + PAIRING_V2_TTL_SECONDS) * 1000),
+            "expires_at": item.expires_at,
         }
         return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
