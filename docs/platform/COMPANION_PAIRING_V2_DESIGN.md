@@ -376,3 +376,14 @@ replay across transactions, challenge binding, and WSS request/redeem.
 Android JVM tests cover request generation and challenge nonce/scope binding.
 This aligns the request contract but does not connect the Android coordinator
 to the pinned WSS transport or constitute physical-device/end-to-end validation.
+
+
+### Nonce replay-cache exhaustion behavior (2026-11-19)
+
+The host replay cache is bounded to 4,096 live client nonces. It purges
+entries only after the pairing transaction TTL; it never evicts a still-live
+nonce to make room. If the cache remains full after expiry cleanup, new
+pairing requests fail closed with a generic unavailable response. This
+preserves replay protection under memory pressure instead of reopening a
+replay window by evicting an unexpired nonce. A focused host test verifies
+that a full cache rejects a fresh request without removing any recorded nonce.
