@@ -32,14 +32,14 @@ The daemon's current WebSocket listener is created in EmrgServer.serve() using a
 - The service opens no sockets. Access control for local UI callers is not enforced by this Python class.
 - A separate `CompanionWssListener` implementation exists in `emrg/server/companion_wss_listener.py`; it is explicitly started by its caller and currently dispatches only authenticated `status` and bounded read-only `sessions.list` requests.
 - The listener uses TLS and host-service identity checks, bounds connection resources, closes clients on disable, and does not route remote requests through the desktop daemon's unrestricted `_handle_client` dispatcher.
-- The listener currently authenticates using the existing v1 companion credential path. It does not yet expose the v2 Ed25519 request/challenge/redeem flow as a network endpoint, nor does it execute remote chat.
+- The listener supports the existing v1 authenticated companion path and now also exposes a separate, one-frame Pairing v2 request/challenge/redeem route on its dedicated TLS endpoint. The v2 route delegates approval and one-time credential issuance to the host pairing core; it does not execute remote chat.
 - `companion_tls_identity.py` provisions and validates a persistent host certificate/key identity; it is more than a design-only policy. Cross-process provisioning coordination and Windows ACL/temp-file hardening remain release gates.
 
 ## Suggested implementation sequence
 
 - H1: Host-side pairing manager composition is implemented; trusted local approval UI and its authenticated local control adapter remain open.
 - H2: TLS identity policy and persistent certificate/key provisioning are implemented. User-verifiable fingerprint presentation, cross-process provisioning coordination, and Windows ACL/temp-file hardening remain open.
-- H3: A separate opt-in WSS listener and narrow adapter exist for authenticated status and bounded read-only session listing. Daemon lifecycle/configuration integration, v2 pairing over WSS, and production network exposure gates remain open.
+- H3: A separate opt-in WSS listener exists for authenticated status, bounded read-only session listing, and the strict one-frame Pairing v2 request/redeem route. Daemon lifecycle/configuration integration, trusted local approval UI, Android live v2 transport, and production network exposure gates remain open.
 - H4: Scoped session listing is implemented in the standalone listener. Remote chat, host-side task construction, and approval/sandbox enforcement remain unimplemented.
 - H5: Continue testing revocation, pending-pairing expiry, listener disable, reconnect reconciliation, rate limits, malformed frames, and Android-to-host end-to-end flows on Windows and Linux.
 
@@ -127,12 +127,12 @@ The earlier sections above were written incrementally and some statements became
 |---|---|---|
 | Pairing and credential host core | Implemented, with v1/v2 transaction primitives and race tests | Trusted local UI/control adapter |
 | TLS host identity | Persistent provisioning and validation implemented | Cross-process locking, Windows ACL/temp-file hardening, trusted fingerprint display |
-| Dedicated WSS transport | Standalone opt-in listener implemented | Daemon lifecycle/config integration; v2 pairing network route |
+| Dedicated WSS transport | Standalone opt-in listener with v1 read-only operations and v2 pairing request/redeem route | Daemon lifecycle/config integration; production exposure gates |
 | Remote operations | Authenticated status and bounded read-only session listing | Chat and approval/sandbox integration |
 | Electron UI | Existing secure preload bridge; no Companion controls | Main-process adapter, allowlisted IPC, renderer approval/device screens |
 | Android | QR parser, secure credential storage, pinned WSS primitive, non-exportable Android Keystore P-256 key manager, and transport-neutral Pairing v2 request/redeem helper with strict challenge validation | Coordinator/live v2 transport integration, credential issuance-to-storage end-to-end flow, and physical-device/Keystore security-level verification |
 
-The standalone WSS listener must not be described as absent, but it must also not be described as a complete Companion service. No live Android-to-host pairing or remote chat claim is supported by the current code.
+The standalone WSS listener must not be described as absent, but it must also not be described as a complete Companion service. The v2 pairing route is host-side only; no live Android-to-host pairing or remote chat claim is supported by the current code.
 
 ## Remote session metadata display-safety hardening (2026-11-19)
 
@@ -178,3 +178,8 @@ Regression tests exercise challenge creation, host-local approval, signature-bou
 - `parseCredentialResponse` accepts only the exact five-field `pairing.credential` envelope, binds both pairing ID and device ID to the active request, and validates the credential's UTF-8 size/shape before the coordinator may persist it.
 - JVM regression tests cover valid host envelopes, transaction/device substitution, unexpected fields, and malformed credentials.
 - These helpers close response-parsing gaps but do not open a socket, implement approval polling, or wire the Compose pairing panel to live transport. Android coordinator/WSS integration and physical-device verification remain open.
+
+
+### Pairing v2 WSS integration status correction (2026-11-19)
+
+The earlier audit statement that the listener did not expose Pairing v2 over WSS was superseded by the host-side route implementation documented above. CI #158 passed on commit `85f6af746220c80e97f36b859b41f5b3c01767e6` on the companion security workflow. This validates the host-side WSS tests on Ubuntu and Windows; it does not close daemon lifecycle/configuration, trusted Electron approval UI, Android live transport/coordinator, or physical-device Keystore gates.
