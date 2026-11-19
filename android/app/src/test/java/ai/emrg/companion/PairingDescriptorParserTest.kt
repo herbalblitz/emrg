@@ -73,3 +73,29 @@ class PairingDescriptorParserTest {
         assertEquals("INVALID_EXPIRY", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
     }
 }
+
+    @Test fun acceptsV2DescriptorWithCanonicalOpaquePairingId() {
+        val pairingId = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(32) { it.toByte() })
+        val json = """{"version":2,"endpoint":"wss://host.example:56031","fingerprint_sha256":"$fingerprint","expires_at":1100,"pairing_id":"$pairingId"}"""
+        val result = PairingDescriptorParser.parse(json, 1000)
+        assertTrue(result is PairingDescriptorResult.Valid)
+        val descriptor = (result as PairingDescriptorResult.Valid).descriptor
+        assertEquals(2, descriptor.version)
+        assertEquals(pairingId, descriptor.pairingId)
+    }
+
+    @Test fun rejectsV2DescriptorWithoutCanonicalPairingId() {
+        val missing = """{"version":2,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1100}"""
+        assertEquals("INVALID_PAIRING_ID", (PairingDescriptorParser.parse(missing, 1000) as PairingDescriptorResult.Invalid).reason)
+        val paddedId = "A".repeat(42) + "="
+        val padded = """{"version":2,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1100,"pairing_id":"$paddedId"}"""
+        assertEquals("INVALID_PAIRING_ID", (PairingDescriptorParser.parse(padded, 1000) as PairingDescriptorResult.Invalid).reason)
+    }
+
+    @Test fun v1DescriptorRemainsCompatibleAndHasNoPairingId() {
+        val json = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1100}"""
+        val descriptor = (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Valid).descriptor
+        assertEquals(1, descriptor.version)
+        assertEquals(null, descriptor.pairingId)
+    }
+
