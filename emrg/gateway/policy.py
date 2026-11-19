@@ -3,8 +3,9 @@
 The proxy is an allow-list, not a filter: a frame type the gateway has not
 listed is refused, so an upstream addition cannot become reachable on a phone
 before someone decides it should be. Two daemon frames are deliberately never
-forwarded: ``shutdown`` and ``init_auto_evolve``. Both change host lifecycle
-rather than a session, and a phone has no business doing either.
+forwarded: ``shutdown`` and ``init_auto_evolve`` (host lifecycle, not a
+session) and ``delete_rant`` (a destructive ledger edit the desktop GUI owns;
+no phone screen sends it). A phone has no business doing any of them.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ PROXIED_TYPES = frozenset(
         "compact",
         "clear_session",
         "list_sessions",
+        "list_all_sessions",
         "resume_session",
         "rename_session",
         "delete_session",
@@ -68,9 +70,12 @@ PROXIED_TYPES = frozenset(
     }
 )
 
-#: Host-lifecycle frames. A phone must not stop the daemon or kick the
-#: auto-evolve loop; those stay on the desktop/TUI.
-BLOCKED_TYPES = frozenset({"shutdown", "init_auto_evolve", "auth"})
+#: Frames a phone must never send. ``shutdown`` / ``init_auto_evolve`` are
+#: host-lifecycle frames: a phone must not stop the daemon or kick the
+#: auto-evolve loop; those stay on the desktop/TUI. ``delete_rant`` rewrites
+#: the rant ledger; the desktop GUI owns that delete, no phone screen sends
+#: it. ``auth`` is handled before dispatch.
+BLOCKED_TYPES = frozenset({"shutdown", "init_auto_evolve", "delete_rant", "auth"})
 
 #: Frames that change state. They are audit-logged (without arguments) and
 #: rate-limited more tightly than reads.
