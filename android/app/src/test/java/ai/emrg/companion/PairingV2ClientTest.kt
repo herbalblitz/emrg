@@ -39,8 +39,8 @@ class PairingV2ClientTest {
             .digest(pair.public.encoded).joinToString("") { "%02x".format(it) }
     }
 
-    private fun b64(size: Int): String =
-        Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(size) { (it + 1).toByte() })
+    private fun b64(size: Int, seed: Int = 1): String =
+        Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(size) { (it + seed).toByte() })
 
     private fun challenge(
         pairingId: String,
@@ -139,7 +139,7 @@ class PairingV2ClientTest {
         val pairingId = b64(32)
         val challengeId = b64(16)
         client.createRequestFrame(pairingId)
-        val wrongId = challenge(pairingId, b64(16), "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
+        val wrongId = challenge(pairingId, b64(16, seed = 2), "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
         assertThrows(IllegalArgumentException::class.java) {
             client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(wrongId))
         }
