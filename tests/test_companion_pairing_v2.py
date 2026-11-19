@@ -53,7 +53,7 @@ def test_pairing_v2_requires_local_approval_and_binds_exact_device_key(tmp_path)
     assert isinstance(challenge_fields["expires_at"], int)
     assert challenge_fields["device_id"] == "android-device"
     assert challenge_fields["client_nonce"] == _b64(b"n" * 32)
-    assert challenge_fields["scopes"] == ["status", "sessions.list"]
+    assert challenge_fields["scopes"] == ["sessions.list", "status"]
     sig = _signature(private, request)
     with pytest.raises(PairingV2Error, match="not approved"):
         pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
