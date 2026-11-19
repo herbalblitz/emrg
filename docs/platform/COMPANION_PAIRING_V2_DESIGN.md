@@ -58,11 +58,11 @@ The v2 QR remains a locator and transaction reference, not a credential containe
 
 1. **Host creates transaction.** Trusted local host UI selects workspace and requested maximum scopes. Host creates a pending transaction with random ID, creation/expiry timestamps, and policy metadata; no device credential is issued.
 2. **Host displays QR.** QR v2 contains WSS endpoint, TLS fingerprint, expiry, and opaque pairing ID.
-3. **Android creates identity.** On scan, Android creates a fresh per-host device key pair in Android Keystore. The private key never leaves the device. Android creates a random request nonce.
-4. **Android requests approval.** Over pinned WSS, Android sends `pairing.request` containing protocol version, pairing ID, device ID, public key, public-key algorithm, requested scopes, and nonce. The host checks descriptor/transaction expiry, transaction state, scope subset, field bounds, and replay nonce.
+3. **Android creates identity.** On scan, Android creates a fresh per-host P-256 EC key pair in Android Keystore. The private key never leaves the device. Android creates a random request nonce.
+4. **Android requests approval.** Over pinned WSS, Android sends `pairing.request` containing protocol version, pairing ID, device ID, P-256 SubjectPublicKeyInfo public key, the explicit `key_algorithm: P-256` identifier, requested scopes, and nonce. The host checks descriptor/transaction expiry, transaction state, scope subset, field bounds, and replay nonce.
 5. **Host presents pending request locally.** Trusted host UI displays a human-readable device label, device ID, public-key fingerprint, workspace, requested scopes, and expiry. It does not expose a secret that can approve the request remotely.
 6. **Host approves or rejects.** Local host action atomically binds approval to that exact device ID and public-key fingerprint. Rejection/cancellation consumes or removes the pending transaction. Approval cannot be changed after redemption.
-7. **Device proves key possession.** Host returns a fresh challenge tied to pairing ID, transaction expiry, device ID, public-key fingerprint, and host identity. Android signs the canonical challenge with its Keystore private key.
+7. **Device proves key possession.** Host returns a fresh challenge tied to pairing ID, transaction expiry, device ID, public-key fingerprint, and host identity. Android signs the canonical challenge using `SHA256withECDSA` with its Keystore private key.
 8. **Android redeems once.** Android sends `pairing.redeem` with pairing ID, device ID, public key fingerprint, challenge ID, and signature. Host verifies the signature and all transaction bindings, atomically consumes the approved transaction, then issues a credential bound to device ID, public key, workspace, and approved scopes.
 9. **Android persists safely.** Credential delivery is bound to the same TLS-pinned connection and device key. Android validates the response binding and persists the credential in the encrypted credential store. Persistence failure triggers best-effort host revocation and leaves the client unpaired.
 10. **Authenticated reconnect.** Future WSS authentication proves possession of the registered device key in addition to the issued credential, or uses a formally documented credential rotation scheme. A copied credential alone should not be sufficient if the protocol adopts key-bound authentication.
@@ -154,7 +154,7 @@ Every transition is host-authoritative and atomic. Duplicate requests, approvals
 
 ## Android device-key compatibility gate (2026-11-19)
 
-The current host prototype is Ed25519-only, while Android targets API 26+. The Android Keystore documentation demonstrates EC key generation and SHA-256 ECDSA signing, but does not establish Ed25519 AndroidKeyStore support across API 26+ devices. StrongBox's documented required algorithm subset also does not include Ed25519.
+The current host prototype is P-256 ECDSA-only, while Android targets API 26+. The Android Keystore documentation demonstrates EC key generation and SHA-256 ECDSA signing, but does not establish Ed25519 AndroidKeyStore support across API 26+ devices. StrongBox's documented required algorithm subset also does not include Ed25519.
 
 Do not assume Ed25519 support from API level or JCA signature-provider availability. Do not silently fall back to software-generated/exportable keys or change the wire algorithm on the Android client alone. Pairing v2 remains disabled until the protocol makes an explicit cross-platform algorithm decision and physical-device tests establish non-exportable key generation, persistence, and signing.
 
@@ -178,7 +178,7 @@ Until all gates pass, keep live pairing and Android chat transport disconnected.
 
 The host-side v2 transaction core now has an isolated implementation in `emrg/server/companion_pairing_v2.py`:
 
-- Uses Ed25519 device public keys (32-byte raw keys) and 64-byte signatures.
+- Uses P-256 ECDSA device keys. The request carries a canonical Base64URL-encoded X.509 SubjectPublicKeyInfo public key and an explicit `key_algorithm: P-256`; redemption carries a canonical Base64URL-encoded ASN.1 DER ECDSA signature over SHA-256.
 - Host creates a 256-bit opaque transaction ID; a device submits one public key and device ID for that transaction.
 - The host-local pending view exposes the device ID and SHA-256 public-key fingerprint for the approval decision; it does not expose private key material.
 - The signed canonical JSON challenge binds protocol version, transaction ID, challenge ID/nonce, device ID, public-key fingerprint, configured host identity, workspace, exact scopes, and transaction expiry.
