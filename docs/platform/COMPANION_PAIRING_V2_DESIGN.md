@@ -182,7 +182,7 @@ The host-side v2 transaction core now has an isolated implementation in `emrg/se
 - Host creates a 256-bit opaque transaction ID; a device submits one public key and device ID for that transaction.
 - The host-local pending view exposes the device ID and SHA-256 public-key fingerprint for the approval decision; it does not expose private key material.
 - The signed canonical JSON challenge binds protocol version, transaction ID, challenge ID/nonce, device ID, public-key fingerprint, configured host identity, workspace, exact scopes, and transaction expiry.
-- Redemption verifies the P-256 ECDSA/SHA-256 proof and exact device/challenge binding, then consumes the transaction before issuing the credential.
+- Redemption verifies the P-256 ECDSA/SHA-256 proof and exact device/challenge binding. The first successful redemption issues one credential; retries of the same signed transaction return that exact credential from a bounded, TTL-scoped in-memory cache, without rotating or re-issuing it. Failed registry writes leave the approved transaction retryable.
 - Host service exposes local begin/pending/approve/reject operations and adapter-facing request/redeem methods. Disabling the service cancels v2 pending transactions.
 
 This is a transport-independent core only. The current WSS listener does not call these methods; QR v2 generation, TLS-certificate fingerprint plumbing, rate limiting at the new request endpoint, Android Keystore signing, and Windows/Android end-to-end integration remain gates. Do not describe v2 pairing as live until those pieces and CI are complete.
@@ -392,3 +392,28 @@ that a full cache rejects a fresh request without removing any recorded nonce.
 ### Android signed host-identity binding (2026-11-19)
 
 Before signing a Pairing v2 challenge, Android now compares the challenge's host_identity value with the SHA-256 certificate fingerprint supplied by the QR descriptor. Comparison accepts colon-separated or compact hexadecimal representations but requires exactly 32 fingerprint bytes. A mismatch or malformed identity is rejected before proof-of-possession signing. This is an additional application-layer binding; it does not replace the TLS certificate pin check performed by the transport. Regression coverage verifies that a challenge naming a different pinned host is rejected.
+
+### Host credential redemption retry safety (2026-11-19)
+
+A successful host credential write may be followed by a lost WSS response. The
+host now retains the issued bearer token only in the corresponding approved
+pairing transaction's in-memory state until that transaction's existing
+180-second TTL expires. Repeating the exact redeem request (same pairing ID,
+device ID, challenge ID, and valid device signature) returns the same token;
+it does not issue or rotate another credential. Concurrent duplicate redeems
+are serialized under the transaction lock and observe the same token.
+
+If credential registry issuance raises before returning a token, the approved
+transaction remains pending and can be retried with the same proof. A redeemed
+transaction is no longer shown in the local pending-approval list and cannot
+be cancelled as if it were still awaiting approval. The cache is bounded by
+the existing maximum of 32 live pairing transactions and is not persisted:
+after host restart or expiry, a lost response cannot be recovered from this
+cache and a fresh pairing is required. This change prevents duplicate issuance
+during the live transaction window; it does not claim crash-durable credential
+delivery. Never log or expose the cached token except in the one-frame
+pairing.credential response to the pinned WSS client.
+
+Python regression tests cover response-loss retry, concurrent duplicate
+redemption returning one identical token, and retry after a credential registry
+write failure. These tests do not replace Android/host end-to-end validation.
