@@ -83,7 +83,10 @@ internal class PairingV2SessionController(
      */
     @Synchronized
     fun redeemAfterConfirmedHostApproval(listener: PairingV2SessionListener): PairingV2ExchangeHandle {
-        if (coordinator.state.phase != PairingPhase.HOST_APPROVED) {
+        val currentPhase = coordinator.state.phase
+        if (currentPhase != PairingPhase.AWAITING_HOST_APPROVAL &&
+            currentPhase != PairingPhase.HOST_APPROVED
+        ) {
             listener.onFailure("PAIRING_STATE_INVALID")
             return PairingV2ExchangeHandle { }
         }
@@ -92,10 +95,12 @@ internal class PairingV2SessionController(
             listener.onFailure("HOST_APPROVAL_NOT_CONFIRMED")
             return PairingV2ExchangeHandle { }
         }
-        val approvedState = coordinator.dispatch(PairingAction.HostApproved)
-        if (approvedState.phase != PairingPhase.HOST_APPROVED) {
-            listener.onFailure("PAIRING_STATE_INVALID")
-            return PairingV2ExchangeHandle { }
+        if (currentPhase == PairingPhase.AWAITING_HOST_APPROVAL) {
+            val approvedState = coordinator.dispatch(PairingAction.HostApproved)
+            if (approvedState.phase != PairingPhase.HOST_APPROVED) {
+                listener.onFailure("PAIRING_STATE_INVALID")
+                return PairingV2ExchangeHandle { }
+            }
         }
 
         return transport.redeemAfterHostApproval(accepted, object : PairingV2FlowListener {
