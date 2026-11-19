@@ -48,7 +48,15 @@ internal fun SecurePairingPanel() {
             Button(onClick = { scannerVisible = true }) { Text("Scan QR with camera") }
             OutlinedTextField(
                 value = qrPayload,
-                onValueChange = { qrPayload = it },
+                onValueChange = {
+                    qrPayload = it
+                    // A changed payload invalidates any previously parsed QR transaction.
+                    endpoint = ""
+                    fingerprint = ""
+                    pairingId = null
+                    descriptorVersion = null
+                    state = PairingState()
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Pairing QR payload (paste)") },
                 minLines = 2,
@@ -67,6 +75,11 @@ internal fun SecurePairingPanel() {
                         )
                     }
                     is PairingDescriptorResult.Invalid -> {
+                        // Never leave an earlier valid descriptor usable after a failed parse.
+                        endpoint = ""
+                        fingerprint = ""
+                        pairingId = null
+                        descriptorVersion = null
                         state = PairingState(phase = PairingPhase.FAILED, errorCode = parsed.reason)
                     }
                 }
