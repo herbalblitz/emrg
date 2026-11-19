@@ -446,3 +446,8 @@ This integration is not proof of production-ready/live pairing. Physical-device 
 ### Lost challenge-response retry behavior (2026-11-19)
 
 The Android `PairingV2Flow` now caches the original `pairing.request` frame for the lifetime of the QR pairing transaction and retransmits that exact frame, including the original client nonce, when a challenge response is lost. The host accepts only an exact retransmission matching the original device ID, DER public key, requested scope set, and client nonce, and returns the original challenge payload. It does not replace the transaction identity or mint a second challenge. A Kotlin unit test covers the lost-response/retry path. On commit `8a826d450074d8a4d73682de4fa5a24a583f3510`, Android CI run `44508660928` completed successfully on this commit: debug APK assembly, unit tests, lint, and APK artifact upload all passed.
+
+
+### Stale Android callback isolation (2026-11-19)
+
+The pairing panel increments a transaction generation whenever the current QR transaction is cleared or replaced. Each session listener captures the generation at creation; callbacks posted to the main thread are ignored if their generation is no longer current. This prevents delayed WSS responses from an earlier pairing attempt from overwriting the UI state of a newly scanned or reset transaction. This is UI lifecycle protection only; it does not replace transport cancellation or host-side authorization.
