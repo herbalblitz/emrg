@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 from typing import Any
 
 MAX_FRAME_BYTES = 256 * 1024
 MAX_PROMPT_BYTES = 64 * 1024
 MIN_CLIENT_NONCE_BYTES = 16
 PROTOCOL_VERSION = "1.0"
+_PAIRING_DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 class CompanionProtocolError(ValueError):
     """Safe, non-sensitive protocol rejection."""
@@ -186,7 +188,9 @@ def validate_pairing_v2_frame(payload: str | bytes) -> dict[str, Any]:
     if frame.get("protocol") != "2.0":
         raise CompanionProtocolError("unsupported pairing protocol")
     for name in required:
-        _required_string(frame, name, max_bytes=128 if name == "device_id" else 128)
+        _required_string(frame, name, max_bytes=128)
+    if not _PAIRING_DEVICE_ID_RE.fullmatch(frame["device_id"]):
+        raise CompanionProtocolError("invalid pairing field")
     for name, (encoded_length, decoded_length) in _PAIRING_V2_BASE64URL.items():
         if name in frame:
             value = frame[name]
