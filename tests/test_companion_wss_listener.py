@@ -606,3 +606,51 @@ def test_close_disposes_listener_and_unregisters_host_callback(tmp_path):
     assert listener.running is False
     with pytest.raises(RuntimeError, match="disposed"):
         asyncio.run(listener.start())
+
+
+def test_close_during_listener_start_prevents_late_bind_and_unregisters_callback(
+    tmp_path, monkeypatch
+):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        listener = _listener(tmp_path, host)
+        callback = listener._on_host_state
+        serving = asyncio.Event()
+        release_bind = asyncio.Event()
+        events = []
+
+        class Server:
+            def close(self):
+                events.append("close")
+            async def wait_closed(self):
+                events.append("wait_closed")
+
+        async def delayed_serve(*args, **kwargs):
+            serving.set()
+            await release_bind.wait()
+            return Server()
+
+        monkeypatch.setattr(
+            "emrg.server.companion_wss_listener.create_server_context",
+            lambda cert, key: object(),
+        )
+        monkeypatch.setattr(
+            "emrg.server.companion_wss_listener.serve", delayed_serve,
+        )
+
+        start_task = asyncio.create_task(listener.start())
+        await asyncio.wait_for(serving.wait(), timeout=1)
+        await listener.close()
+        assert callback not in host._state_callbacks
+        release_bind.set()
+
+        with pytest.raises(CompanionTlsError, match="during listener startup"):
+            await asyncio.wait_for(start_task, timeout=1)
+
+        assert events == ["close", "wait_closed"]
+        assert listener._disposed is True
+        assert listener.running is False
+        assert listener._starting is False
+
+    asyncio.run(run())
