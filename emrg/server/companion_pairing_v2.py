@@ -225,7 +225,7 @@ class PairingV2Transactions:
 
     def cancel(self, pairing_id: str) -> bool:
         try:
-            _text(pairing_id, 128, "pairing unavailable")
+            _pairing_id(pairing_id)
         except PairingV2Error:
             return False
         with self._lock:
