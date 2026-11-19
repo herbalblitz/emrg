@@ -448,3 +448,51 @@ def test_wss_closes_existing_socket_after_credential_rotation(tmp_path):
         }]
 
     asyncio.run(run())
+
+
+
+def test_disable_during_listener_start_closes_new_server(tmp_path, monkeypatch):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        listener = _listener(tmp_path, host)
+        serving = asyncio.Event()
+        release_bind = asyncio.Event()
+        events = []
+
+        class Server:
+            def close(self):
+                events.append("close")
+            async def wait_closed(self):
+                events.append("wait_closed")
+
+        async def delayed_serve(*args, **kwargs):
+            serving.set()
+            await release_bind.wait()
+            return Server()
+
+        monkeypatch.setattr(
+            "emrg.server.companion_wss_listener.create_server_context",
+            lambda cert, key: object(),
+        )
+        monkeypatch.setattr(
+            "emrg.server.companion_wss_listener.serve", delayed_serve,
+        )
+
+        start_task = asyncio.create_task(listener.start())
+        await asyncio.wait_for(serving.wait(), timeout=1)
+        host.disable()
+        # Let the scheduled host-state callback set the shutdown flag while
+        # socket binding is still suspended.
+        await asyncio.sleep(0)
+        release_bind.set()
+
+        with pytest.raises(CompanionTlsError, match="during listener startup"):
+            await asyncio.wait_for(start_task, timeout=1)
+
+        assert events == ["close", "wait_closed"]
+        assert listener.running is False
+        assert listener._closing is True
+        listener._loop = None
+
+    asyncio.run(run())
