@@ -72,3 +72,15 @@ def test_server_encoder_limits_and_requires_object():
 def test_pre_auth_rejects_short_client_nonce():
     with pytest.raises(CompanionProtocolError):
         validate_client_frame(_auth(client_nonce="too-short"))
+
+
+
+def test_session_list_rejects_client_supplied_path_or_extra_fields():
+    base = {"type": "sessions.list", "request_id": "r",
+            "workspace_id": "workspace-approved"}
+    for extra in ({"cwd": "/other"}, {"path": "/other"}, {"tools": ["read"]}):
+        with pytest.raises(CompanionProtocolError):
+            validate_client_frame(
+                json.dumps({**base, **extra}), authenticated=True,
+                scopes=frozenset({"sessions.list"}),
+                workspace_id="workspace-approved")
