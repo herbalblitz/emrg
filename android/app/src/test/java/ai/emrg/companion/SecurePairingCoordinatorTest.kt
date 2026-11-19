@@ -9,8 +9,12 @@ class SecurePairingCoordinatorTest {
     private class FakeCredentialStore : CredentialStore {
         val values = mutableMapOf<String, String>()
         val deleted = mutableListOf<String>()
+        var failPut = false
         var failDelete = false
-        override fun put(alias: String, credential: String) { values[alias] = credential }
+        override fun put(alias: String, credential: String) {
+            if (failPut) throw IllegalStateException("simulated storage failure")
+            values[alias] = credential
+        }
         override fun get(alias: String): String? = values[alias]
         override fun delete(alias: String) { if (failDelete) throw IllegalStateException(); values.remove(alias); deleted += alias }
     }
@@ -42,6 +46,26 @@ class SecurePairingCoordinatorTest {
         val paired = approvedCoordinator.dispatch(PairingAction.CredentialIssued(host), "host-scoped-secret")
         assertEquals(PairingPhase.PAIRED, paired.phase)
         assertEquals("host-scoped-secret", store2.values["device-01"])
+    }
+
+
+    @Test
+    fun failedCredentialPersistenceNeverReportsPairedAndCanBeRetried() {
+        val store = FakeCredentialStore()
+        val coordinator = approved(store)
+        store.failPut = true
+
+        val failed = coordinator.dispatch(PairingAction.CredentialIssued(host), "credential")
+        assertEquals(PairingPhase.FAILED, failed.phase)
+        assertEquals("CREDENTIAL_STORAGE_FAILED", failed.errorCode)
+        assertNull(failed.pairedHost)
+        assertTrue(store.values.isEmpty())
+
+        store.failPut = false
+        val retried = coordinator.dispatch(PairingAction.CredentialIssued(host), "credential")
+        assertEquals(PairingPhase.PAIRED, retried.phase)
+        assertEquals(host, retried.pairedHost)
+        assertEquals("credential", store.values["device-01"])
     }
 
     @Test
