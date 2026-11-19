@@ -2,9 +2,12 @@ package ai.emrg.companion
 
 import org.json.JSONObject
 import java.security.KeyFactory
+import java.security.AlgorithmParameters
 import java.security.MessageDigest
 import java.security.interfaces.ECPublicKey
 import java.security.spec.X509EncodedKeySpec
+import java.security.spec.ECGenParameterSpec
+import java.security.spec.ECParameterSpec
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
@@ -36,7 +39,7 @@ internal class PairingV2Client(
         } catch (_: Exception) {
             null
         }
-        require(parsedPublicKey != null && parsedPublicKey.params.curve.field.fieldSize == 256) {
+        require(parsedPublicKey != null && isP256(parsedPublicKey.params)) {
             "Device public key is not P-256"
         }
         val keyDigest = sha256Hex(rawPublicKey)
@@ -146,6 +149,20 @@ internal class PairingV2Client(
             "Base64URL value is not canonical"
         }
         return decoded
+    }
+
+    private fun isP256(actual: ECParameterSpec): Boolean {
+        val expected = try {
+            AlgorithmParameters.getInstance("EC").apply {
+                init(ECGenParameterSpec("secp256r1"))
+            }.getParameterSpec(ECParameterSpec::class.java)
+        } catch (_: Exception) {
+            return false
+        }
+        return actual.curve == expected.curve &&
+            actual.generator == expected.generator &&
+            actual.order == expected.order &&
+            actual.cofactor == expected.cofactor
     }
 
     private fun sha256Hex(value: ByteArray): String =
