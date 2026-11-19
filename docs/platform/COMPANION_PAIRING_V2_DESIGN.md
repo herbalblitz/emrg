@@ -1,6 +1,6 @@
 # Companion Pairing v2 — Design and Security Gates
 
-Status: design proposal; not wired into the live listener or Android coordinator.
+Status: host WSS request/redeem adapter prototype exists; Android coordinator is not wired. Pairing remains a gated prototype, not a production-ready end-to-end feature.
 
 Date: 2026-11-19
 
@@ -15,11 +15,11 @@ This design does **not** enable remote chat, tool execution, filesystem access, 
 - QR descriptor v1 contains only `version`, `endpoint`, `fingerprint_sha256`, and `expires_at`. It is WSS-only, SAN-checked, short-lived (at most 180 seconds), and credential-free.
 - Host pairing transactions already support bounded pending requests, expiry, explicit local approve/reject, cancellation, one-time redemption, and credential issuance.
 - `CompanionHostService.redeem_pairing` is a host-local service operation, not a WSS endpoint.
-- WSS currently requires an existing device credential before accepting authenticated operations. There is no unauthenticated pairing-redemption message.
+- The WSS listener now has a dedicated one-frame unauthenticated `pairing.request` / `pairing.redeem` route. It delegates to the host v2 transaction service, applies per-peer rate limiting, and keeps approval exclusively in the host-local service. This route is separate from authenticated status/session dispatch.
 - Android parses descriptor v1 and has a secure credential store and pinned-WSS primitive, but its pairing UI/coordinator is not connected to a complete host-side exchange.
 - Android's self-approval affordance has been removed. The device must wait for a host-side decision.
 
-These components must not be treated as an end-to-end pairing implementation.
+These components must not be treated as an end-to-end pairing implementation. In particular, the current request-frame validator/adapter still does not require the design's `requested_scopes` and `client_nonce` fields, and the host transaction API does not yet validate or bind those values. The Android request builder likewise omits them. This wire-contract mismatch is a blocking integration task; do not silently widen scopes or claim replay protection from a client nonce.
 
 ## 3. Security invariants
 
@@ -294,13 +294,15 @@ A small `CompanionDeviceKeyManager` interface permits JVM protocol tests to
 supply a test signer without pretending that a software test key is Android
 Keystore-backed. The Android implementation remains the production signer.
 
-The Android v2 helper is not yet wired to `SecurePairingCoordinator`, the
-pinned WebSocket, or a host WSS pairing route. Host approval remains a separate
-trusted-local action. Live Pairing v2 must remain unavailable until coordinator
-and transport integration, physical-device Keystore tests (including API 26),
-process-restart persistence, and end-to-end Python/Android signature
-interoperability are verified. JVM tests do not prove secure-hardware availability
-or actual Android Keystore behavior.
+The Android v2 helper is not yet wired to `SecurePairingCoordinator` or the
+pinned WebSocket. The host WSS adapter prototype exists, but its request frame
+is not yet fully aligned with the design contract (`requested_scopes` and
+`client_nonce` are missing end-to-end). Host approval remains a separate
+trusted-local action. Live Pairing v2 must remain unavailable until wire-contract
+alignment, coordinator and transport integration, physical-device Keystore tests
+(including API 26), process-restart persistence, and end-to-end Python/Android
+signature interoperability are verified. JVM tests do not prove secure-hardware
+availability or actual Android Keystore behavior.
 
 
 ### Pairing v2 client hardening follow-up (2026-11-19)
@@ -309,3 +311,21 @@ or actual Android Keystore behavior.
 - Starting a new request clears the prior in-memory transaction/key binding first, so a failed new request cannot leave the previous transaction eligible for redemption.
 - Regression coverage rejects redeeming a different pairing transaction.
 - These are protocol-helper safeguards only. They do not add a WSS route or enable live pairing; host-side approval, transport integration, credential response binding, and physical-device validation remain release gates.
+
+
+### Host WSS adapter implementation update (2026-11-19)
+
+The listener prototype in `emrg/server/companion_wss_listener.py` now routes
+only the initial `pairing.request` and `pairing.redeem` frames to the v2 host
+service before normal authenticated-session dispatch. The route is one-frame
+and unauthenticated by design, returns a generic `pairing_unavailable` error
+for transaction/proof/approval failures, and never exposes remote approve or
+reject operations. The per-peer limiter is bounded to 1,024 peers and 10
+attempts per 60-second window.
+
+Tests currently exercise request/redeem, local-only approval, redemption before
+approval, replay rejection, generic error behavior, and per-peer rate limiting.
+This is still only a transport adapter prototype: the wire request does not yet
+carry or enforce `requested_scopes` and `client_nonce`, and Android does not
+yet connect its coordinator to this route. Those are explicit blockers, not
+implicitly satisfied requirements.
