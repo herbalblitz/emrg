@@ -18,6 +18,8 @@ def test_authenticate_returns_only_authorized_binding(tmp_path):
     token = registry.issue(device_id="phone", workspace_id="workspace-a",
                            cwd="/approved/path", scopes={"status", "chat.send"})
     result = CompanionAuthenticator(registry).authenticate(_frame("phone", token))
+    assert isinstance(result["generation"], str) and result["generation"]
+    result.pop("generation")
     assert result == {
         "device_id": "phone", "workspace_id": "workspace-a",
         "cwd": "/approved/path", "scopes": frozenset({"status", "chat.send"}),
