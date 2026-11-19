@@ -269,29 +269,35 @@ These JVM tests do not substitute for physical-device Android Keystore validatio
 
 - The encrypted credential store also decodes decrypted bytes with a reporting UTF-8 decoder and re-applies the credential validity/512-byte checks on read. Malformed or out-of-contract stored plaintext now fails closed instead of being silently replacement-decoded.
 
-### Android Keystore Ed25519 implementation plan (2026-11-19)
+### Android P-256 device-key and Pairing v2 client foundation (2026-11-19)
 
-The Android device-key work remains a gated implementation, not a completed capability.
-The host contract currently verifies DER-encoded P-256 SubjectPublicKeyInfo public keys and DER ECDSA signatures over SHA-256. Android must use the same P-256 key and signature format and sign the exact
-canonical challenge payload; a generic Java signature-provider success is not
-sufficient evidence of Android Keystore hardware/provider support.
+The Android source now contains a non-exportable P-256 Android Keystore key-manager
+foundation in `AndroidKeystoreDeviceKeyManager.kt`. It creates/loads a per-host
+EC key alias, requires the private-key handle to be non-exportable, exports only
+the DER SubjectPublicKeyInfo public key, signs with `SHA256withECDSA`, and
+supports explicit alias deletion. The implementation has no software-key fallback.
 
-The key-manager implementation must therefore:
+The transport-neutral `PairingV2Client.kt` builds the strict
+`pairing.request` frame with `key_algorithm: P-256`, validates canonical
+Base64URL transaction identifiers and the host challenge's protocol, transaction,
+device, public-key digest, expiry, nonce, workspace, and allowed scopes, then signs
+the exact challenge UTF-8 bytes and builds `pairing.redeem`. It does not open a
+socket, approve a request, or persist a credential.
 
-- Probe the Android Keystore provider at runtime and attempt P-256 EC key-pair
-  generation using a per-host, non-exportable alias.
-- Verify that the generated public key can be exported in the host's expected
-  raw 32-byte representation without exporting private material.
-- Sign challenge bytes using the private key handle returned by the Keystore;
-  verify the resulting signature against the exported public key before use.
-- Persist only a stable alias and public metadata. Never persist private-key
-  bytes, use an unencrypted software fallback, or silently switch algorithms.
-- Treat unsupported algorithm/provider, invalidated key, signing failure, or
-  mismatched public-key encoding as a safe unsupported-device/pairing failure.
-- Add instrumentation coverage on physical/emulated API levels and representative
-  providers. JVM tests alone cannot prove Android Keystore behavior.
+The wire encoding is:
+- Public key: canonical unpadded Base64URL of DER X.509 SubjectPublicKeyInfo
+  for a P-256 EC key (typically 91 DER bytes / 122 Base64URL characters).
+- Proof: canonical unpadded Base64URL of the ASN.1 DER ECDSA signature over
+  SHA-256 of the exact host challenge bytes.
 
-The API-level compatibility boundary must be established by executing the
-instrumentation matrix, not inferred solely from `minSdk` or the availability of
-the JCA SHA256withECDSA algorithm on the host JVM. Until that matrix passes, the Android
-pairing coordinator must not issue a v2 proof or claim the device is pairable.
+A small `CompanionDeviceKeyManager` interface permits JVM protocol tests to
+supply a test signer without pretending that a software test key is Android
+Keystore-backed. The Android implementation remains the production signer.
+
+The Android v2 helper is not yet wired to `SecurePairingCoordinator`, the
+pinned WebSocket, or a host WSS pairing route. Host approval remains a separate
+trusted-local action. Live Pairing v2 must remain unavailable until coordinator
+and transport integration, physical-device Keystore tests (including API 26),
+process-restart persistence, and end-to-end Python/Android signature
+interoperability are verified. JVM tests do not prove secure-hardware availability
+or actual Android Keystore behavior.
