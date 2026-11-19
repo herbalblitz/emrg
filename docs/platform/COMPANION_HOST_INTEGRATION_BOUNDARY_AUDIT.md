@@ -86,3 +86,30 @@ Pending transactions are now bounded to 32 concurrent entries. Expired entries a
 ## Listener configuration policy primitive
 
 `companion_listener_policy.py` validates explicit unicast IP-literal bind addresses, rejects wildcard and multicast/reserved addresses, enforces non-privileged ports, and bounds resource/time settings. It intentionally does not perform DNS, open sockets, start a listener, or modify firewall rules. An actual listener and its lifecycle tests remain unimplemented.
+
+## Electron host UI integration re-audit (2026-11-19)
+
+A repository-wide source-tree inspection confirms that the existing Electron desktop GUI is the correct future trusted local presentation surface, but it is not currently connected to companion host management:
+
+- `emrg/gui/main.js` contains no companion integration or IPC handlers.
+- `emrg/gui/preload.js` exposes a fixed allowlisted bridge to the renderer; it has no companion management methods.
+- The renderer already has established settings/dialog patterns, but adding buttons there alone would not provide authority: the Electron main process must invoke a narrow local host API and must never accept approval decisions from an untrusted remote client.
+- `CompanionHostService` is currently a Python composition object with no IPC adapter, no local caller authentication, and no live listener. Its methods are primitives, not a usable GUI backend.
+
+### Next implementation boundary
+
+1. Add a narrow local-only daemon control API for companion status, host identity/fingerprint, QR transaction creation, pending-request listing, approve/reject/cancel, registered-device listing, and revocation.
+2. Keep that API on the existing loopback-only desktop IPC boundary; do not expose it on a future LAN listener and do not reuse the daemon token as a mobile credential.
+3. Validate every request in the daemon and bind approval to the exact pending transaction and device-key fingerprint returned by the host.
+4. Add an Electron main-process adapter and explicit preload allowlist methods; renderer components may display requests and collect local user intent but may not mint credentials or synthesize approval state.
+5. Add daemon protocol, IPC allowlist, renderer interaction, and Windows/Linux tests before calling the host approval UI implemented.
+
+This audit deliberately does not add renderer controls without a functioning, access-controlled backend. That would create a misleading approval surface without a real security boundary.
+
+### Latest race-hardening verification
+
+- Companion security CI #135 passed on Ubuntu and Windows for the pairing-core cancel-versus-redeem race test.
+- Companion security CI #136 passed on Ubuntu and Windows for the host-service cancel-versus-redeem race test (commit `4fb8fc02`).
+- The tests establish one terminal winner: successful cancellation yields no credential; successful redemption yields one registered credential and cancellation returns false.
+- These tests validate host-side primitives only. They do not validate Electron IPC, a live WSS listener, Android Keystore, or end-to-end pairing.
+
