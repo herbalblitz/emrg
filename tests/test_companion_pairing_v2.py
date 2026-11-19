@@ -238,3 +238,43 @@ def test_pairing_v2_rejects_display_control_characters_in_host_identity(
     with pytest.raises(PairingV2Error, match="invalid host identity"):
         PairingV2Transactions(registry, host_identity=unsafe_identity)
 
+def test_pairing_v2_cancel_and_redeem_race_has_one_terminal_winner(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    pairing, registry, _, private, public = _setup(tmp_path)
+    tx, request = _request(pairing, public)
+    assert pairing.approve(tx["pairing_id"], approved=True)
+    signature = _signature(private, request)
+    start = Barrier(2)
+
+    def cancel():
+        start.wait(timeout=3)
+        return pairing.cancel(tx["pairing_id"])
+
+    def redeem():
+        start.wait(timeout=3)
+        try:
+            return pairing.redeem(
+                pairing_id=tx["pairing_id"], device_id="android-device",
+                challenge_id=request["challenge_id"], signature=signature)
+        except PairingV2Error:
+            return None
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        cancel_future = pool.submit(cancel)
+        redeem_future = pool.submit(redeem)
+        cancelled = cancel_future.result(timeout=5)
+        token = redeem_future.result(timeout=5)
+
+    # The transaction lock makes cancellation and redemption mutually exclusive:
+    # either cancellation wins and no credential exists, or redemption wins and
+    # the cancellation sees an already-consumed transaction.
+    assert cancelled is (token is None)
+    assert pairing.pending_requests() == []
+    if token is None:
+        assert registry.list_devices() == []
+    else:
+        identity = registry.verify(device_id="android-device", credential=token)
+        assert identity is not None
+
