@@ -30,7 +30,7 @@ internal data class PairingV2Challenge(
  */
 internal class PairingV2Client(
     private val keys: CompanionDeviceKeyManager,
-    private val deviceId: String,
+    internal val deviceId: String,
     private val keyAlias: String,
     requestedScopes: Set<String> = setOf("status"),
     private val nowEpochSeconds: () -> Long = { System.currentTimeMillis() / 1000L },
