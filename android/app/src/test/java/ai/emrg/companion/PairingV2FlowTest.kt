@@ -138,8 +138,8 @@ class PairingV2FlowTest {
         deliverChallenge(exchange, listener)
         val challenge = listener.challenge!!
 
-        assertFalse(flow.confirmHostApproval(challenge.copy(pairingId = "D".repeat(43))))
-        assertTrue(flow.confirmHostApproval(challenge))
+        assertFalse(pairingFlow.confirmHostApproval(challenge.copy(pairingId = "D".repeat(43))))
+        assertTrue(pairingFlow.confirmHostApproval(challenge))
 
         val otherListener = RecordingListener()
         flow(FakeExchange()).redeemAfterHostApproval(challenge, otherListener)
@@ -154,7 +154,7 @@ class PairingV2FlowTest {
         pairingFlow.requestChallenge(listener)
         deliverChallenge(exchange, listener)
         val challenge = listener.challenge!!
-        assertTrue(flow.confirmHostApproval(challenge))
+        assertTrue(pairingFlow.confirmHostApproval(challenge))
 
         pairingFlow.redeemAfterHostApproval(challenge, listener)
         val first = exchange.lastRequest!!.toString()
