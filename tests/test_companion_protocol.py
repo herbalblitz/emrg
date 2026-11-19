@@ -49,6 +49,15 @@ def test_chat_send_normalizes_allowed_fields():
     assert result=={"type":"chat.send","request_id":"r","workspace_id":"w","session_id":None,"prompt":"hello"}
 
 @pytest.mark.parametrize("field,value", [("cwd","C:/other"),("tools",["pwsh"]),("sandbox","danger-full-access"),("provider","remote")])
+@pytest.mark.parametrize("session_id", ["", "x" * 129, "\\ud800", 42, []])
+def test_chat_rejects_invalid_session_identifiers(session_id):
+    frame={"type":"chat.send","request_id":"r","workspace_id":"w",
+           "prompt":"hello","session_id":session_id}
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame(json.dumps(frame),authenticated=True,
+                              scopes=frozenset({"chat.send"}),workspace_id="w")
+
+
 def test_chat_rejects_privilege_or_unrecognized_fields(field,value):
     frame={"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hello","session_id":None,field:value}
     with pytest.raises(CompanionProtocolError):
