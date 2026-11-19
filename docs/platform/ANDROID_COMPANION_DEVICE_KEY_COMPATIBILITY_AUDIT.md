@@ -30,7 +30,7 @@ The Android app may keep `minSdk = 26` for its existing UI, QR parsing, credenti
 
 - Host Pairing v2 transaction verification now accepts only P-256 EC keys encoded as DER SubjectPublicKeyInfo and verifies ECDSA/SHA-256 DER signatures.
 - The strict unauthenticated pairing-frame validator requires `key_algorithm: P-256`, bounded canonical Base64URL public keys, and bounded canonical Base64URL signatures. v1 authentication remains a separate parser.
-- Host pairing transaction and protocol tests have been migrated to P-256; GitHub Actions run #149 passed on Ubuntu and Windows (194 passed on Ubuntu; Windows result is also green).
+- Host pairing transaction and protocol tests have been migrated to P-256; GitHub Actions run #149 passed on Ubuntu and Windows (202 passed on Ubuntu and 198 passed with 4 skipped on Windows).
 - Added `AndroidKeystoreDeviceKeyManager` to create/load P-256 EC identities in Android Keystore, return only the encoded public key, sign challenges with `SHA256withECDSA`, and refuse exportable private keys. It has no software-key fallback.
 - The manager is not yet wired into the Android pairing coordinator. Device security-level reporting, API 26 physical-device testing, process-restart testing, and end-to-end Python/Android signature interoperability remain open.
 
