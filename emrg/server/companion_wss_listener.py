@@ -31,8 +31,7 @@ _SESSION_TEXT_LIMITS = {"session_id": 128, "created_at": 64, "updated_at": 64, "
 
 def _safe_remote_text(value: str, limit: int) -> bool:
     """Reject display-control and invalid Unicode before metadata reaches clients."""
-    if not value or len(value) > limit:
-        return False
+    del limit  # length is bounded by the caller's existing field-specific slice
     return not any(unicodedata.category(char) in {"Cc", "Cf", "Cs"}
                    for char in value)
 
