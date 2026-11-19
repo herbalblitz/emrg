@@ -23,29 +23,29 @@ fun PairScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __hostText = remember { mutableStateOf("") }
-    var hostText: String? = null
+    var hostText: String
         get() = __hostText.value
         set(value) { __hostText.value = value }
     val __portText = remember { mutableStateOf("56032") }
-    var portText: String? = null
+    var portText: String
         get() = __portText.value
         set(value) { __portText.value = value }
     val __pinText = remember { mutableStateOf("") }
-    var pinText: String? = null
+    var pinText: String
         get() = __pinText.value
         set(value) { __pinText.value = value }
     val __codeText = remember { mutableStateOf("") }
-    var codeText: String? = null
+    var codeText: String
         get() = __codeText.value
         set(value) { __codeText.value = value }
     val __nameText = remember { mutableStateOf("") }
-    var nameText: String? = null
+    var nameText: String
         get() = __nameText.value
         set(value) { __nameText.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
     var error: String? = null
     val __pairing = remember { mutableStateOf(false) }
-    var pairing: Boolean = false
+    var pairing: Boolean
         get() = __pairing.value
         set(value) { __pairing.value = value }
 
