@@ -689,6 +689,7 @@ def test_wss_pairing_v2_request_and_redeem_require_host_local_approval(tmp_path)
             "type": "pairing.request", "protocol": "2.0",
             "pairing_id": transaction["pairing_id"], "device_id": "android-v2",
             "key_algorithm": "P-256", "public_key": enc(public_der),
+            "requested_scopes": ["status"], "client_nonce": enc(b"n" * 32),
         }
         request_socket = Socket(request)
         await listener._session(request_socket)
@@ -759,6 +760,7 @@ def test_wss_pairing_v2_redeem_before_local_approval_fails_closed(tmp_path):
             "type": "pairing.request", "protocol": "2.0",
             "pairing_id": transaction["pairing_id"], "device_id": "android-v2",
             "key_algorithm": "P-256", "public_key": enc(public_der),
+            "requested_scopes": ["status"], "client_nonce": enc(b"n" * 32),
         })
         await listener._session(request_socket)
         challenge = request_socket.sent[0]
@@ -917,6 +919,7 @@ def test_wss_pairing_v2_request_and_redeem_are_one_frame_local_approval_only(tmp
             "type": "pairing.request", "protocol": "2.0",
             "pairing_id": pairing["pairing_id"], "device_id": "android-v2",
             "key_algorithm": "P-256", "public_key": encode(public_key),
+            "requested_scopes": ["status", "sessions.list"], "client_nonce": encode(b"n" * 32),
         }
         request_socket = Socket(request)
         await listener._session(request_socket)
