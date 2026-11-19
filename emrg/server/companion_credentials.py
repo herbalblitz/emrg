@@ -89,6 +89,7 @@ class CredentialRegistry:
             data = self._read()
             data["devices"][device_id] = {
                 "salt": salt, "verifier": _token_hash(token, salt),
+                "generation": secrets.token_hex(16),
                 "workspace_id": workspace_id, "cwd": cwd,
                 "scopes": sorted(scopes), "revoked": False,
             }
@@ -115,8 +116,11 @@ class CredentialRegistry:
         if (not isinstance(scopes, list) or not all(isinstance(s, str) for s in scopes)
                 or not isinstance(workspace_id, str) or not isinstance(cwd, str)):
             return None
+        generation = record.get("generation")
+        if not isinstance(generation, str) or not generation:
+            return None
         return {"device_id": device_id, "workspace_id": workspace_id,
-                "cwd": cwd, "scopes": frozenset(scopes)}
+                "cwd": cwd, "scopes": frozenset(scopes), "generation": generation}
 
     def is_current(self, identity: dict[str, Any]) -> bool:
         """Check that an authenticated connection still matches an active registry record.
@@ -137,6 +141,8 @@ class CredentialRegistry:
         return (
             record.get("workspace_id") == identity.get("workspace_id")
             and record.get("cwd") == identity.get("cwd")
+            and isinstance(record.get("generation"), str)
+            and record.get("generation") == identity.get("generation")
             and isinstance(scopes, list)
             and frozenset(scopes) == frozenset(identity.get("scopes", ()))
         )
