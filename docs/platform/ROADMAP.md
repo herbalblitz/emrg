@@ -246,3 +246,10 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Companion security CI run [#111](https://github.com/herbalblitz/emrg/actions/runs/44447348538) passed on both platforms after the workflow correction: Ubuntu **170 passed**; Windows **166 passed, 4 skipped**. Logs show all five `test_companion_pairing_v2.py` tests passed on both runners.
 - This verifies the host-side companion test suite and v2 transaction unit tests only; it does not validate a live WSS pairing endpoint or Android v2 integration.
 - Pairing v2 remains a transport-independent host primitive. No live WSS pairing endpoint or Android v2 integration is claimed.
+
+
+### Pairing v2 concurrency and capacity regression coverage (2026-11-19)
+
+- Commit `e2efde59` added tests proving concurrent redemption issues exactly one credential and the pending-transaction cap remains 32 with `cancel_all()` clearing the queue.
+- Companion security CI [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797) passed on that test commit: Ubuntu **172 passed**; Windows **168 passed, 4 skipped**. Both new tests and all seven tests in `test_companion_pairing_v2.py` passed on both platforms.
+- This remains host-side unit-test evidence; the v2 pairing flow is not yet wired to a live WSS endpoint or Android client.
