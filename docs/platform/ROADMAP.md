@@ -270,3 +270,13 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Android Companion CI [#206](https://github.com/herbalblitz/emrg/actions/runs/44454840217) passed on commit `16c24854`: debug APK assembly, JVM unit tests, lint and APK artifact upload all succeeded.
 - Android CI #204 failed on the intermediate source commit `af227532`, which referenced the codec before its follow-up implementation commit; #206 is the completed run containing the implementation and regression tests.
 - The CI result validates JVM tests and APK build/lint, not Android Keystore behavior on physical devices. Pairing v2 device-key integration and live host pairing remain release gates.
+
+
+### Android credential size hardening (2026-11-19)
+
+- Android pairing coordinator and encrypted credential store now enforce the host registry's 512-byte UTF-8 credential bound before persistence; blank and oversized credentials fail closed.
+- AES-256-GCM Android Keystore key generation explicitly requires randomized encryption.
+- Regression tests cover blank credentials, exact 512-byte acceptance, oversized ASCII and multibyte UTF-8 rejection, and coordinator non-persistence on oversized issuance.
+- Android CI #207 is running for the first storage change; #210 is queued for the complete source and test set at `69ca6a82`. Do not treat either as passed until the latest run completes.
+- App minSdk is 26; the platform-independent envelope codec's `java.util.Base64` dependency is therefore compatible with the configured minimum API.
+- Physical-device Android Keystore behavior remains unverified and is a separate validation gate.
