@@ -46,6 +46,11 @@ def _signature(private, device):
 def test_pairing_v2_requires_local_approval_and_binds_exact_device_key(tmp_path):
     pairing, registry, _, private, public = _setup(tmp_path)
     tx, request = _request(pairing, public)
+    signed_payload = base64.urlsafe_b64decode(request["challenge"] + "=" * (-len(request["challenge"]) % 4))
+    challenge_fields = __import__("json").loads(signed_payload)
+    assert challenge_fields["host_identity"] == "tls-sha256-fingerprint"
+    assert isinstance(challenge_fields["expires_at"], int)
+    assert challenge_fields["device_id"] == "android-device"
     sig = _signature(private, request)
     with pytest.raises(PairingV2Error, match="not approved"):
         pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
