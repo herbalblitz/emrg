@@ -98,7 +98,7 @@ All commands below are JSON WebSocket frames sent after authentication. Command 
 - `rename_session` with an empty title invokes host-side title generation; clients should send a non-empty title for deterministic rename.
 - `clear_session` and `delete_session` may cancel queued messages and broadcast `queued_cancelled` to session subscribers.
 - `rewind_session` broadcasts its successful result to subscribers, including descriptors of removed records. Treat the event as a session-wide state update, not just a reply to the caller.
-- These findings are source inspection, not runtime integration tests. Android transport remains unimplemented.
+- These findings are source inspection, not runtime integration tests. The Android live Companion transport remains unimplemented; the separate opt-in host-side WSS subset is documented below.
 
 ## Transport doc correction
 
@@ -112,7 +112,7 @@ All commands below are JSON WebSocket frames sent after authentication. Command 
 - Shared test fixtures cover auth/status, delta, tool start/end (including older frames without `call_label`), done/cancelled, error, empty tool allowlist and unknown future event.
 - JVM tests reject malformed JSON and non-object roots, and verify nullable/optional values and correlation fields.
 - Android CI now runs `testDebugUnitTest` in addition to assemble/lint.
-- **Not implemented:** WebSocket transport, pairing/authentication flow, secure credentials, protocol negotiation, daemon connection, or remote execution. The frame model alone is not a client.
+- **Not implemented:** Android WebSocket transport, pairing/authentication UI, protocol negotiation, daemon task bridge, or remote execution. The frame model and host-side WSS subset do not yet form a usable Android client.
 
 
 ## Android request-stream reducer milestone (2026-11-18)
@@ -212,7 +212,7 @@ These are requirements for a future implementation, not evidence of an existing 
 
 ## Host companion protocol proposal (2026-11-18)
 
-The isolated remote host API, pairing lifecycle, auth frames, capabilities, workspace-scoped session/chat operations, stream events, replay policy and implementation gates are drafted in `HOST_COMPANION_PROTOCOL_V1.md`. This is a design/spec milestone only. No listener, credential verifier, TLS host identity management, pairing approval UI or daemon bridge exists yet. The existing local loopback endpoint remains unchanged and must not be exposed.
+The extended remote host API, chat/task lifecycle, stream events, replay policy and implementation gates are drafted in `HOST_COMPANION_PROTOCOL_V1.md`. The opt-in WSS transport, credential verifier and TLS listener now exist as a limited backend subset documented below; the broader design remains a specification, not an implemented capability. Pairing approval UI/QR rendering, Android live transport and daemon task bridge are still absent. The existing desktop loopback endpoint remains unchanged and must not be exposed.
 
 
 ## Companion WSS implemented subset (2026-11-19)
