@@ -117,12 +117,12 @@ class PairingV2FlowTest {
     fun redeemRequiresExplicitConfirmationForMatchingHostApproval() {
         val exchange = FakeExchange()
         val listener = RecordingListener()
-        val flow = flow(exchange)
-        flow.requestChallenge(listener)
+        val pairingFlow = flow(exchange)
+        pairingFlow.requestChallenge(listener)
         deliverChallenge(exchange, listener)
         val challenge = listener.challenge!!
 
-        flow.redeemAfterHostApproval(challenge, listener)
+        pairingFlow.redeemAfterHostApproval(challenge, listener)
 
         assertEquals("HOST_APPROVAL_NOT_CONFIRMED", listener.failure)
         assertEquals(1, exchange.calls)
@@ -133,8 +133,8 @@ class PairingV2FlowTest {
     fun hostApprovalMustReferToChallengeFromThisFlow() {
         val exchange = FakeExchange()
         val listener = RecordingListener()
-        val flow = flow(exchange)
-        flow.requestChallenge(listener)
+        val pairingFlow = flow(exchange)
+        pairingFlow.requestChallenge(listener)
         deliverChallenge(exchange, listener)
         val challenge = listener.challenge!!
 
@@ -150,15 +150,15 @@ class PairingV2FlowTest {
     fun retriesReuseTheSameSignedRedeemFrame() {
         val exchange = FakeExchange()
         val listener = RecordingListener()
-        val flow = flow(exchange)
-        flow.requestChallenge(listener)
+        val pairingFlow = flow(exchange)
+        pairingFlow.requestChallenge(listener)
         deliverChallenge(exchange, listener)
         val challenge = listener.challenge!!
         assertTrue(flow.confirmHostApproval(challenge))
 
-        flow.redeemAfterHostApproval(challenge, listener)
+        pairingFlow.redeemAfterHostApproval(challenge, listener)
         val first = exchange.lastRequest!!.toString()
-        flow.redeemAfterHostApproval(challenge, listener)
+        pairingFlow.redeemAfterHostApproval(challenge, listener)
         val second = exchange.lastRequest!!.toString()
 
         assertEquals(first, second)
