@@ -132,3 +132,52 @@ def test_wss_session_authenticates_and_returns_scoped_status(tmp_path):
         assert decoded[1] == {"type": "status.result", "request_id": "r1",
                               "listener": "wss", "enabled": True}
     asyncio.run(run())
+
+
+
+def test_wss_session_lists_only_credential_bound_workspace(tmp_path, monkeypatch):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        credential = host.registry.issue(
+            device_id="phone-2", workspace_id="workspace-approved",
+            cwd=str(tmp_path / "approved-workspace"), scopes={"sessions.list"})
+        listener = _listener(tmp_path, host)
+        observed = []
+
+        def list_sessions(cwd):
+            observed.append(cwd)
+            return [{"session_id": "session-1", "title": "Approved workspace"}]
+
+        monkeypatch.setattr("emrg.server.companion_wss_listener.Session.list_sessions", list_sessions)
+
+        class Socket:
+            def __init__(self, frames):
+                self.frames = iter(frames)
+                self.sent = []
+            async def recv(self):
+                try:
+                    return next(self.frames)
+                except StopIteration:
+                    raise asyncio.TimeoutError()
+            async def send(self, data):
+                self.sent.append(data)
+            async def close(self, **kwargs):
+                pass
+
+        auth = {"type": "auth", "protocol": "1.0", "device_id": "phone-2",
+                "credential": credential, "client_nonce": "nonce-abcdefghijkl"}
+        request = {"type": "sessions.list", "request_id": "list-1",
+                   "workspace_id": "workspace-approved"}
+        ws = Socket([json.dumps(auth), json.dumps(request)])
+        with pytest.raises(asyncio.TimeoutError):
+            await listener._session(ws)
+
+        assert observed == [tmp_path / "approved-workspace"]
+        result = json.loads(ws.sent[1])
+        assert result == {
+            "type": "sessions.result", "request_id": "list-1",
+            "workspace_id": "workspace-approved",
+            "sessions": [{"session_id": "session-1", "title": "Approved workspace"}],
+        }
+    asyncio.run(run())
