@@ -190,7 +190,7 @@ def validate_pairing_v2_frame(payload: str | bytes) -> dict[str, Any]:
     kind = frame.get("type")
     if kind == "pairing.request":
         allowed = {"type", "protocol", "pairing_id", "device_id", "key_algorithm", "public_key", "requested_scopes", "client_nonce"}
-        required = ("pairing_id", "device_id", "key_algorithm", "public_key", "requested_scopes", "client_nonce")
+        required = ("pairing_id", "device_id", "key_algorithm", "public_key", "client_nonce")
     elif kind == "pairing.redeem":
         allowed = {"type", "protocol", "pairing_id", "device_id",
                    "challenge_id", "signature"}
