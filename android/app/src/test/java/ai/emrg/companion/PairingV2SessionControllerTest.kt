@@ -21,6 +21,8 @@ class PairingV2SessionControllerTest {
     ) : PairingV2SessionTransport {
         var challengeListener: PairingV2FlowListener? = null
         var challenge: PairingV2Challenge? = null
+        var redeemCalls = 0
+        var unavailableFirst = false
 
         override fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle {
             challengeListener = listener
@@ -33,7 +35,12 @@ class PairingV2SessionControllerTest {
             listener: PairingV2FlowListener,
         ): PairingV2ExchangeHandle {
             check(this.challenge == challenge)
-            listener.onCredential("a".repeat(64))
+            redeemCalls += 1
+            if (unavailableFirst && redeemCalls == 1) {
+                listener.onFailure("PAIRING_UNAVAILABLE")
+            } else {
+                listener.onCredential("a".repeat(64))
+            }
             return PairingV2ExchangeHandle { }
         }
     }
@@ -88,6 +95,33 @@ class PairingV2SessionControllerTest {
         assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
         assertEquals("a".repeat(64), store.values["host-credential"])
         assertEquals("host-credential", listener.paired?.credentialAlias)
+        assertTrue(listener.failure == null)
+    }
+
+
+    @Test
+    fun genericUnavailableDoesNotMarkHostApprovedAndSameChallengeCanBeRetried() {
+        val store = Store()
+        val coordinator = approvedCoordinator(store)
+        val transport = FakeTransport().apply {
+            challenge = this@PairingV2SessionControllerTest.challenge
+            unavailableFirst = true
+        }
+        val controller = controller(coordinator, transport)
+        val listener = Listener()
+
+        controller.requestPairingChallenge(listener)
+        controller.redeemChallenge(listener)
+
+        assertEquals(PairingPhase.AWAITING_HOST_APPROVAL, coordinator.state.phase)
+        assertEquals("PAIRING_UNAVAILABLE", listener.failure)
+        assertTrue(store.values.isEmpty())
+
+        controller.redeemChallenge(listener)
+
+        assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
+        assertEquals(2, transport.redeemCalls)
+        assertEquals("a".repeat(64), store.values["host-credential"])
         assertTrue(listener.failure == null)
     }
 
