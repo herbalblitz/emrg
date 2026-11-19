@@ -106,3 +106,4 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [ ] Chat dispatch into daemon runtime, UI pairing/QR, Android live transport and full end-to-end remain open.
 
 - [x] Active WSS device sessions revalidate the authenticated device's current registry authorization before each request; revocation and credential rotation invalidate existing connections, and registry read failures fail closed.
+- [x] WSS session listing returns only bounded, allowlisted metadata; local cwd, transcripts, and arbitrary meta fields are excluded.
