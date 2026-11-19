@@ -22,6 +22,16 @@ class SecureCredentialStoreTest {
         assertFalse(AndroidKeystoreCredentialStore.isValidCredentialAlias("host with spaces"))
     }
     @Test
+    fun acceptsOnlyNonBlankCredentialsWithinHostProtocolLimit() {
+        assertTrue(AndroidKeystoreCredentialStore.isValidCredential("token"))
+        assertTrue(AndroidKeystoreCredentialStore.isValidCredential("x".repeat(512)))
+        assertFalse(AndroidKeystoreCredentialStore.isValidCredential(""))
+        assertFalse(AndroidKeystoreCredentialStore.isValidCredential("   "))
+        assertFalse(AndroidKeystoreCredentialStore.isValidCredential("x".repeat(513)))
+        assertFalse(AndroidKeystoreCredentialStore.isValidCredential("é".repeat(257)))
+    }
+
+    @Test
     fun credentialEnvelopeRoundTripsCanonicalBase64() {
         val iv = ByteArray(12) { it.toByte() }
         val ciphertext = ByteArray(32) { (it + 1).toByte() }
