@@ -110,10 +110,15 @@ class CompanionHostService:
             return count
 
     def registered_devices(self) -> list[dict[str, Any]]:
-        return self.registry.list_devices()
+        with self._lifecycle_lock:
+            return self.registry.list_devices()
 
     def revoke_device(self, device_id: str) -> bool:
-        return self.registry.revoke(device_id)
+        # Serialize revocation with authentication and active-identity checks so
+        # the service cannot return a newly authenticated identity concurrently
+        # with a local revoke operation.
+        with self._lifecycle_lock:
+            return self.registry.revoke(device_id)
 
     # Pairing v2 host-local approval and transport-adapter operations.
     def begin_pairing_v2(self, *, host_identity: str, workspace_id: str,
