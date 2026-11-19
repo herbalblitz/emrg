@@ -111,7 +111,7 @@ class PairingDescriptorParserTest {
     }
 
     @Test fun rejectsCredentialFieldAfterJsonEscapeDecoding() {
-        val json = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","\\u0074oken":"secret"}"""
+        val json = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","\u0074oken":"secret"}"""
         assertEquals("CREDENTIAL_IN_DESCRIPTOR", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
     }
 
