@@ -30,10 +30,10 @@ internal class PairingV2SessionController(
         require(isSha256Fingerprint(fingerprintSha256))
         require(AndroidKeystoreCredentialStore.isValidCredentialAlias(credentialAlias))
         require(deviceId.matches(Regex("[A-Za-z0-9._:-]{1,128}")))
-        require(scopes.isNotEmpty() && scopes.all {
+        require(this.scopes.isNotEmpty() && this.scopes.all {
             it == PairingScope.READ_STATUS || it == PairingScope.LIST_SESSIONS
         }) { "Requested pairing scopes are not enabled for this client" }
-        val protocolScopes = scopes.mapTo(mutableSetOf()) {
+        val protocolScopes = this.scopes.mapTo(mutableSetOf()) {
             when (it) {
                 PairingScope.READ_STATUS -> "status"
                 PairingScope.LIST_SESSIONS -> "sessions.list"
