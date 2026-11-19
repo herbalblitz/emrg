@@ -703,3 +703,36 @@ def test_wss_does_not_accept_unauthenticated_pairing_v2_frames(tmp_path, frame, 
         assert tx["pairing_id"]
 
     asyncio.run(run())
+
+def test_stale_disable_callback_does_not_shutdown_reenabled_listener(tmp_path):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry-stale-disable.json")
+        host.enable()
+        listener = _listener(tmp_path, host)
+        listener._loop = asyncio.get_running_loop()
+        events = []
+
+        class Server:
+            def close(self):
+                events.append("close")
+            async def wait_closed(self):
+                events.append("wait_closed")
+
+        listener._server = Server()
+        # The disable notification is queued onto the event loop. Re-enable
+        # before it runs; the queued callback must observe current host policy.
+        host.disable()
+        host.enable()
+        await asyncio.sleep(0)
+
+        assert host.enabled is True
+        assert listener.running is True
+        assert listener._closing is False
+        assert events == []
+
+        await listener.stop()
+        assert events == ["close", "wait_closed"]
+        listener._loop = None
+
+    asyncio.run(run())
+
