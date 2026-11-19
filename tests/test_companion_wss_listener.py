@@ -541,3 +541,48 @@ def test_stop_during_listener_start_closes_new_server(tmp_path, monkeypatch):
         assert listener._closing is True
 
     asyncio.run(run())
+
+
+def test_concurrent_listener_start_is_rejected_without_second_bind(tmp_path, monkeypatch):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        listener = _listener(tmp_path, host)
+        serving = asyncio.Event()
+        release_bind = asyncio.Event()
+        calls = []
+
+        class Server:
+            def close(self):
+                calls.append("close")
+            async def wait_closed(self):
+                calls.append("wait_closed")
+
+        async def delayed_serve(*args, **kwargs):
+            calls.append("bind")
+            serving.set()
+            await release_bind.wait()
+            return Server()
+
+        monkeypatch.setattr(
+            "emrg.server.companion_wss_listener.create_server_context",
+            lambda cert, key: object(),
+        )
+        monkeypatch.setattr(
+            "emrg.server.companion_wss_listener.serve", delayed_serve,
+        )
+
+        first_start = asyncio.create_task(listener.start())
+        await asyncio.wait_for(serving.wait(), timeout=1)
+        with pytest.raises(RuntimeError, match="already running or starting"):
+            await listener.start()
+        release_bind.set()
+        await asyncio.wait_for(first_start, timeout=1)
+
+        assert calls == ["bind"]
+        assert listener.running is True
+        assert listener._starting is False
+        await listener.stop()
+        assert calls == ["bind", "close", "wait_closed"]
+
+    asyncio.run(run())
