@@ -304,11 +304,11 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Add `PairingV2SessionController` to coordinate challenge delivery, redemption, reducer transitions, and encrypted credential persistence.
 - [x] Keep host-local approval authoritative. Android never fabricates approval; a generic unavailable response leaves the coordinator awaiting host approval and permits a bounded user-initiated retry using the cached signed redeem frame.
 - [x] Persist credentials only after a valid host-issued credential response and successful coordinator/store validation.
-- [ ] Wire the QR scanner/panel and lifecycle-safe retry UX to the controller.
+- [x] Wire the QR scanner/panel and lifecycle-safe retry UX to the controller (`SecurePairingPanel.kt`); Android CI run `44515550203` passed on commit `aaf3672`.
 - [ ] Run Android Keystore compatibility tests on physical devices and validate Android ↔ Windows pairing end-to-end.
 - [ ] Run authenticated status/session-list operations against a real Windows host. Chat remains disabled because the workspace/cwd authorization contract is not yet complete.
 
-The latest Android debug APK assembly has succeeded. The first controller-integration CI run exposed one test assertion issue in the retry test; the test now checks the successful paired callback rather than expecting a historical failure callback to be erased. A fresh CI run is required before marking this increment verified.
+Android Companion CI run `44515550203` completed successfully on commit `aaf367260fa3bc7ea10acce7e473f02326a4eff3`; APK assembly, JVM unit tests, lint, and artifact upload passed.
 
 
 ### QR-to-controller UI integration update (2026-11-19)
@@ -329,3 +329,12 @@ The QR panel is now wired to the v2 controller, superseding earlier notes that t
 - The pairing panel ignores callbacks queued by an older QR transaction after reset or rescan, preventing stale network responses from replacing the current UI state.
 - Android workflow run `44508660928` passed APK assembly, unit tests, lint, and artifact upload for the retry-frame change. Run `44509690853` also passed the same checks for the stale-callback isolation change (`0a587371540cb8c49072cd1b063fad160605712e`).
 - Remaining validation: physical Android Keystore/device test and live Windows-host pairing end-to-end test.
+
+
+### Pairing state concurrency hardening (2026-11-19)
+
+- `SecurePairingCoordinator.state` now synchronizes reads with reducer/store writes so UI and transport threads observe published immutable snapshots.
+- `PairingV2SessionController.redeemChallenge` derives retry eligibility and error handling from one state snapshot, avoiding mixed-phase reads during concurrent transitions.
+- Added a JVM regression test that invokes duplicate valid credential callbacks concurrently and verifies the paired state and stored credential remain intact.
+- Android CI run [#322](https://github.com/herbalblitz/emrg/actions/runs/44515550203) passed on commit `aaf367260fa3bc7ea10acce7e473f02326a4eff3`. The concurrent-callback test is a new follow-up change and requires its own CI run.
+- Still open: physical Android Keystore validation, trusted-local Windows approval UI, real Android ↔ Windows pairing E2E, authenticated status/session-list UI, and Windows install/lifecycle smoke tests.
