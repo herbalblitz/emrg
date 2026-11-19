@@ -77,7 +77,7 @@ def test_pairing_scope_validation(tmp_path):
 @pytest.mark.parametrize("workspace_id,cwd,scopes", [
     ("w" * 129, "/w", {"status"}),
     ("ws", "/w" * 2049, {"status"}),
-    ("\\ud800", "/w", {"status"}),
+    ("\ud800", "/w", {"status"}),
     ("ws", "/w", "status"),
     ("ws", "/w", {1}),
 ])
@@ -90,7 +90,7 @@ def test_pairing_rejects_unbounded_or_malformed_inputs(tmp_path, workspace_id, c
 def test_pairing_redeem_rejects_malformed_identity_text(tmp_path):
     pairing = make_pairing(tmp_path)
     with pytest.raises(PairingError, match="invalid device"):
-        pairing.redeem(pairing_id="id", pairing_secret="secret", device_id="\\ud800")
+        pairing.redeem(pairing_id="id", pairing_secret="secret", device_id="\ud800")
     with pytest.raises(PairingError, match="pairing secret invalid"):
         pairing.redeem(pairing_id="id", pairing_secret="s" * 513, device_id="phone")
     with pytest.raises(PairingError, match="pairing unavailable"):
