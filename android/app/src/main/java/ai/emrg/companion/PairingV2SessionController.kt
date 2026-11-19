@@ -32,6 +32,16 @@ internal class PairingV2SessionController(
         require(scopes.isNotEmpty() && scopes.all {
             it == PairingScope.READ_STATUS || it == PairingScope.LIST_SESSIONS
         }) { "Requested pairing scopes are not enabled for this client" }
+        val protocolScopes = scopes.mapTo(mutableSetOf()) {
+            when (it) {
+                PairingScope.READ_STATUS -> "status"
+                PairingScope.LIST_SESSIONS -> "sessions.list"
+                else -> error("Unsupported pairing scope")
+            }
+        }
+        require(protocolScopes == transport.requestedScopes) {
+            "Stored host scopes must exactly match the signed pairing request"
+        }
     }
 
     @Synchronized
@@ -73,6 +83,10 @@ internal class PairingV2SessionController(
      */
     @Synchronized
     fun redeemAfterConfirmedHostApproval(listener: PairingV2SessionListener): PairingV2ExchangeHandle {
+        if (coordinator.state.phase != PairingPhase.HOST_APPROVED) {
+            listener.onFailure("PAIRING_STATE_INVALID")
+            return PairingV2ExchangeHandle { }
+        }
         val accepted = challenge
         if (accepted == null || !transport.confirmHostApproval(accepted)) {
             listener.onFailure("HOST_APPROVAL_NOT_CONFIRMED")
