@@ -172,10 +172,27 @@ class PairingV2Transactions:
         with self._lock:
             self._purge(now)
             item = self._pending.get(pairing_id)
-            if item is None or item.approved is not None:
+            if item is None:
                 raise PairingV2Error("pairing unavailable")
             if item.device_id is not None:
+                # A pairing.challenge response can be lost after the host has
+                # accepted the request. Permit only an exact retransmission of
+                # that request and return the original challenge bytes; never
+                # replace the device key, nonce, scopes, or challenge. This also
+                # remains safe if local approval happened before the retry.
+                if (item.device_id == device_id
+                        and item.public_key == raw_key
+                        and item.requested_scopes == requested
+                        and item.client_nonce == client_nonce
+                        and item.challenge is not None
+                        and item.challenge_id is not None):
+                    return {
+                        "challenge_id": item.challenge_id,
+                        "challenge": _encode(self._challenge_payload(pairing_id, item)),
+                    }
                 raise PairingV2Error("pairing request already received")
+            if item.approved is not None:
+                raise PairingV2Error("pairing unavailable")
             self._purge_client_nonces(now)
             if client_nonce in self._seen_client_nonces:
                 raise PairingV2Error("client nonce replay")
