@@ -936,6 +936,36 @@ vision = false
       return { ok: true, removed: Boolean(frame.removed), closed, name };
     });
 
+    // Trusted local Companion controls. These fixed IPC handlers never expose
+    // a generic daemon command channel to the renderer.
+    async function companionLocalControl(operation, payload = {}) {
+      const frame = await requireConn().sendCommandAndWait(
+        "companion_local_control", { operation, payload }, 5000,
+      );
+      if (frame?.type !== "companion_local_control_result" || frame.ok !== true) {
+        throw new Error(typeof frame?.error === "string" ? frame.error : "local Companion control unavailable");
+      }
+      return frame.result || {};
+    }
+
+    ipcMain.handle("emrg:companionStatus", async () =>
+      companionLocalControl("status"));
+
+    ipcMain.handle("emrg:companionPendingPairings", async () =>
+      companionLocalControl("pairing.pending.list"));
+
+    ipcMain.handle("emrg:companionDecidePairing", async (_e, payload = {}) => {
+      if (!payload || typeof payload.pairingId !== "string" ||
+          !/^[A-Za-z0-9_-]{43}$/.test(payload.pairingId) ||
+          typeof payload.approved !== "boolean") {
+        throw new Error("invalid Companion approval decision");
+      }
+      return companionLocalControl("pairing.decide", {
+        pairing_id: payload.pairingId,
+        approved: payload.approved,
+      });
+    });
+
     ipcMain.handle("emrg:listTasks", async () => {
       // GUI / 指令 P4：/trigger — daemon list_tasks → tasks_list
       const frame = await requireConn().sendCommandAndWait("list_tasks", {}, 5000);
