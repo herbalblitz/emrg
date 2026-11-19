@@ -109,6 +109,19 @@ class PairingV2ClientTest {
     }
 
     @Test
+    fun refusesChallengeWithExpiryBeyondProtocolLifetime() {
+        val keys = FakeDeviceKeys()
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val pairingId = b64(32)
+        val challengeId = b64(16)
+        client.createRequestFrame(pairingId)
+        val raw = challenge(pairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_700_000_181L)
+        assertThrows(IllegalArgumentException::class.java) {
+            client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(raw))
+        }
+    }
+
+    @Test
     fun refusesRedeemBeforeCreatingDeviceRequest() {
         val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
         assertThrows(IllegalStateException::class.java) {
