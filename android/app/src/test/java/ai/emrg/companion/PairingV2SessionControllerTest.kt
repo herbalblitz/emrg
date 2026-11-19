@@ -18,6 +18,10 @@ class PairingV2SessionControllerTest {
 
     private class FakeTransport(
         override val requestedScopes: Set<String> = setOf("status"),
+        override val endpoint: String = "wss://host.example/pair",
+        override val fingerprintSha256: String = "AA:".repeat(31) + "AA",
+        override val pairingId: String = "A".repeat(43),
+        override val deviceId: String = "android-device",
     ) : PairingV2SessionTransport {
         var challengeListener: PairingV2FlowListener? = null
         var challenge: PairingV2Challenge? = null
@@ -140,6 +144,21 @@ class PairingV2SessionControllerTest {
         assertEquals("CREDENTIAL_STORAGE_FAILED", listener.failure)
         assertTrue(listener.paired == null)
         assertTrue(store.values.isEmpty())
+    }
+
+
+    @Test(expected = IllegalArgumentException::class)
+    fun transportHostIdentityMustMatchStoredPairedHostMetadata() {
+        val store = Store()
+        val coordinator = approvedCoordinator(store)
+        controller(coordinator, FakeTransport(endpoint = "wss://other.example/pair"))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun transportDeviceIdentityMustMatchStoredPairedHostMetadata() {
+        val store = Store()
+        val coordinator = approvedCoordinator(store)
+        controller(coordinator, FakeTransport(deviceId = "different-device"))
     }
 
     @Test(expected = IllegalArgumentException::class)
