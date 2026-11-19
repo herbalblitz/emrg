@@ -100,7 +100,7 @@ class PairingV2SessionControllerTest {
         val listener = Listener()
 
         controller.requestPairingChallenge(listener)
-        controller.redeemAfterConfirmedHostApproval(listener)
+        controller.redeemChallenge(listener)
 
         assertEquals(PairingPhase.FAILED, coordinator.state.phase)
         assertEquals("CREDENTIAL_STORAGE_FAILED", listener.failure)
