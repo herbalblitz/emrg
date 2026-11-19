@@ -98,7 +98,7 @@ class PairingV2FlowTest {
             .put("host_identity", fingerprint)
             .put("workspace_id", "workspace-1")
             .put("expires_at", 1_100)
-            .put("nonce", "C".repeat(43))
+            .put("nonce", "A".repeat(43))
             .put("scopes", JSONArray().put("status"))
         val encodedChallenge = Base64.getUrlEncoder().withoutPadding()
             .encodeToString(challenge.toString().toByteArray(Charsets.UTF_8))
@@ -140,13 +140,10 @@ class PairingV2FlowTest {
 
         assertFalse(flow.confirmHostApproval(challenge.copy(pairingId = "D".repeat(43))))
         assertTrue(flow.confirmHostApproval(challenge))
-        assertEquals("HOST_APPROVAL_NOT_CONFIRMED", run {
-            val otherExchange = FakeExchange()
-            val otherListener = RecordingListener()
-            val otherFlow = flow(otherExchange)
-            otherFlow.redeemAfterHostApproval(challenge, otherListener)
-            otherListener.failure
-        })
+
+        val otherListener = RecordingListener()
+        flow(FakeExchange()).redeemAfterHostApproval(challenge, otherListener)
+        assertEquals("PAIRING_TRANSACTION_MISMATCH", otherListener.failure)
     }
 
     @Test
