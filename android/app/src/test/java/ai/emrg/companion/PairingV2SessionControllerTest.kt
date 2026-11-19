@@ -3,6 +3,9 @@ package ai.emrg.companion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class PairingV2SessionControllerTest {
     private class Store : CredentialStore {
@@ -184,6 +187,43 @@ class PairingV2SessionControllerTest {
         assertEquals("a".repeat(64), store.values["host-credential"])
     }
 
+
+    @Test
+    fun concurrentDuplicateCredentialCallbacksPreservePairedState() {
+        val store = Store()
+        val coordinator = approvedCoordinator(store)
+        val transport = FakeTransport().apply { challenge = this@PairingV2SessionControllerTest.challenge }
+        val controller = controller(coordinator, transport)
+        val listener = Listener()
+
+        controller.requestPairingChallenge(listener)
+        controller.redeemChallenge(listener)
+        assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
+
+        val callback = transport.lastRedeemListener!!
+        val ready = CountDownLatch(2)
+        val start = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            val tasks = (1..2).map {
+                pool.submit {
+                    ready.countDown()
+                    check(start.await(5, TimeUnit.SECONDS))
+                    callback.onCredential("a".repeat(64))
+                }
+            }
+            assertTrue(ready.await(5, TimeUnit.SECONDS))
+            start.countDown()
+            tasks.forEach { it.get(5, TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdownNow()
+        }
+
+        assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
+        assertEquals("host-credential", coordinator.state.pairedHost?.credentialAlias)
+        assertEquals("a".repeat(64), store.values["host-credential"])
+        assertTrue(listener.failure == null)
+    }
 
     @Test(expected = IllegalArgumentException::class)
     fun transportHostIdentityMustMatchStoredPairedHostMetadata() {
