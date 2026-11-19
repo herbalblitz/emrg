@@ -42,7 +42,7 @@ class PairingDescriptorParserTest {
     }
 
     @Test fun rejectsUnsupportedVersionAndOversizedPayload() {
-        val version = """{"version":2,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint"}"""
+        val version = """{"version":3,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint"}"""
         assertEquals("UNSUPPORTED_VERSION", (PairingDescriptorParser.parse(version, 1000) as PairingDescriptorResult.Invalid).reason)
         assertEquals("INVALID_LENGTH", (PairingDescriptorParser.parse("x".repeat(2049), 1000) as PairingDescriptorResult.Invalid).reason)
     }
