@@ -1,8 +1,8 @@
 import base64
 
 import pytest
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from emrg.server.companion_credentials import CredentialRegistry
 from emrg.server.companion_pairing_v2 import PairingV2Error, PairingV2Transactions
@@ -23,10 +23,10 @@ def _setup(tmp_path):
     clock = Clock()
     registry = CredentialRegistry(tmp_path / "credentials.json")
     pairing = PairingV2Transactions(registry, host_identity="tls-sha256-fingerprint", clock=clock)
-    private = Ed25519PrivateKey.generate()
+    private = ec.generate_private_key(ec.SECP256R1())
     public = private.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw)
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo)
     return pairing, registry, clock, private, _b64(public)
 
 
@@ -40,7 +40,7 @@ def _request(pairing, public_key):
 
 def _signature(private, device):
     challenge = base64.urlsafe_b64decode(device["challenge"] + "=" * (-len(device["challenge"]) % 4))
-    return _b64(private.sign(challenge))
+    return _b64(private.sign(challenge, ec.ECDSA(hashes.SHA256())))
 
 
 def test_pairing_v2_requires_local_approval_and_binds_exact_device_key(tmp_path):
@@ -78,7 +78,7 @@ def test_pairing_v2_rejects_wrong_device_and_wrong_signature(tmp_path):
     with pytest.raises(PairingV2Error, match="proof rejected"):
         pairing.redeem(pairing_id=tx["pairing_id"], device_id="other-device",
                        challenge_id=request["challenge_id"], signature=signature)
-    other = Ed25519PrivateKey.generate()
+    other = ec.generate_private_key(ec.SECP256R1())
     with pytest.raises(PairingV2Error, match="proof rejected"):
         pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
                        challenge_id=request["challenge_id"], signature=_signature(other, request))
