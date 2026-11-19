@@ -936,6 +936,18 @@ vision = false
       return { ok: true, removed: Boolean(frame.removed), closed, name };
     });
 
+    function assertCompanionRenderer(event) {
+      if (!win || win.isDestroyed() || event.sender !== win.webContents) {
+        throw new Error("Companion controls are available only in the primary window");
+      }
+      const frame = event.senderFrame;
+      const expectedUrl = win.webContents.getURL();
+      if (!frame || !frame.isMainFrame || frame !== win.webContents.mainFrame ||
+          !expectedUrl || !expectedUrl.startsWith("file://") || frame.url !== expectedUrl) {
+        throw new Error("Companion controls require the primary local renderer");
+      }
+    }
+
     // Trusted local Companion controls. These fixed IPC handlers never expose
     // a generic daemon command channel to the renderer.
     async function companionLocalControl(operation, payload = {}) {
@@ -948,13 +960,18 @@ vision = false
       return frame.result || {};
     }
 
-    ipcMain.handle("emrg:companionStatus", async () =>
-      companionLocalControl("status"));
+    ipcMain.handle("emrg:companionStatus", async (event) => {
+      assertCompanionRenderer(event);
+      return companionLocalControl("status");
+    });
 
-    ipcMain.handle("emrg:companionPendingPairings", async () =>
-      companionLocalControl("pairing.pending.list"));
+    ipcMain.handle("emrg:companionPendingPairings", async (event) => {
+      assertCompanionRenderer(event);
+      return companionLocalControl("pairing.pending.list");
+    });
 
-    ipcMain.handle("emrg:companionDecidePairing", async (_e, payload = {}) => {
+    ipcMain.handle("emrg:companionDecidePairing", async (event, payload = {}) => {
+      assertCompanionRenderer(event);
       if (!payload || typeof payload.pairingId !== "string" ||
           !/^[A-Za-z0-9_-]{43}$/.test(payload.pairingId) ||
           typeof payload.approved !== "boolean") {
