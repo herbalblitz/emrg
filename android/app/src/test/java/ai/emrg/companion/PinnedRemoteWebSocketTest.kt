@@ -138,3 +138,16 @@ class PinnedRemoteWebSocketTest {
         } catch (_: IllegalArgumentException) { }
     }
 }
+
+
+    @Test fun applicationFramesAreRejectedUntilAuthenticationCompletes() {
+        assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "auth_ok"))
+        assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "auth_error"))
+        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "sessions_list"))
+        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "chat.delta"))
+
+        assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "sessions_list"))
+        assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "chat.delta"))
+        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "auth_ok"))
+        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "auth_rejected"))
+    }
