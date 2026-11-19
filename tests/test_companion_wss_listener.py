@@ -880,6 +880,35 @@ def test_wss_pairing_v2_rate_limit_is_per_peer_and_bounded(tmp_path):
     assert listener._allow_pairing_attempt(peer_b) is True
     assert len(listener._pairing_attempts) == 2
 
+def test_wss_pairing_peer_capacity_fails_closed_without_live_bucket_eviction(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    now = [100.0]
+    monkeypatch.setattr(
+        "emrg.server.companion_wss_listener.time.monotonic",
+        lambda: now[0],
+    )
+    listener = _listener(tmp_path)
+    peers = [
+        SimpleNamespace(remote_address=(f"192.0.2.{index}", 1234))
+        for index in range(1, 1025)
+    ]
+    assert all(listener._allow_pairing_attempt(peer) for peer in peers)
+    assert len(listener._pairing_attempts) == 1024
+
+    # A new source address cannot evict a live peer bucket and reset limits.
+    newcomer = SimpleNamespace(remote_address=("198.51.100.10", 4321))
+    assert listener._allow_pairing_attempt(newcomer) is False
+    assert len(listener._pairing_attempts) == 1024
+    assert listener._allow_pairing_attempt(peers[0]) is True
+    assert all(listener._allow_pairing_attempt(peers[0]) for _ in range(8))
+    assert listener._allow_pairing_attempt(peers[0]) is False
+
+    # Expired buckets are reclaimed, allowing a new peer after the window.
+    now[0] += 61.0
+    assert listener._allow_pairing_attempt(newcomer) is True
+    assert len(listener._pairing_attempts) == 1
+
 def test_wss_pairing_v2_request_and_redeem_are_one_frame_local_approval_only(tmp_path):
     import base64
     from cryptography.hazmat.primitives import hashes, serialization
