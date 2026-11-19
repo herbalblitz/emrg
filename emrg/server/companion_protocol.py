@@ -158,12 +158,25 @@ def encode_server_frame(frame: dict[str, Any]) -> bytes:
     return raw
 
 
-_PAIRING_V2_BASE64URL = {
-    "pairing_id": (43, 32),       # encoded length, decoded bytes
-    "public_key": (43, 32),       # encoded length, decoded bytes
-    "challenge_id": (22, 16),     # encoded length, decoded bytes
-    "signature": (86, 64),        # encoded length, decoded bytes
+_PAIRING_V2_FIXED_BASE64URL = {
+    "pairing_id": (43, 32),
+    "challenge_id": (22, 16),
 }
+
+
+def _decode_canonical_base64url(value: object, *, min_bytes: int, max_bytes: int) -> bool:
+    if not isinstance(value, str) or not value or len(value) > (max_bytes * 8 + 5) // 6:
+        return False
+    if any(char not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" for char in value):
+        return False
+    try:
+        decoded = base64.b64decode(
+            value + "=" * (-len(value) % 4), altchars=b"-_", validate=True)
+    except ValueError:
+        return False
+    canonical = base64.urlsafe_b64encode(decoded).rstrip(b"=").decode("ascii")
+    return min_bytes <= len(decoded) <= max_bytes and canonical == value
+
 
 
 def validate_pairing_v2_frame(payload: str | bytes) -> dict[str, Any]:
@@ -176,8 +189,8 @@ def validate_pairing_v2_frame(payload: str | bytes) -> dict[str, Any]:
     frame = _object(payload)
     kind = frame.get("type")
     if kind == "pairing.request":
-        allowed = {"type", "protocol", "pairing_id", "device_id", "public_key"}
-        required = ("pairing_id", "device_id", "public_key")
+        allowed = {"type", "protocol", "pairing_id", "device_id", "key_algorithm", "public_key"}
+        required = ("pairing_id", "device_id", "key_algorithm", "public_key")
     elif kind == "pairing.redeem":
         allowed = {"type", "protocol", "pairing_id", "device_id",
                    "challenge_id", "signature"}
@@ -191,19 +204,18 @@ def validate_pairing_v2_frame(payload: str | bytes) -> dict[str, Any]:
         _required_string(frame, name, max_bytes=128)
     if not _PAIRING_DEVICE_ID_RE.fullmatch(frame["device_id"]):
         raise CompanionProtocolError("invalid pairing field")
-    for name, (encoded_length, decoded_length) in _PAIRING_V2_BASE64URL.items():
-        if name in frame:
-            value = frame[name]
-            if (not isinstance(value, str) or len(value) != encoded_length
-                    or any(char not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-                           for char in value)):
-                raise CompanionProtocolError("invalid pairing field")
-            try:
-                decoded = base64.b64decode(
-                    value + "=" * (-len(value) % 4), altchars=b"-_", validate=True)
-            except ValueError:
-                raise CompanionProtocolError("invalid pairing field") from None
-            canonical = base64.urlsafe_b64encode(decoded).rstrip(b"=").decode("ascii")
-            if len(decoded) != decoded_length or canonical != value:
-                raise CompanionProtocolError("invalid pairing field")
+    if kind == "pairing.request" and frame["key_algorithm"] != "P-256":
+        raise CompanionProtocolError("unsupported pairing key algorithm")
+    for name, (encoded_length, decoded_length) in _PAIRING_V2_FIXED_BASE64URL.items():
+        value = frame.get(name)
+        if not isinstance(value, str) or len(value) != encoded_length:
+            raise CompanionProtocolError("invalid pairing field")
+        if not _decode_canonical_base64url(value, min_bytes=decoded_length, max_bytes=decoded_length):
+            raise CompanionProtocolError("invalid pairing field")
+    if kind == "pairing.request":
+        if not _decode_canonical_base64url(frame["public_key"], min_bytes=80, max_bytes=256):
+            raise CompanionProtocolError("invalid pairing field")
+    if kind == "pairing.redeem":
+        if not _decode_canonical_base64url(frame["signature"], min_bytes=64, max_bytes=80):
+            raise CompanionProtocolError("invalid pairing field")
     return frame
