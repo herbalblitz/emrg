@@ -222,3 +222,12 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Added transport-independent Ed25519 device-key-bound pairing transactions and host-service lifecycle methods.
 - Added tests for local approval, exact device binding, invalid signatures, duplicate device requests, expiry, cancellation, credential issuance, and host disable cleanup.
 - WSS listener and Android are not wired to the prototype; QR v2 and TLS identity plumbing remain incomplete.
+
+
+### Pairing v2 cross-platform host CI (2026-11-19)
+
+- Companion security CI #103 passed on commit `afb7407d` on Ubuntu and Windows.
+- Ubuntu: 157 tests passed.
+- Windows: 153 tests passed, 4 skipped.
+- This validates the standalone Ed25519 pairing v2 core and host-service lifecycle adapter methods, including device-key binding, host approval, invalid signature/device rejection, expiry, cancellation, and disable cleanup.
+- This does not validate a live WSS pairing endpoint or Android integration; those remain intentionally unimplemented.
