@@ -765,3 +765,26 @@ def test_remote_session_metadata_keeps_existing_field_length_bounds():
     result = _remote_session_metadata([{"title": long_title}])
     assert result == [{"title": "x" * 256}]
 
+def test_remote_session_metadata_preserves_legitimate_unicode():
+    records = [{
+        "session_id": "phiên-東京-🛰️",
+        "title": "Công việc · 中文 · 🚀",
+        "created_at": "2026-01-01T00:00:00Z",
+    }]
+
+    assert _remote_session_metadata(records) == records
+
+
+def test_remote_session_metadata_ignores_controls_beyond_truncated_suffix():
+    # Characters beyond the transmitted field limit cannot affect the client
+    # display, so they must not cause an otherwise safe prefix to be dropped.
+    records = [{
+        "session_id": "s-1",
+        "title": ("A" * 256) + "\u202e",
+    }]
+
+    assert _remote_session_metadata(records) == [{
+        "session_id": "s-1",
+        "title": "A" * 256,
+    }]
+
