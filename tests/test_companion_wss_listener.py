@@ -307,3 +307,101 @@ def test_remote_session_metadata_is_allowlisted_bounded_and_capped():
     ]
     assert _remote_session_metadata([None, "not-a-record"]) == []
     assert _remote_session_metadata("not-a-list") == []
+
+
+
+def test_wss_chat_send_is_explicitly_not_dispatched_even_with_scope(tmp_path, monkeypatch):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        credential = host.registry.issue(
+            device_id="phone-chat", workspace_id="ws-chat",
+            cwd=str(tmp_path), scopes={"chat.send"})
+        listener = _listener(tmp_path, host)
+        dispatch_attempts = []
+
+        # Guard against accidentally wiring chat execution into this transport.
+        monkeypatch.setattr(
+            host, "send_chat",
+            lambda **kwargs: dispatch_attempts.append(kwargs),
+            raising=False,
+        )
+
+        auth = {"type": "auth", "protocol": "1.0", "device_id": "phone-chat",
+                "credential": credential, "client_nonce": "nonce-chat-12345678"}
+        request = {"type": "chat.send", "request_id": "chat-1",
+                   "workspace_id": "ws-chat", "prompt": "hello",
+                   "session_id": "session-1"}
+
+        class Socket:
+            def __init__(self):
+                self.frames = iter([json.dumps(auth), json.dumps(request)])
+                self.sent = []
+            async def recv(self):
+                try:
+                    return next(self.frames)
+                except StopIteration:
+                    raise asyncio.TimeoutError()
+            async def send(self, data):
+                self.sent.append(json.loads(data))
+            async def close(self, **kwargs):
+                pass
+
+        ws = Socket()
+        with pytest.raises(asyncio.TimeoutError):
+            await listener._session(ws)
+
+        assert ws.sent[1] == {
+            "type": "error", "request_id": "chat-1", "code": "not_implemented"
+        }
+        assert dispatch_attempts == []
+
+    asyncio.run(run())
+
+
+def test_wss_rejects_sessions_list_without_scope_before_dispatch(tmp_path, monkeypatch):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        credential = host.registry.issue(
+            device_id="phone-no-sessions", workspace_id="ws-no-sessions",
+            cwd=str(tmp_path), scopes={"status"})
+        listener = _listener(tmp_path, host)
+        calls = []
+
+        def forbidden_list(cwd):
+            calls.append(cwd)
+            raise AssertionError("unauthorized request reached session listing")
+
+        monkeypatch.setattr(
+            "emrg.server.companion_wss_listener.Session.list_sessions",
+            forbidden_list,
+        )
+        auth = {"type": "auth", "protocol": "1.0",
+                "device_id": "phone-no-sessions", "credential": credential,
+                "client_nonce": "nonce-no-sessions-123"}
+        request = {"type": "sessions.list", "request_id": "list-denied",
+                   "workspace_id": "ws-no-sessions"}
+
+        class Socket:
+            def __init__(self):
+                self.frames = iter([json.dumps(auth), json.dumps(request)])
+                self.sent = []
+                self.closed = []
+            async def recv(self):
+                try:
+                    return next(self.frames)
+                except StopIteration:
+                    raise asyncio.TimeoutError()
+            async def send(self, data):
+                self.sent.append(json.loads(data))
+            async def close(self, **kwargs):
+                self.closed.append(kwargs)
+
+        ws = Socket()
+        await listener._session(ws)
+        assert [frame["type"] for frame in ws.sent] == ["auth.ok"]
+        assert ws.closed == [{"code": 1008, "reason": "Protocol rejected"}]
+        assert calls == []
+
+    asyncio.run(run())
