@@ -37,6 +37,8 @@ internal data class PairingState(
     val candidateFingerprint: String? = null,
     val pairedHost: PairedHost? = null,
     val errorCode: String? = null,
+    /** Opaque v2 transaction identifier from the QR descriptor. */
+    val candidatePairingId: String? = null,
 )
 
 internal sealed interface PairingAction {
