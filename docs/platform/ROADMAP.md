@@ -96,6 +96,7 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [ ] Windows clean-machine install/upgrade/reconnect/uninstall smoke.
 
 ## CI evidence
+- Run #94, commit `9ffb1bdb`: WSS listener disposal/callback-unregistration regression test passed on Ubuntu and Windows; Ubuntu **153 passed**, Windows **149 passed, 4 skipped**. This validates host-side companion security tests only, not Android live transport.
 - Run #129, commit `d7c6f71b9d996ff09b4795de13109893cbb73361`: connection status panel integration, APK assembly, JVM tests, lint and artifact upload passed.
 - Run #122, commit `9c9922f43ce325f3292ee82674be91a18f6e18e9`: Android debug APK assembly, JVM unit tests, lint and APK artifact upload all succeeded. It validates scanner startup error UI plus parser/reducer tests; it is not an Android instrumentation or live daemon pairing test.
 - Run #121, commit `02b3145927568a41ec58c6c28fdfb2fd5746dcf0`: same pipeline passed for scanner call-site opt-in fix.
