@@ -155,6 +155,13 @@ class CompanionHostService:
                 return False
             return self._pairings_v2.approve(pairing_id, approved=approved)
 
+    def cancel_pairing_v2(self, pairing_id: str) -> bool:
+        """Cancel one v2 transaction from the trusted local host UI."""
+        with self._lifecycle_lock:
+            if self._pairings_v2 is None:
+                return False
+            return self._pairings_v2.cancel(pairing_id)
+
     def redeem_pairing_v2(self, *, pairing_id: str, device_id: str,
                           challenge_id: str, signature: str) -> str:
         with self._lifecycle_lock:
