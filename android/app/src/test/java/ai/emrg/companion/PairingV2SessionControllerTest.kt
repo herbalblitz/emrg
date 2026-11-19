@@ -126,7 +126,7 @@ class PairingV2SessionControllerTest {
         assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
         assertEquals(2, transport.redeemCalls)
         assertEquals("a".repeat(64), store.values["host-credential"])
-        assertTrue(listener.failure == null)
+        assertEquals("host-credential", listener.paired?.credentialAlias)
     }
 
     @Test
