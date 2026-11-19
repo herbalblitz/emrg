@@ -132,3 +132,46 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
     with pytest.raises(ValueError, match="disabled"):
         host.request_pairing_v2(pairing_id=pending2["pairing_id"],
                                  device_id="other", public_key=public_text)
+
+def test_disable_serializes_with_concurrent_pairing_creation(tmp_path, monkeypatch):
+    import threading
+
+    host = CompanionHostService(tmp_path / "registry-race.json")
+    host.enable()
+    entered = threading.Event()
+    release = threading.Event()
+    original_begin = host.pairings.begin
+    created = []
+
+    def blocked_begin(**kwargs):
+        entered.set()
+        assert release.wait(timeout=3)
+        return original_begin(**kwargs)
+
+    monkeypatch.setattr(host.pairings, "begin", blocked_begin)
+
+    creator = threading.Thread(target=lambda: created.append(
+        host.begin_pairing(workspace_id="ws", cwd="/w", scopes={"status"})))
+    creator.start()
+    assert entered.wait(timeout=3)
+
+    disabled = threading.Event()
+
+    def disable_host():
+        host.disable()
+        disabled.set()
+
+    disabler = threading.Thread(target=disable_host)
+    disabler.start()
+    # disable must wait for the in-flight creation, then clear its transaction.
+    assert not disabled.wait(timeout=0.05)
+    release.set()
+    creator.join(timeout=3)
+    disabler.join(timeout=3)
+
+    assert not creator.is_alive()
+    assert not disabler.is_alive()
+    assert disabled.is_set()
+    assert len(created) == 1
+    assert host.enabled is False
+    assert host.pending_pairings() == []
