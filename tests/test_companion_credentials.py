@@ -14,6 +14,8 @@ def test_issue_verify_and_metadata_is_workspace_bound(tmp_path: Path):
     token = registry.issue(device_id="phone", workspace_id="ws-a", cwd="/work/a",
                            scopes={"chat.send", "sessions.list"})
     verified = registry.verify(device_id="phone", credential=token)
+    assert isinstance(verified["generation"], str) and verified["generation"]
+    verified.pop("generation")
     assert verified == {
         "device_id": "phone", "workspace_id": "ws-a", "cwd": "/work/a",
         "scopes": frozenset({"chat.send", "sessions.list"}),
