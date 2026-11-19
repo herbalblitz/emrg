@@ -260,3 +260,31 @@ These JVM tests do not substitute for physical-device Android Keystore validatio
 
 
 - The encrypted credential store also decodes decrypted bytes with a reporting UTF-8 decoder and re-applies the credential validity/512-byte checks on read. Malformed or out-of-contract stored plaintext now fails closed instead of being silently replacement-decoded.
+
+### Android Keystore Ed25519 implementation plan (2026-11-19)
+
+The Android device-key work remains a gated implementation, not a completed capability.
+The host contract currently verifies raw 32-byte Ed25519 public keys and 64-byte
+Ed25519 signatures. Android must produce exactly those bytes and sign the exact
+canonical challenge payload; a generic Java signature-provider success is not
+sufficient evidence of Android Keystore hardware/provider support.
+
+The key-manager implementation must therefore:
+
+- Probe the Android Keystore provider at runtime and attempt Ed25519 key-pair
+  generation using a per-host, non-exportable alias.
+- Verify that the generated public key can be exported in the host's expected
+  raw 32-byte representation without exporting private material.
+- Sign challenge bytes using the private key handle returned by the Keystore;
+  verify the resulting signature against the exported public key before use.
+- Persist only a stable alias and public metadata. Never persist private-key
+  bytes, use an unencrypted software fallback, or silently switch algorithms.
+- Treat unsupported algorithm/provider, invalidated key, signing failure, or
+  mismatched public-key encoding as a safe unsupported-device/pairing failure.
+- Add instrumentation coverage on physical/emulated API levels and representative
+  providers. JVM tests alone cannot prove Android Keystore behavior.
+
+The API-level compatibility boundary must be established by executing the
+instrumentation matrix, not inferred solely from `minSdk` or the availability of
+the JCA Ed25519 algorithm on the host JVM. Until that matrix passes, the Android
+pairing coordinator must not issue a v2 proof or claim the device is pairable.
