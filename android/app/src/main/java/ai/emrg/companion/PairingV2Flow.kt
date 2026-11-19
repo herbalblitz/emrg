@@ -15,8 +15,7 @@ internal interface PairingV2FrameExchange {
 internal interface PairingV2SessionTransport {
     val requestedScopes: Set<String>
     fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle
-    fun confirmHostApproval(challenge: PairingV2Challenge): Boolean
-    fun redeemAfterHostApproval(
+    fun redeem(
         challenge: PairingV2Challenge,
         listener: PairingV2FlowListener,
     ): PairingV2ExchangeHandle
@@ -44,13 +43,11 @@ internal class PairingV2Flow(
 ) : PairingV2SessionTransport {
     override val requestedScopes: Set<String> get() = client.requestedScopes
     private var acceptedChallenge: PairingV2Challenge? = null
-    private var hostApprovalConfirmed = false
     private var cachedRedeemFrame: JSONObject? = null
 
     @Synchronized
     override fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle {
         acceptedChallenge = null
-        hostApprovalConfirmed = false
         cachedRedeemFrame = null
         val request = try {
             client.createRequestFrame(pairingId)
@@ -60,6 +57,10 @@ internal class PairingV2Flow(
         }
         return exchange.exchange(endpoint, fingerprintSha256, request, object : PairingV2ExchangeListener {
             override fun onResponse(response: JSONObject) {
+                if (response.opt("type") == "pairing.error") {
+                    listener.onFailure("PAIRING_UNAVAILABLE")
+                    return
+                }
                 val challenge = try {
                     client.parseChallengeResponse(pairingId, response)
                 } catch (_: Exception) {
@@ -68,7 +69,6 @@ internal class PairingV2Flow(
                 }
                 synchronized(this@PairingV2Flow) {
                     acceptedChallenge = challenge
-                    hostApprovalConfirmed = false
                     cachedRedeemFrame = null
                 }
                 listener.onChallenge(challenge)
@@ -79,28 +79,17 @@ internal class PairingV2Flow(
     }
 
     /**
-     * Records the user's confirmation that approval was completed in the trusted host UI.
-     * The host still independently enforces approval; this flag is not proof to the server.
+     * Sends the signed proof for the accepted challenge. The host is the sole approval
+     * authority and returns only a generic unavailable response until its local approval.
+     * Repeated calls reuse the exact same signed frame for idempotent host redemption.
      */
-    @Synchronized
-    override fun confirmHostApproval(challenge: PairingV2Challenge): Boolean {
-        if (acceptedChallenge != challenge) return false
-        hostApprovalConfirmed = true
-        return true
-    }
-
-    /** Redeem is unavailable until the matching challenge has explicit host-approval confirmation. */
-    override fun redeemAfterHostApproval(
+    override fun redeem(
         challenge: PairingV2Challenge,
         listener: PairingV2FlowListener,
     ): PairingV2ExchangeHandle {
         val redeem = synchronized(this) {
             if (acceptedChallenge != challenge || challenge.pairingId != pairingId) {
                 listener.onFailure("PAIRING_TRANSACTION_MISMATCH")
-                return PairingV2ExchangeHandle { }
-            }
-            if (!hostApprovalConfirmed) {
-                listener.onFailure("HOST_APPROVAL_NOT_CONFIRMED")
                 return PairingV2ExchangeHandle { }
             }
             cachedRedeemFrame?.let { JSONObject(it.toString()) } ?: try {
@@ -113,6 +102,10 @@ internal class PairingV2Flow(
         }
         return exchange.exchange(endpoint, fingerprintSha256, redeem, object : PairingV2ExchangeListener {
             override fun onResponse(response: JSONObject) {
+                if (response.opt("type") == "pairing.error") {
+                    listener.onFailure("PAIRING_UNAVAILABLE")
+                    return
+                }
                 val credential = try {
                     client.parseCredentialResponse(pairingId, response)
                 } catch (_: Exception) {
