@@ -73,14 +73,24 @@ internal fun SecurePairingPanel() {
             }) { Text("Parse QR payload") }
             OutlinedTextField(
                 value = endpoint,
-                onValueChange = { endpoint = it },
+                onValueChange = {
+                    endpoint = it
+                    // A manually edited endpoint must not inherit a QR transaction ID.
+                    pairingId = null
+                    descriptorVersion = null
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Host endpoint (wss://)") },
                 singleLine = true
             )
             OutlinedTextField(
                 value = fingerprint,
-                onValueChange = { fingerprint = it },
+                onValueChange = {
+                    fingerprint = it
+                    // A manually edited pin invalidates the parsed QR transaction context.
+                    pairingId = null
+                    descriptorVersion = null
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("SHA-256 fingerprint (colon-separated)") },
                 singleLine = true
