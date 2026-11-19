@@ -110,6 +110,16 @@ class PairingDescriptorParserTest {
         assertEquals("INVALID_FIELD_TYPE", (PairingDescriptorParser.parse(fingerprintValue, 1000) as PairingDescriptorResult.Invalid).reason)
     }
 
+    @Test fun rejectsCredentialFieldAfterJsonEscapeDecoding() {
+        val json = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","\\u0074oken":"secret"}"""
+        assertEquals("CREDENTIAL_IN_DESCRIPTOR", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
+    }
+
+    @Test fun rejectsNonStringV2PairingId() {
+        val json = """{"version":2,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1100,"pairing_id":123}"""
+        assertEquals("INVALID_PAIRING_ID", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
+    }
+
     @Test fun rejectsDuplicateKeysAfterJsonEscapeDecoding() {
         val json = """{"version":1,"\u0076ersion":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1100}"""
         assertEquals("DUPLICATE_FIELD", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
