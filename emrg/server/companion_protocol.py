@@ -153,3 +153,44 @@ def encode_server_frame(frame: dict[str, Any]) -> bytes:
     if len(raw) > MAX_FRAME_BYTES:
         raise CompanionProtocolError("frame too large")
     return raw
+
+
+_PAIRING_V2_BASE64URL = {
+    "pairing_id": 43,       # 32 random bytes, unpadded URL-safe base64
+    "public_key": 43,       # 32-byte Ed25519 public key
+    "challenge_id": 22,     # 16 random bytes, unpadded URL-safe base64
+    "signature": 86,        # 64-byte Ed25519 signature
+}
+
+
+def validate_pairing_v2_frame(payload: str | bytes) -> dict[str, Any]:
+    """Validate one unauthenticated v2 pairing frame without changing v1 auth.
+
+    This parser is deliberately separate from validate_client_frame(): a future
+    listener must explicitly route pairing frames to a rate-limited pairing
+    handler and must never treat them as authenticated companion operations.
+    """
+    frame = _object(payload)
+    kind = frame.get("type")
+    if kind == "pairing.request":
+        allowed = {"type", "protocol", "pairing_id", "device_id", "public_key"}
+        required = ("pairing_id", "device_id", "public_key")
+    elif kind == "pairing.redeem":
+        allowed = {"type", "protocol", "pairing_id", "device_id",
+                   "challenge_id", "signature"}
+        required = ("pairing_id", "device_id", "challenge_id", "signature")
+    else:
+        raise CompanionProtocolError("unsupported pairing message")
+    _require_fields(frame, allowed)
+    if frame.get("protocol") != "2.0":
+        raise CompanionProtocolError("unsupported pairing protocol")
+    for name in required:
+        _required_string(frame, name, max_bytes=128 if name == "device_id" else 128)
+    for name, expected_length in _PAIRING_V2_BASE64URL.items():
+        if name in frame:
+            value = frame[name]
+            if (not isinstance(value, str) or len(value) != expected_length
+                    or any(char not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+                           for char in value)):
+                raise CompanionProtocolError("invalid pairing field")
+    return frame
