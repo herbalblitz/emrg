@@ -14,7 +14,7 @@ import secrets
 import threading
 import time
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 
 from cryptography.exceptions import InvalidSignature
@@ -110,6 +110,8 @@ class _PendingV2:
     approved: bool | None = None
     requested_scopes: frozenset[str] | None = None
     client_nonce: str | None = None
+    # Keep the issued bearer token only in bounded, short-lived transaction memory.
+    credential_token: str | None = field(default=None, repr=False)
 
 
 class PairingV2Transactions:
@@ -215,7 +217,8 @@ class PairingV2Transactions:
             self._purge(now)
             result = []
             for pairing_id, item in self._pending.items():
-                if item.device_id is None or item.public_key is None:
+                if (item.device_id is None or item.public_key is None
+                        or item.credential_token is not None):
                     continue
                 result.append({
                     "pairing_id": pairing_id,
@@ -272,10 +275,21 @@ class PairingV2Transactions:
                 public_key.verify(raw_signature, payload, ec.ECDSA(hashes.SHA256()))
             except (InvalidSignature, ValueError):
                 raise PairingV2Error("device proof rejected") from None
-            del self._pending[pairing_id]
-            workspace_id, cwd, scopes = item.workspace_id, item.cwd, set(item.requested_scopes or item.scopes)
-        return self._registry.issue(device_id=device_id, workspace_id=workspace_id,
-                                    cwd=cwd, scopes=scopes)
+
+            # A lost WSS response may cause the device to redeem again. Return
+            # the exact same token for this exact signed transaction; never
+            # issue a replacement token or rotate the device credential.
+            if item.credential_token is not None:
+                return item.credential_token
+
+            # Keep the transaction lock across issuance so concurrent retries
+            # cannot create multiple credentials. If issuance raises, the
+            # approved transaction remains retryable with the same proof.
+            token = self._registry.issue(
+                device_id=device_id, workspace_id=item.workspace_id,
+                cwd=item.cwd, scopes=set(item.requested_scopes or item.scopes))
+            item.credential_token = token
+            return token
 
     def cancel(self, pairing_id: str) -> bool:
         try:
@@ -283,7 +297,11 @@ class PairingV2Transactions:
         except PairingV2Error:
             return False
         with self._lock:
-            return self._pending.pop(pairing_id, None) is not None
+            item = self._pending.get(pairing_id)
+            if item is None or item.credential_token is not None:
+                return False
+            del self._pending[pairing_id]
+            return True
 
     def cancel_all(self) -> int:
         with self._lock:
