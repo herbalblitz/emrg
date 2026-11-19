@@ -3,7 +3,6 @@ package com.emrg.app.model
 import com.emrg.app.net.EmrgJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlinx.serialization.json.encodeToString
 
 class ModelsTest {
 
