@@ -20,7 +20,8 @@ internal class SecurePairingCoordinator(
                 return state
             }
             val credential = issuedCredential
-            if (credential.isNullOrBlank() ||
+            if (credential == null ||
+                !AndroidKeystoreCredentialStore.isValidCredential(credential) ||
                 !AndroidKeystoreCredentialStore.isValidCredentialAlias(action.host.credentialAlias)
             ) {
                 state = next.copy(phase = PairingPhase.FAILED, pairedHost = null, errorCode = "INVALID_CREDENTIAL")
