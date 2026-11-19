@@ -18,6 +18,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -64,8 +65,9 @@ internal fun SecurePairingPanel() {
         statusText = "Pairing transaction cleared."
     }
 
+    val latestHandle by rememberUpdatedState(activeHandle)
     DisposableEffect(Unit) {
-        onDispose { activeHandle?.cancel() }
+        onDispose { latestHandle?.cancel() }
     }
 
     fun createController(): PairingV2SessionController? {
