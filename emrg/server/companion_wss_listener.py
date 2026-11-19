@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 import unicodedata
 from typing import Any
 
@@ -30,6 +31,9 @@ from pathlib import Path
 _LOG = logging.getLogger(__name__)
 _MAX_REMOTE_SESSIONS = 200
 _SESSION_TEXT_LIMITS = {"session_id": 128, "created_at": 64, "updated_at": 64, "title": 256}
+_PAIRING_RATE_WINDOW_SECONDS = 60.0
+_PAIRING_RATE_MAX_ATTEMPTS = 10
+_PAIRING_RATE_MAX_PEERS = 1024
 
 
 def _safe_remote_text(value: str, limit: int) -> bool:
@@ -76,6 +80,7 @@ class CompanionWssListener:
         self._disposed = False
         self._loop: asyncio.AbstractEventLoop | None = None
         self._clients: set[Any] = set()
+        self._pairing_attempts: dict[str, list[float]] = {}
         self._host.add_state_callback(self._on_host_state)
 
     @property
@@ -193,10 +198,32 @@ class CompanionWssListener:
             self._active -= 1
             self._semaphore.release()
 
+    def _allow_pairing_attempt(self, websocket) -> bool:
+        """Bound unauthenticated pairing work per peer and cap limiter memory."""
+        address = getattr(websocket, "remote_address", None)
+        peer = str(address[0]) if isinstance(address, tuple) and address else "unknown"
+        now = time.monotonic()
+        attempts = [stamp for stamp in self._pairing_attempts.get(peer, [])
+                    if now - stamp < _PAIRING_RATE_WINDOW_SECONDS]
+        if len(attempts) >= _PAIRING_RATE_MAX_ATTEMPTS:
+            self._pairing_attempts[peer] = attempts
+            return False
+        if peer not in self._pairing_attempts and len(self._pairing_attempts) >= _PAIRING_RATE_MAX_PEERS:
+            oldest = min(self._pairing_attempts,
+                         key=lambda key: self._pairing_attempts[key][-1]
+                         if self._pairing_attempts[key] else 0.0)
+            del self._pairing_attempts[oldest]
+        attempts.append(now)
+        self._pairing_attempts[peer] = attempts
+        return True
+
     async def _handle_pairing_v2(self, websocket, frame: dict[str, Any]) -> None:
         """Handle one pinned-TLS pairing frame; approval remains host-local."""
         if not self._host.enabled or self._closing:
             await websocket.close(code=1008, reason="Companion disabled")
+            return
+        if not self._allow_pairing_attempt(websocket):
+            await websocket.close(code=1013, reason="Pairing rate limit")
             return
         try:
             if frame["type"] == "pairing.request":
