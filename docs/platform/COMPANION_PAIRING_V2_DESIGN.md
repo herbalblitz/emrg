@@ -164,3 +164,17 @@ Every transition is host-authoritative and atomic. Duplicate requests, approvals
 8. Only then enable pairing end-to-end behind an explicit opt-in feature flag.
 
 Until all gates pass, keep live pairing and Android chat transport disconnected. Do not dispatch `CredentialIssued` from local UI state, fabricate host approval, or add a credential to the QR descriptor.
+
+
+## Prototype implementation update (2026-11-19)
+
+The host-side v2 transaction core now has an isolated implementation in `emrg/server/companion_pairing_v2.py`:
+
+- Uses Ed25519 device public keys (32-byte raw keys) and 64-byte signatures.
+- Host creates a 256-bit opaque transaction ID; a device submits one public key and device ID for that transaction.
+- The host-local pending view exposes the device ID and SHA-256 public-key fingerprint for the approval decision; it does not expose private key material.
+- The signed canonical JSON challenge binds protocol version, transaction ID, challenge ID/nonce, device ID, public-key fingerprint, configured host identity, workspace, exact scopes, and transaction expiry.
+- Redemption verifies the Ed25519 proof and exact device/challenge binding, then consumes the transaction before issuing the credential.
+- Host service exposes local begin/pending/approve/reject operations and adapter-facing request/redeem methods. Disabling the service cancels v2 pending transactions.
+
+This is a transport-independent core only. The current WSS listener does not call these methods; QR v2 generation, TLS-certificate fingerprint plumbing, rate limiting at the new request endpoint, Android Keystore signing, and Windows/Android end-to-end integration remain gates. Do not describe v2 pairing as live until those pieces and CI are complete.
