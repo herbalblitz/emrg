@@ -112,6 +112,8 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 
 ## Pairing v2 host transaction core
 
+- [x] Host trusted-local pending v2 approval listing is bounded to display/decision metadata and SHA-256 public-key fingerprint; tests assert raw public key, client nonce, challenge bytes, and issued credential are not exposed, and redeemed transactions leave the pending queue. Companion security CI #182 passed on Ubuntu (210) and Windows (206 passed, 4 skipped).
+
 - [x] Transport-independent Ed25519 device-key-bound pairing transaction with host-local approval, signed challenge fields, one-time redemption, bounded lifetime and host-service lifecycle hooks.
 - [x] Unit tests cover approval gating, device/key proof binding, wrong-device and wrong-signature rejection, duplicate request/approval, expiry, cancellation and credential scope issuance.
 - [x] Added `tests/test_companion_pairing_v2.py` to the companion-security workflow's explicit pytest invocation; CI run [#111](https://github.com/herbalblitz/emrg/actions/runs/44447348538) passed with the initial five v2 tests, then CI run [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797) passed with all seven tests, including concurrent one-time redemption and the 32-entry pending-cap/cancel-all regression.
