@@ -13,6 +13,10 @@ internal interface PairingV2FrameExchange {
 }
 
 internal interface PairingV2SessionTransport {
+    val endpoint: String
+    val fingerprintSha256: String
+    val pairingId: String
+    val deviceId: String
     val requestedScopes: Set<String>
     fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle
     fun redeem(
@@ -35,12 +39,13 @@ internal interface PairingV2FlowListener {
  * SecurePairingCoordinator after a validated credential response.
  */
 internal class PairingV2Flow(
-    private val endpoint: String,
-    private val fingerprintSha256: String,
-    private val pairingId: String,
+    override val endpoint: String,
+    override val fingerprintSha256: String,
+    override val pairingId: String,
     private val client: PairingV2Client,
     private val exchange: PairingV2FrameExchange,
 ) : PairingV2SessionTransport {
+    override val deviceId: String get() = client.deviceId
     override val requestedScopes: Set<String> get() = client.requestedScopes
     private var acceptedChallenge: PairingV2Challenge? = null
     private var cachedRedeemFrame: JSONObject? = null
