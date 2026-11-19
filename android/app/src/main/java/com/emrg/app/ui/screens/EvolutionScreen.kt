@@ -24,15 +24,15 @@ fun EvolutionScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __count = remember { mutableStateOf(0) }
-    var count: Int
+        var count: Int = 0
         get() = __count.value
         set(value) { __count.value = value }
     val __records = remember { mutableStateOf(emptyList<com.emrg.app.model.EvolutionRecord>()) }
-    var records: List<com.emrg.app.model.EvolutionRecord>
+        var records: List<com.emrg.app.model.EvolutionRecord> = emptyList()
         get() = __records.value
         set(value) { __records.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -72,15 +72,15 @@ fun TasksScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __tasks = remember { mutableStateOf(emptyList<com.emrg.app.model.TaskInfo>()) }
-    var tasks: List<com.emrg.app.model.TaskInfo>
+        var tasks: List<com.emrg.app.model.TaskInfo> = emptyList()
         get() = __tasks.value
         set(value) { __tasks.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
     val __taskName = remember { mutableStateOf("") }
-    var taskName: String
+        var taskName: String = null
         get() = __taskName.value
         set(value) { __taskName.value = value }
 
@@ -137,11 +137,11 @@ fun SkillsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __skills = remember { mutableStateOf(emptyList<com.emrg.app.model.SkillInfo>()) }
-    var skills: List<com.emrg.app.model.SkillInfo>
+        var skills: List<com.emrg.app.model.SkillInfo> = emptyList()
         get() = __skills.value
         set(value) { __skills.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 

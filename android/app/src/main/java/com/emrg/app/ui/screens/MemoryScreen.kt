@@ -25,15 +25,15 @@ fun MemoryScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __memories = remember { mutableStateOf(emptyList<com.emrg.app.model.MemoryEntry>()) }
-    var memories: List<com.emrg.app.model.MemoryEntry>
+        var memories: List<com.emrg.app.model.MemoryEntry> = emptyList()
         get() = __memories.value
         set(value) { __memories.value = value }
     val __loading = remember { mutableStateOf(false) }
-    var loading: Boolean
+        var loading: Boolean = false
         get() = __loading.value
         set(value) { __loading.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -73,15 +73,15 @@ fun ModelsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __current = remember { mutableStateOf("") }
-    var current: String
+        var current: String = null
         get() = __current.value
         set(value) { __current.value = value }
     val __models = remember { mutableStateOf(emptyList<com.emrg.app.model.ModelInfo>()) }
-    var models: List<com.emrg.app.model.ModelInfo>
+        var models: List<com.emrg.app.model.ModelInfo> = emptyList()
         get() = __models.value
         set(value) { __models.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -121,23 +121,23 @@ fun RantScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __message = remember { mutableStateOf("") }
-    var message: String
+        var message: String = null
         get() = __message.value
         set(value) { __message.value = value }
     val __agent = remember { mutableStateOf("") }
-    var agent: String
+        var agent: String = null
         get() = __agent.value
         set(value) { __agent.value = value }
     val __submitting = remember { mutableStateOf(false) }
-    var submitting: Boolean
+        var submitting: Boolean = false
         get() = __submitting.value
         set(value) { __submitting.value = value }
     val __result = remember { mutableStateOf<Int?>(null) }
-    var result: Int?
+    var result: Int? = null
         get() = __result.value
         set(value) { __result.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 
