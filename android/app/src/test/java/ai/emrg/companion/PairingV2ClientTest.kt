@@ -67,7 +67,7 @@ class PairingV2ClientTest {
         val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
         val pairingId = b64(32)
         val challengeId = b64(16)
-        val request = client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
+        val request = client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }.also { activeClientNonce = it.getString("client_nonce") }
         assertEquals("pairing.request", request.getString("type"))
         assertEquals("2.0", request.getString("protocol"))
         assertEquals("P-256", request.getString("key_algorithm"))
@@ -94,7 +94,7 @@ class PairingV2ClientTest {
         val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
         val pairingId = b64(32)
         val challengeId = b64(16)
-        client.createRequestFrame(pairingId)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val raw = challenge(pairingId, challengeId, "other-device", keys.publicKeyDigest(), 1_700_000_100L)
         assertThrows(IllegalArgumentException::class.java) {
             client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(raw))
@@ -107,7 +107,7 @@ class PairingV2ClientTest {
         val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
         val pairingId = b64(32)
         val challengeId = b64(16)
-        client.createRequestFrame(pairingId)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val raw = challenge(pairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_699_999_999L)
         assertThrows(IllegalArgumentException::class.java) {
             client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(raw))
@@ -120,7 +120,7 @@ class PairingV2ClientTest {
         val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
         val pairingId = b64(32)
         val challengeId = b64(16)
-        client.createRequestFrame(pairingId)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val raw = challenge(pairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_700_000_181L)
         assertThrows(IllegalArgumentException::class.java) {
             client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(raw))
@@ -134,7 +134,7 @@ class PairingV2ClientTest {
         val activePairingId = b64(32)
         val otherPairingId = b64(32, seed = 3)
         val challengeId = b64(16)
-        client.createRequestFrame(activePairingId)
+        client.createRequestFrame(activePairingId).also { activeClientNonce = it.getString("client_nonce") }
         val raw = challenge(otherPairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
         assertThrows(IllegalArgumentException::class.java) {
             client.createRedeemFrame(otherPairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(raw))
@@ -176,7 +176,7 @@ class PairingV2ClientTest {
         val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
         val pairingId = b64(32)
         val challengeId = b64(16)
-        client.createRequestFrame(pairingId)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val raw = challenge(pairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
         val marker = "host-identity".toByteArray(Charsets.UTF_8)
         val offset = raw.indices.first { index ->
@@ -194,7 +194,7 @@ class PairingV2ClientTest {
         val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
         val pairingId = b64(32)
         val challengeId = b64(16)
-        client.createRequestFrame(pairingId)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val raw = challenge(pairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
             .toString(Charsets.UTF_8)
             .replace("\"protocol\":\"2.0\"", "\"protocol\":2.0")
@@ -210,7 +210,7 @@ class PairingV2ClientTest {
         val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
         val pairingId = b64(32)
         val challengeId = b64(16)
-        client.createRequestFrame(pairingId)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val wrongId = challenge(pairingId, b64(16, seed = 2), "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
         assertThrows(IllegalArgumentException::class.java) {
             client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(wrongId))
@@ -260,7 +260,7 @@ class PairingV2ClientTest {
         val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
         val pairingId = b64(32)
         val challengeId = b64(16)
-        client.createRequestFrame(pairingId)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val challengeBytes = challenge(
             pairingId, challengeId, "android-device-1",
             keys.publicKeyDigest(), 1_700_000_100L,
@@ -288,7 +288,7 @@ class PairingV2ClientTest {
     fun rejectsChallengeAndCredentialResponsesWithWrongBindingOrExtraFields() {
         val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
         val pairingId = b64(32)
-        client.createRequestFrame(pairingId)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val challengeResponse = org.json.JSONObject()
             .put("type", "pairing.challenge")
             .put("protocol", "2.0")
@@ -318,7 +318,7 @@ class PairingV2ClientTest {
     fun rejectsMalformedCredentialInCredentialResponse() {
         val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
         val pairingId = b64(32)
-        client.createRequestFrame(pairingId)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val response = org.json.JSONObject()
             .put("type", "pairing.credential")
             .put("protocol", "2.0")
