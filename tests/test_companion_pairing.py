@@ -46,6 +46,19 @@ def test_reject_and_cancel_are_terminal(tmp_path):
     assert not pairing.cancel(request2["pairing_id"])
 
 
+def test_local_decisions_reject_malformed_pairing_ids_and_non_boolean_choice(tmp_path):
+    pairing = make_pairing(tmp_path)
+    request = pairing.begin(workspace_id="ws", cwd="/w", scopes={"status"})
+    assert not pairing.approve([], approved=True)
+    assert not pairing.approve("x" * 129, approved=True)
+    assert not pairing.approve(request["pairing_id"], approved="yes")
+    assert not pairing.cancel([])
+    assert not pairing.cancel("x" * 129)
+    assert pairing.pending_requests()[0]["approved"] is None
+    assert pairing.approve(request["pairing_id"], approved=True)
+    assert not pairing.approve(request["pairing_id"], approved=False)
+
+
 def test_expiry_and_wrong_secret_attempt_limit(tmp_path):
     clock = FakeClock()
     pairing = make_pairing(tmp_path, clock)
