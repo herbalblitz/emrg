@@ -253,3 +253,11 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Commit `e2efde59` added tests proving concurrent redemption issues exactly one credential and the pending-transaction cap remains 32 with `cancel_all()` clearing the queue.
 - Companion security CI [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797) passed on that test commit: Ubuntu **172 passed**; Windows **168 passed, 4 skipped**. Both new tests and all seven tests in `test_companion_pairing_v2.py` passed on both platforms.
 - This remains host-side unit-test evidence; the v2 pairing flow is not yet wired to a live WSS endpoint or Android client.
+
+
+### Pairing v2 concurrency and capacity regression CI (2026-11-19)
+
+- Added a concurrent redemption test: eight simultaneous attempts against one approved v2 transaction must produce exactly one credential, which is then verified against the expected device, workspace and scopes.
+- Added pending-transaction capacity coverage: the 33rd pending request is rejected at the 32-transaction limit; cancel_all() clears the pending set and capacity becomes available again.
+- Companion security CI [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797) passed on commit `e2efde59653c`: Ubuntu **172 passed**; Windows **168 passed, 4 skipped**.
+- These results validate host-side pairing v2 transaction and protocol tests on both platforms. They do not validate live WSS pairing, trusted host UI, Android Keystore integration, or end-to-end pairing; those remain open.
