@@ -59,7 +59,12 @@ internal fun SecurePairingPanel() {
                     is PairingDescriptorResult.Valid -> {
                         endpoint = parsed.descriptor.endpoint
                         fingerprint = parsed.descriptor.fingerprintSha256
-                        state = reducePairingState(PairingState(), PairingAction.PairingQrReceived(endpoint, fingerprint))
+                        pairingId = parsed.descriptor.pairingId
+                        descriptorVersion = parsed.descriptor.version
+                        state = reducePairingState(
+                            PairingState(),
+                            PairingAction.PairingQrReceived(endpoint, fingerprint, pairingId),
+                        )
                     }
                     is PairingDescriptorResult.Invalid -> {
                         state = PairingState(phase = PairingPhase.FAILED, errorCode = parsed.reason)
