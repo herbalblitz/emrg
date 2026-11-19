@@ -165,7 +165,12 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Tests cover default-off behavior, enable/disable, pending invalidation, redeem rejection, and the prior cap/expiry tests. CI verification pending.
 
 
-### Companion default-off + listener bind policy
+### Companion default-off + WSS listener implementation
 - [x] Companion host service is disabled by default; enable is explicit, disable invalidates pending pairings, and disabled state gates pairing/authentication.
-- [x] Added a transport-free listener configuration guard: IP-literal only, no wildcard/multicast/reserved bind, ports restricted to 1024-65535, and bounded connection/handshake/idle/close settings.
-- [ ] Wire this policy into an actual WSS listener; no socket is created by these primitives. CI verification pending.
+- [x] Added a listener configuration guard: IP-literal only, no wildcard/multicast/reserved bind, ports restricted to 1024-65535, and bounded connection/handshake/idle/close settings.
+- [x] Wired the policy into a dedicated, opt-in TLS WSS listener; TLS context loads before bind, authentication is the first frame, and connection/frame/time limits are enforced.
+- [x] Implemented scoped `status` and read-only `sessions.list`; session paths come only from the approved credential record and returned metadata is allowlisted and bounded.
+- [x] Host disable and explicit stop close clients; disable/stop during asynchronous bind closes the late server rather than resurrecting the listener.
+- [x] Active connections revalidate revocation and credential generation on each request; remote `chat.send` remains explicitly unimplemented and is never dispatched.
+- [ ] Trusted local pairing/QR UI, Android live WSS integration, chat/task lifecycle, cancellation, tool approvals and end-to-end tests remain open.
+- [x] Cross-platform CI verified startup-race and metadata-bound regression tests: Ubuntu **150 passed**; Windows **146 passed, 4 skipped** in run `44438215551`.
