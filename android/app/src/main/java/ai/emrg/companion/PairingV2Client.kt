@@ -5,6 +5,9 @@ import java.security.KeyFactory
 import java.security.MessageDigest
 import java.security.interfaces.ECPublicKey
 import java.security.spec.X509EncodedKeySpec
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
+import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 /**
@@ -55,7 +58,11 @@ internal class PairingV2Client(
         val publicKey = publicKeyBytes
             ?: throw IllegalStateException("Pairing request must be created before redeem")
         val challenge = try {
-            JSONObject(rawChallenge.toString(Charsets.UTF_8))
+            val decoder = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+            val json = decoder.decode(ByteBuffer.wrap(rawChallenge)).toString()
+            JSONObject(json)
         } catch (_: Exception) {
             throw IllegalArgumentException("Pairing challenge is invalid")
         }
