@@ -23,6 +23,28 @@ from emrg.session import Session
 from pathlib import Path
 
 _LOG = logging.getLogger(__name__)
+_MAX_REMOTE_SESSIONS = 200
+_SESSION_TEXT_LIMITS = {"session_id": 128, "created_at": 64, "updated_at": 64, "title": 256}
+
+
+def _remote_session_metadata(records: object) -> list[dict[str, Any]]:
+    """Expose a bounded metadata allowlist; never forward local paths or raw meta."""
+    if not isinstance(records, list):
+        return []
+    safe: list[dict[str, Any]] = []
+    for record in records[:_MAX_REMOTE_SESSIONS]:
+        if not isinstance(record, dict):
+            continue
+        item: dict[str, Any] = {}
+        for key, limit in _SESSION_TEXT_LIMITS.items():
+            value = record.get(key)
+            if isinstance(value, str):
+                item[key] = value[:limit]
+        count = record.get("message_count")
+        if isinstance(count, int) and not isinstance(count, bool) and count >= 0:
+            item["message_count"] = count
+        safe.append(item)
+    return safe
 
 
 class CompanionWssListener:
@@ -161,6 +183,7 @@ class CompanionWssListener:
                 # credential record. Never accept a remote cwd/path override.
                 sessions = await asyncio.to_thread(
                     Session.list_sessions, Path(identity["cwd"]))
+                sessions = _remote_session_metadata(sessions)
                 response = {
                     "type": "sessions.result", "request_id": frame["request_id"],
                     "workspace_id": identity["workspace_id"], "sessions": sessions,
