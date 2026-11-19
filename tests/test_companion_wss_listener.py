@@ -657,7 +657,6 @@ def test_close_during_listener_start_prevents_late_bind_and_unregisters_callback
 
 def test_wss_pairing_v2_request_and_redeem_require_host_local_approval(tmp_path):
     import base64
-    import hashlib
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ec
 
@@ -729,7 +728,7 @@ def test_wss_pairing_v2_request_and_redeem_require_host_local_approval(tmp_path)
 
 def test_wss_pairing_v2_redeem_before_local_approval_fails_closed(tmp_path):
     import base64
-    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ec
 
     async def run():
@@ -765,8 +764,7 @@ def test_wss_pairing_v2_redeem_before_local_approval_fails_closed(tmp_path):
         challenge = request_socket.sent[0]
         raw_challenge = base64.urlsafe_b64decode(
             challenge["challenge"] + "=" * (-len(challenge["challenge"]) % 4))
-        signature = private_key.sign(raw_challenge, ec.ECDSA(
-            __import__("cryptography.hazmat.primitives.hashes", fromlist=["SHA256"]).SHA256()))
+        signature = private_key.sign(raw_challenge, ec.ECDSA(hashes.SHA256()))
         redeem_socket = Socket({
             "type": "pairing.redeem", "protocol": "2.0",
             "pairing_id": transaction["pairing_id"], "device_id": "android-v2",
