@@ -189,8 +189,8 @@ def validate_pairing_v2_frame(payload: str | bytes) -> dict[str, Any]:
     frame = _object(payload)
     kind = frame.get("type")
     if kind == "pairing.request":
-        allowed = {"type", "protocol", "pairing_id", "device_id", "key_algorithm", "public_key"}
-        required = ("pairing_id", "device_id", "key_algorithm", "public_key")
+        allowed = {"type", "protocol", "pairing_id", "device_id", "key_algorithm", "public_key", "requested_scopes", "client_nonce"}
+        required = ("pairing_id", "device_id", "key_algorithm", "public_key", "requested_scopes", "client_nonce")
     elif kind == "pairing.redeem":
         allowed = {"type", "protocol", "pairing_id", "device_id",
                    "challenge_id", "signature"}
@@ -216,6 +216,15 @@ def validate_pairing_v2_frame(payload: str | bytes) -> dict[str, Any]:
             raise CompanionProtocolError("invalid pairing field")
     if kind == "pairing.request":
         if not _decode_canonical_base64url(frame["public_key"], min_bytes=80, max_bytes=256):
+            raise CompanionProtocolError("invalid pairing field")
+        scopes = frame.get("requested_scopes")
+        allowed_scopes = {"status", "sessions.list", "chat.send"}
+        if (not isinstance(scopes, list) or not 1 <= len(scopes) <= 3
+                or any(not isinstance(scope, str) or scope not in allowed_scopes for scope in scopes)
+                or len(set(scopes)) != len(scopes)):
+            raise CompanionProtocolError("invalid pairing field")
+        nonce = frame.get("client_nonce")
+        if not _decode_canonical_base64url(nonce, min_bytes=16, max_bytes=64):
             raise CompanionProtocolError("invalid pairing field")
     if kind == "pairing.redeem":
         if not _decode_canonical_base64url(frame["signature"], min_bytes=64, max_bytes=80):
