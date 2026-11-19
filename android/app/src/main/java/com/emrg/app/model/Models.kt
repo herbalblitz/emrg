@@ -1,10 +1,13 @@
 package com.emrg.app.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * The app's own types. Everything that crosses the wire stays a `JsonObject`
  * in [com.emrg.app.net.GatewayClient]; these are the screens' vocabulary.
  */
 
+@Serializable
 data class HostProfile(
     val id: String,
     val name: String,

@@ -6,6 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 
 class GatewayProtocolTest {
@@ -45,7 +46,7 @@ class GatewayProtocolTest {
 
     @Test
     fun daemon_frame_has_no_rid() {
-        val frame = GatewayProtocol.daemon("task", jsonOf("prompt" to "hi"))
+        val frame = GatewayProtocol.daemon("task", jsonOf("prompt" to JsonPrimitive("hi")))
         assertEquals("task", frame["type"]!!.jsonPrimitive.content)
         assertTrue(frame["rid"] == null)
     }
