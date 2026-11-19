@@ -144,6 +144,15 @@ class PairingV2SessionControllerTest {
         assertEquals("CREDENTIAL_STORAGE_FAILED", listener.failure)
         assertTrue(listener.paired == null)
         assertTrue(store.values.isEmpty())
+
+        // The host already issued this credential; a transient local write failure
+        // must not force the user to restart pairing or obtain a second challenge.
+        store.failWrite = false
+        controller.redeemChallenge(listener)
+
+        assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
+        assertEquals("host-credential", listener.paired?.credentialAlias)
+        assertEquals("a".repeat(64), store.values["host-credential"])
     }
 
 
