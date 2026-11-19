@@ -13,6 +13,13 @@ import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
+/** A validated challenge envelope returned by the dedicated host WSS endpoint. */
+internal data class PairingV2Challenge(
+    val pairingId: String,
+    val challengeId: String,
+    val encodedChallenge: String,
+)
+
 /**
  * Builds the device-key-bound Pairing v2 request and redeem frames.
  *
@@ -54,6 +61,46 @@ internal class PairingV2Client(
             .put("device_id", deviceId)
             .put("key_algorithm", KEY_ALGORITHM)
             .put("public_key", encodedPublicKey)
+    }
+
+    /** Validate the host's challenge envelope before interpreting its signed payload. */
+    @Synchronized
+    fun parseChallengeResponse(pairingId: String, response: JSONObject): PairingV2Challenge {
+        require(activePairingId == pairingId && publicKeyBytes != null) {
+            "Pairing request does not match this transaction"
+        }
+        require(response.length() == 5 &&
+            response.opt("type") == "pairing.challenge" &&
+            response.opt("protocol") == "2.0" &&
+            response.opt("pairing_id") == pairingId &&
+            response.opt("challenge_id") is String &&
+            response.opt("challenge") is String
+        ) { "Pairing challenge response is invalid" }
+        val challengeId = response.getString("challenge_id")
+        requireCanonicalBase64Url(challengeId, 16, "challenge id")
+        val encodedChallenge = response.getString("challenge")
+        decodeCanonicalBase64Url(encodedChallenge, 1, MAX_CHALLENGE_BYTES)
+        return PairingV2Challenge(pairingId, challengeId, encodedChallenge)
+    }
+
+    /** Accept a credential only when the response is bound to this device and transaction. */
+    @Synchronized
+    fun parseCredentialResponse(pairingId: String, response: JSONObject): String {
+        require(activePairingId == pairingId) {
+            "Credential response does not match this transaction"
+        }
+        require(response.length() == 5 &&
+            response.opt("type") == "pairing.credential" &&
+            response.opt("protocol") == "2.0" &&
+            response.opt("pairing_id") == pairingId &&
+            response.opt("device_id") == deviceId &&
+            response.opt("credential") is String
+        ) { "Pairing credential response is invalid" }
+        val credential = response.getString("credential")
+        require(AndroidKeystoreCredentialStore.isValidCredential(credential)) {
+            "Pairing credential is invalid"
+        }
+        return credential
     }
 
     @Synchronized
