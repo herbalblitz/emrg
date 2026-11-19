@@ -332,8 +332,6 @@ class PairingV2ClientTest {
         }
     }
 
-}
-
 
     @Test
     fun refusesChallengeSignedForDifferentQrPinnedHostIdentity() {
@@ -358,3 +356,4 @@ class PairingV2ClientTest {
             )
         }
     }
+}
