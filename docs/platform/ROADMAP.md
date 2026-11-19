@@ -238,3 +238,10 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - The signed Ed25519 challenge now includes a wall-clock `expires_at` value, as well as host identity, device ID, key fingerprint, workspace, and exact scopes. Transaction enforcement still uses a monotonic host clock to avoid wall-clock changes extending the local TTL.
 - Companion security CI #104 passed on code commit `8550af1b`: Ubuntu 157 passed; Windows 153 passed, 4 skipped.
 - Companion security CI #105 passed on test commit `7d2aad8d`: Ubuntu 157 passed; Windows 153 passed, 4 skipped. The added regression test checks that host identity and expiry are included in the signed challenge.
+
+
+### Pairing v2 CI coverage correction (2026-11-19)
+
+- The companion-security workflow's path filter already matched `tests/test_companion_pairing_v2.py`, but its explicit pytest command omitted that file. Added the v2 test module to the Ubuntu/Windows invocation.
+- The new workflow commit will trigger fresh cross-platform verification; earlier green runs must not be treated as having executed this test module.
+- Pairing v2 remains a transport-independent host primitive. No live WSS pairing endpoint or Android v2 integration is claimed.
