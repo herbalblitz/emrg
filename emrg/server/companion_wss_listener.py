@@ -63,6 +63,7 @@ class CompanionWssListener:
         self._semaphore = asyncio.Semaphore(config.max_connections)
         self._active = 0
         self._closing = False
+        self._disposed = False
         self._loop: asyncio.AbstractEventLoop | None = None
         self._clients: set[Any] = set()
         self._host.add_state_callback(self._on_host_state)
@@ -76,6 +77,8 @@ class CompanionWssListener:
         return self._active
 
     async def start(self) -> None:
+        if self._disposed:
+            raise RuntimeError("companion listener has been disposed")
         if self.running or self._starting:
             raise RuntimeError("companion listener already running or starting")
         if not self._host.enabled:
@@ -112,6 +115,16 @@ class CompanionWssListener:
         """Stop accepting, close clients, and wait boundedly for handlers."""
         await self._shutdown(code=1001, reason="Listener stopped")
         self._loop = None
+
+    async def close(self) -> None:
+        """Permanently dispose this listener and unregister its host callback."""
+        if self._disposed:
+            return
+        self._disposed = True
+        try:
+            await self.stop()
+        finally:
+            self._host.remove_state_callback(self._on_host_state)
 
     async def _shutdown(self, *, code: int, reason: str) -> None:
         server, self._server = self._server, None
