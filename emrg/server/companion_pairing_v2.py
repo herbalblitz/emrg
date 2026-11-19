@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import secrets
 import threading
 import time
@@ -24,6 +25,8 @@ PAIRING_V2_TTL_SECONDS = 180
 PAIRING_V2_ID_BYTES = 32
 ED25519_PUBLIC_KEY_BYTES = 32
 ED25519_SIGNATURE_BYTES = 64
+_BASE64URL_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+_DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 class PairingV2Error(ValueError):
@@ -43,15 +46,29 @@ def _text(value: object, limit: int, error: str) -> str:
 
 
 def _decode(value: object, expected: int, error: str) -> bytes:
-    if not isinstance(value, str) or not value or len(value) > 256:
+    encoded_length = (expected * 8 + 5) // 6
+    if (not isinstance(value, str) or len(value) != encoded_length
+            or not _BASE64URL_RE.fullmatch(value)):
         raise PairingV2Error(error)
     try:
-        raw = base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+        raw = base64.b64decode(
+            value + "=" * (-len(value) % 4), altchars=b"-_", validate=True)
     except (ValueError, TypeError):
         raise PairingV2Error(error) from None
-    if len(raw) != expected or _encode(raw) != value.rstrip('='):
+    if len(raw) != expected or _encode(raw) != value:
         raise PairingV2Error(error)
     return raw
+
+
+def _device_id(value: object) -> str:
+    if not isinstance(value, str) or not _DEVICE_ID_RE.fullmatch(value):
+        raise PairingV2Error("invalid device")
+    return value
+
+
+def _pairing_id(value: object) -> str:
+    _decode(value, PAIRING_V2_ID_BYTES, "pairing unavailable")
+    return value
 
 
 def _encode(value: bytes) -> str:
@@ -106,8 +123,8 @@ class PairingV2Transactions:
 
     def request(self, *, pairing_id: str, device_id: str,
                 public_key: str) -> dict[str, str]:
-        _text(pairing_id, 128, "pairing unavailable")
-        _text(device_id, 128, "invalid device")
+        _pairing_id(pairing_id)
+        _device_id(device_id)
         raw_key = _decode(public_key, ED25519_PUBLIC_KEY_BYTES, "invalid device key")
         now = self._clock()
         with self._lock:
@@ -165,7 +182,7 @@ class PairingV2Transactions:
 
     def approve(self, pairing_id: str, *, approved: bool) -> bool:
         try:
-            _text(pairing_id, 128, "pairing unavailable")
+            _pairing_id(pairing_id)
         except PairingV2Error:
             return False
         if not isinstance(approved, bool):
@@ -182,9 +199,9 @@ class PairingV2Transactions:
 
     def redeem(self, *, pairing_id: str, device_id: str,
                challenge_id: str, signature: str) -> str:
-        _text(pairing_id, 128, "pairing unavailable")
-        _text(device_id, 128, "invalid device")
-        _text(challenge_id, 128, "invalid challenge")
+        _pairing_id(pairing_id)
+        _device_id(device_id)
+        _decode(challenge_id, 16, "invalid challenge")
         raw_signature = _decode(signature, ED25519_SIGNATURE_BYTES, "invalid proof")
         with self._lock:
             self._purge(self._clock())
