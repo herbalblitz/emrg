@@ -178,3 +178,10 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Cross-platform CI verified startup-race and metadata-bound regression tests: Ubuntu **150 passed**; Windows **146 passed, 4 skipped** in run `44438215551`.
 
 - [x] Follow-up WSS lifecycle regression CI run `44438531074` passed on both platforms after adding explicit-stop-during-bind and concurrent-start tests: Ubuntu **152 passed**; Windows **148 passed, 4 skipped**.
+
+
+### Android Companion authentication gate verification (2026-11-19)
+- [x] Android WSS client rejects application frames before host authentication, rejects repeated authentication-control frames after authentication, and rejects missing/null frame types in either state.
+- [x] Android Companion CI run #191 passed on commit `fdd5d1bb`: debug APK assembly, JVM unit tests, lint and debug APK artifact upload.
+- [x] Recorded the client-side security gate and its limitations in `CLIENT_PROTOCOL_CONTRACT.md` (documentation commit `85732af9`).
+- [ ] Still required before usable remote Companion: real host-approved pairing/credential issuance flow, Android pairing coordinator + encrypted credential-store integration, live WSS connection/UI lifecycle, host protocol compatibility/negotiation, daemon chat/task bridge, cancellation and tool-approval lifecycle, and end-to-end tests. The current demo chat remains offline and must not be presented as connected.
