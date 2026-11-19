@@ -82,7 +82,8 @@ internal fun reducePairingState(state: PairingState, action: PairingAction): Pai
             if (!isSecurePairingEndpoint(action.endpoint) ||
                 !isSha256Fingerprint(action.fingerprintSha256) || !validPairingId
             ) {
-                state.copy(phase = PairingPhase.FAILED, errorCode = "INVALID_PAIRING_DESCRIPTOR")
+                // Invalid input starts a fresh failed transaction; never retain a prior host or QR ID.
+                PairingState(phase = PairingPhase.FAILED, errorCode = "INVALID_PAIRING_DESCRIPTOR")
             } else {
                 PairingState(
                     phase = PairingPhase.AWAITING_HOST_VERIFICATION,
