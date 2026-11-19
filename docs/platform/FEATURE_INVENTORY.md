@@ -108,3 +108,11 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 
 - [x] Active WSS device sessions revalidate the authenticated device's current registry authorization before each request; revocation and credential rotation invalidate existing connections, and registry read failures fail closed. Regression tests cover credential rotation on an already-open socket.
 - [x] WSS session listing returns only bounded, allowlisted metadata; local cwd, transcripts, and arbitrary meta fields are excluded.
+
+
+## Pairing v2 host transaction core
+
+- [x] Transport-independent Ed25519 device-key-bound pairing transaction with host-local approval, signed challenge fields, one-time redemption, bounded lifetime and host-service lifecycle hooks.
+- [x] Unit tests cover approval gating, device/key proof binding, wrong-device and wrong-signature rejection, duplicate request/approval, expiry, cancellation and credential scope issuance.
+- [x] Added `tests/test_companion_pairing_v2.py` to the companion-security workflow's explicit pytest invocation on Ubuntu and Windows; CI result for this inclusion is pending.
+- [ ] WSS request/redeem adapter, trusted local approval UI, Android private-key proof/credential persistence integration and end-to-end pairing remain unimplemented.
