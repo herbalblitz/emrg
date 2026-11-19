@@ -102,4 +102,5 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Listener configuration validation rejects hostname/DNS inputs, wildcard binds, multicast/reserved addresses, privileged/out-of-range ports, and unbounded resource/timeout settings.
 - [x] Dedicated opt-in WSS listener binds only after explicit host enable; TLS context loads before bind, frame/connection/timeouts bounded, authentication required as first frame, and stop closes clients.
 - [x] Host-service disable lifecycle observer stops the listener, closes active WSS clients and invalidates pending pairings; transport tests cover auth + scoped status and disable shutdown.
-- [ ] Chat/session dispatch into daemon runtime, UI pairing/QR, Android live transport and full end-to-end remain open.
+- [x] Read-only `sessions.list` WSS dispatch uses the approved credential's stored workspace path (never a client-supplied cwd), requires the `sessions.list` scope and returns correlated session metadata; test covers workspace binding.
+- [ ] Chat dispatch into daemon runtime, UI pairing/QR, Android live transport and full end-to-end remain open.
