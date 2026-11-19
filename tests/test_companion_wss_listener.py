@@ -953,7 +953,7 @@ def test_wss_pairing_v2_request_and_redeem_are_one_frame_local_approval_only(tmp
             device_id="android-v2", credential=credential_response["credential"]
         )
         assert identity["workspace_id"] == "approved-workspace"
-        assert identity["scopes"] == frozenset({"status", "sessions.list")}
+        assert identity["scopes"] == frozenset({"status", "sessions.list"})}
         assert host.pending_pairings_v2() == []
 
     asyncio.run(run())
