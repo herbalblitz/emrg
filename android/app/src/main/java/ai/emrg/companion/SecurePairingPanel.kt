@@ -156,7 +156,7 @@ internal fun SecurePairingPanel() {
                 if (!isCurrentTransaction()) return@post
                 busy = false
                 statusText = if (safeCode == "PAIRING_UNAVAILABLE") {
-                    "Host has not approved yet (or pairing is unavailable). You can retry; the signed proof is reused."
+                    "Host has not approved yet (or pairing is unavailable). You can retry; the original pairing request and signed proof are reused."
                 } else {
                     "Pairing failed: $safeCode"
                 }
