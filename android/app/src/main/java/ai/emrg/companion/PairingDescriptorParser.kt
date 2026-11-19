@@ -24,6 +24,42 @@ internal object PairingDescriptorParser {
     private val v2Fields = v1Fields + "pairing_id"
     private val forbiddenCredentialFields = setOf("credential", "token", "secret", "password", "private_key", "authorization")
 
+    /** Reject duplicate top-level names before JSONObject silently overwrites them. */
+    private fun hasDuplicateTopLevelKeys(payload: String): Boolean {
+        var index = 0
+        var depth = 0
+        val keys = HashSet<String>()
+        while (index < payload.length) {
+            when (payload[index].code) {
+                123 -> { depth++; if (depth == 1) keys.clear(); index++ }
+                125 -> { depth--; index++ }
+                34 -> {
+                    val start = index
+                    index++
+                    var escaped = false
+                    while (index < payload.length) {
+                        val ch = payload[index++]
+                        if (escaped) escaped = false
+                        else if (ch.code == 92) escaped = true
+                        else if (ch.code == 34) break
+                    }
+                    if (depth == 1) {
+                        var next = index
+                        while (next < payload.length && payload[next].isWhitespace()) next++
+                        if (next < payload.length && payload[next] == ':') {
+                            val key = try {
+                                JSONObject("{" + payload.substring(start, index) + ":null}").keys().next()
+                            } catch (_: Exception) { return true }
+                            if (!keys.add(key)) return true
+                        }
+                    }
+                }
+                else -> index++
+            }
+        }
+        return false
+    }
+
     private fun isCanonicalPairingId(value: String): Boolean {
         if (!value.matches(Regex("[A-Za-z0-9_-]{43}"))) return false
         return try {
@@ -38,6 +74,7 @@ internal object PairingDescriptorParser {
     fun parse(payload: String, nowEpochSeconds: Long): PairingDescriptorResult {
         if (payload.length !in 1..MAX_PAYLOAD_CHARS) return PairingDescriptorResult.Invalid("INVALID_LENGTH")
         return try {
+            if (hasDuplicateTopLevelKeys(payload)) return PairingDescriptorResult.Invalid("DUPLICATE_FIELD")
             val json = JSONObject(payload)
             val versionValue = json.opt("version")
             if (versionValue !is Number || !versionValue.toDouble().isFinite() ||
@@ -51,8 +88,13 @@ internal object PairingDescriptorParser {
                 if (key.lowercase() in forbiddenCredentialFields) return PairingDescriptorResult.Invalid("CREDENTIAL_IN_DESCRIPTOR")
                 if (key !in allowedFields) return PairingDescriptorResult.Invalid("UNSUPPORTED_FIELD")
             }
-            val endpoint = json.optString("endpoint", "").trim()
-            val fingerprint = json.optString("fingerprint_sha256", "").trim()
+            val endpointValue = json.opt("endpoint")
+            val fingerprintValue = json.opt("fingerprint_sha256")
+            if (endpointValue !is String || fingerprintValue !is String) {
+                return PairingDescriptorResult.Invalid("INVALID_FIELD_TYPE")
+            }
+            val endpoint = endpointValue.trim()
+            val fingerprint = fingerprintValue.trim()
             if (!isSecurePairingEndpoint(endpoint)) return PairingDescriptorResult.Invalid("INVALID_ENDPOINT")
             if (!isSha256Fingerprint(fingerprint)) return PairingDescriptorResult.Invalid("INVALID_FINGERPRINT")
             if (!json.has("expires_at")) return PairingDescriptorResult.Invalid("MISSING_EXPIRY")
