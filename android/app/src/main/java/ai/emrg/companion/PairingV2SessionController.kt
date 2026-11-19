@@ -127,7 +127,7 @@ internal class PairingV2SessionController(
                     if (current.phase == PairingPhase.PAIRED) {
                         if (current.pairedHost != host) {
                             listener.onFailure("PAIRING_TRANSACTION_MISMATCH")
-                            return@onCredential
+                            return
                         }
                         current
                     } else {
