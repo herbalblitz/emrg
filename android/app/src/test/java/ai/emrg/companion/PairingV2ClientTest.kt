@@ -251,4 +251,80 @@ class PairingV2ClientTest {
         }
     }
 
+    @Test
+    fun validatesChallengeAndCredentialResponseTransactionBindings() {
+        val keys = FakeDeviceKeys()
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val pairingId = b64(32)
+        val challengeId = b64(16)
+        client.createRequestFrame(pairingId)
+        val challengeBytes = challenge(
+            pairingId, challengeId, "android-device-1",
+            keys.publicKeyDigest(), 1_700_000_100L,
+        )
+        val response = org.json.JSONObject()
+            .put("type", "pairing.challenge")
+            .put("protocol", "2.0")
+            .put("pairing_id", pairingId)
+            .put("challenge_id", challengeId)
+            .put("challenge", Base64.getUrlEncoder().withoutPadding().encodeToString(challengeBytes))
+        val parsed = client.parseChallengeResponse(pairingId, response)
+        assertEquals(pairingId, parsed.pairingId)
+        assertEquals(challengeId, parsed.challengeId)
+
+        val credentialResponse = org.json.JSONObject()
+            .put("type", "pairing.credential")
+            .put("protocol", "2.0")
+            .put("pairing_id", pairingId)
+            .put("device_id", "android-device-1")
+            .put("credential", "host-scoped-credential")
+        assertEquals("host-scoped-credential", client.parseCredentialResponse(pairingId, credentialResponse))
+    }
+
+    @Test
+    fun rejectsChallengeAndCredentialResponsesWithWrongBindingOrExtraFields() {
+        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
+        val pairingId = b64(32)
+        client.createRequestFrame(pairingId)
+        val challengeResponse = org.json.JSONObject()
+            .put("type", "pairing.challenge")
+            .put("protocol", "2.0")
+            .put("pairing_id", b64(32, seed = 8))
+            .put("challenge_id", b64(16))
+            .put("challenge", b64(96))
+        assertThrows(IllegalArgumentException::class.java) {
+            client.parseChallengeResponse(pairingId, challengeResponse)
+        }
+
+        val credentialResponse = org.json.JSONObject()
+            .put("type", "pairing.credential")
+            .put("protocol", "2.0")
+            .put("pairing_id", pairingId)
+            .put("device_id", "another-device")
+            .put("credential", "credential")
+        assertThrows(IllegalArgumentException::class.java) {
+            client.parseCredentialResponse(pairingId, credentialResponse)
+        }
+        credentialResponse.put("device_id", "android-device-1").put("unexpected", true)
+        assertThrows(IllegalArgumentException::class.java) {
+            client.parseCredentialResponse(pairingId, credentialResponse)
+        }
+    }
+
+    @Test
+    fun rejectsMalformedCredentialInCredentialResponse() {
+        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
+        val pairingId = b64(32)
+        client.createRequestFrame(pairingId)
+        val response = org.json.JSONObject()
+            .put("type", "pairing.credential")
+            .put("protocol", "2.0")
+            .put("pairing_id", pairingId)
+            .put("device_id", "android-device-1")
+            .put("credential", " ")
+        assertThrows(IllegalArgumentException::class.java) {
+            client.parseCredentialResponse(pairingId, response)
+        }
+    }
+
 }
