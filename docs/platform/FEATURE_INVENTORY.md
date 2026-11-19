@@ -165,3 +165,11 @@ Not yet complete:
 Verification: Android CI run `44503538472` on commit `7df4eeb924e7a36e55b653e4ab77ddefa4a7c6de` passed APK assembly, JVM unit tests, lint, and APK artifact upload.
 
 Still not verified: physical-device Android Keystore behavior, a real Windows-host QR/approval/WSS/credential end-to-end flow, and live status/session-list UI operations. The current panel requests only `status`; chat sending and tool execution are not enabled by this work. A successful CI build is not evidence of device or cross-platform runtime validation.
+
+
+### Android pairing retry and callback lifecycle hardening (2026-11-19)
+
+- Pairing challenge retries now retransmit the exact original request frame and client nonce; the host returns the original challenge only for an exact match.
+- The pairing panel ignores callbacks queued by an older QR transaction after reset or rescan, preventing stale network responses from replacing the current UI state.
+- Android workflow run `44508660928` passed APK assembly, unit tests, lint, and artifact upload for the retry-frame change. The callback-isolation change is being validated in a separate workflow run.
+- Remaining validation: physical Android Keystore/device test and live Windows-host pairing end-to-end test.
