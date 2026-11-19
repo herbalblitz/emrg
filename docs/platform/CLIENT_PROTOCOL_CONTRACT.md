@@ -231,3 +231,8 @@ Chat dispatch, cancellation, tool approvals, filesystem operations, pairing UI/Q
 
 - Before dispatching each authenticated WSS request, the host checks that the device remains present, non-revoked, and bound to the same workspace, cwd and scopes as at authentication.
 - Revoking a device or rotating/replacing its credential invalidates already-open WSS sessions on their next request. Each new credential issuance stores a fresh opaque generation marker; the authenticated identity carries that marker internally, and active-session checks compare it even when workspace, cwd and scopes remain unchanged. Older registry entries without this marker remain compatible through a rotation-sensitive value derived from their existing salt and verifier. Registry read/validation errors fail closed. This is request-boundary enforcement; it does not interrupt an idle socket until it next sends a request (or the listener is otherwise stopped).
+
+
+### Remote session metadata boundary
+
+The WSS `sessions.list` response does not forward raw session metadata. It exposes only a bounded allowlist (`session_id`, timestamps, title, and non-negative message count), truncates text fields, and caps the result at 200 entries. Local paths, transcript content, and arbitrary metadata keys are excluded.
