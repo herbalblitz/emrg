@@ -232,3 +232,22 @@ def test_wss_rejects_existing_identity_after_credential_rotation(tmp_path):
     host.registry.issue(device_id="phone-rotate", workspace_id="ws-rotate",
                         cwd=str(tmp_path), scopes={"sessions.list"})
     assert not host.is_identity_current(identity)
+
+
+
+def test_active_identity_check_fails_closed_when_registry_unavailable(tmp_path, monkeypatch):
+    host = CompanionHostService(tmp_path / "registry.json")
+    host.enable()
+    host.registry.issue(device_id="phone-registry", workspace_id="ws-registry",
+                        cwd=str(tmp_path), scopes={"status"})
+
+    def unavailable():
+        from emrg.server.companion_credentials import CredentialRegistryError
+        raise CredentialRegistryError("registry unavailable")
+
+    monkeypatch.setattr(host.registry, "_read", unavailable)
+    identity = {
+        "device_id": "phone-registry", "workspace_id": "ws-registry",
+        "cwd": str(tmp_path), "scopes": frozenset({"status"}),
+    }
+    assert not host.is_identity_current(identity)
