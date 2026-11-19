@@ -156,3 +156,12 @@ Not yet complete:
 - QR scanner/panel is not wired to the controller.
 - No physical-device Android Keystore validation or Android ↔ Windows end-to-end pairing has been completed.
 - No live authenticated status/session-list transport is claimed; remote chat/tool execution remains unavailable.
+
+
+## Pairing v2 UI integration status (2026-11-19)
+
+`SecurePairingPanel.kt` now connects the QR camera/paste flow to the v2 descriptor parser and `PairingV2SessionController`. It presents the endpoint and host SHA-256 fingerprint for explicit confirmation, then drives the challenge, signed proof, manual retry, and paired callback lifecycle. The active exchange is cancelled when the panel leaves composition. The host's trusted-local approval remains authoritative.
+
+Verification: Android CI run `44503538472` on commit `7df4eeb924e7a36e55b653e4ab77ddefa4a7c6de` passed APK assembly, JVM unit tests, lint, and APK artifact upload.
+
+Still not verified: physical-device Android Keystore behavior, a real Windows-host QR/approval/WSS/credential end-to-end flow, and live status/session-list UI operations. The current panel requests only `status`; chat sending and tool execution are not enabled by this work. A successful CI build is not evidence of device or cross-platform runtime validation.
