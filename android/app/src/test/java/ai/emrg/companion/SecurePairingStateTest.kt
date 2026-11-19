@@ -26,6 +26,34 @@ class SecurePairingStateTest {
     }
 
     @Test
+    fun preservesCanonicalV2PairingIdThroughHostIdentityVerification() {
+        val pairingId = java.util.Base64.getUrlEncoder().withoutPadding()
+            .encodeToString(ByteArray(32) { it.toByte() })
+        val candidate = reducePairingState(
+            PairingState(),
+            PairingAction.PairingQrReceived(endpoint, fingerprint, pairingId),
+        )
+        assertEquals(PairingPhase.AWAITING_HOST_VERIFICATION, candidate.phase)
+        assertEquals(pairingId, candidate.candidatePairingId)
+        val verified = reducePairingState(
+            candidate,
+            PairingAction.HostIdentityConfirmed(fingerprint),
+        )
+        assertEquals(PairingPhase.AWAITING_HOST_APPROVAL, verified.phase)
+        assertEquals(pairingId, verified.candidatePairingId)
+    }
+
+    @Test
+    fun rejectsMalformedV2PairingId() {
+        val rejected = reducePairingState(
+            PairingState(),
+            PairingAction.PairingQrReceived(endpoint, fingerprint, "not-a-canonical-pairing-id"),
+        )
+        assertEquals(PairingPhase.FAILED, rejected.phase)
+        assertEquals("INVALID_PAIRING_DESCRIPTOR", rejected.errorCode)
+    }
+
+    @Test
     fun requiresExactHostFingerprintConfirmationBeforeApproval() {
         val candidate = reducePairingState(PairingState(), PairingAction.PairingQrReceived(endpoint, fingerprint))
         assertEquals(PairingPhase.AWAITING_HOST_VERIFICATION, candidate.phase)
