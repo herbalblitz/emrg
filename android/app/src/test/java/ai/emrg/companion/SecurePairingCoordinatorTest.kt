@@ -63,6 +63,19 @@ class SecurePairingCoordinatorTest {
     }
 
     @Test
+    fun rejectsOversizedCredentialBeforePersistence() {
+        val store = FakeCredentialStore()
+        val result = approved(store).dispatch(
+            PairingAction.CredentialIssued(host),
+            "x".repeat(513),
+        )
+        assertEquals(PairingPhase.FAILED, result.phase)
+        assertEquals("INVALID_CREDENTIAL", result.errorCode)
+        assertNull(result.pairedHost)
+        assertTrue(store.values.isEmpty())
+    }
+
+    @Test
     fun revocationDeletesPersistedCredentialAndClearsPairing() {
         val store = FakeCredentialStore()
         val coordinator = approved(store)
