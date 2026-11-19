@@ -27,6 +27,18 @@ class PairingError(ValueError):
     """Safe pairing transaction failure."""
 
 
+def _bounded_text(value: object, max_bytes: int, error: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise PairingError(error)
+    try:
+        size = len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        raise PairingError(error) from None
+    if size > max_bytes:
+        raise PairingError(error)
+    return value
+
+
 @dataclass
 class _Pending:
     secret_hash: bytes
@@ -49,7 +61,11 @@ class PairingTransactions:
 
     def begin(self, *, workspace_id: str, cwd: str, scopes: set[str]) -> dict[str, str | int]:
         allowed = {"status", "sessions.list", "chat.send"}
-        if not workspace_id or not cwd or not scopes or not scopes <= allowed:
+        _bounded_text(workspace_id, 128, "invalid pairing request")
+        _bounded_text(cwd, 4096, "invalid pairing request")
+        if (not isinstance(scopes, (set, frozenset)) or not scopes
+                or not all(isinstance(scope, str) for scope in scopes)
+                or not scopes <= allowed):
             raise PairingError("invalid pairing request")
         pairing_id = secrets.token_urlsafe(18)
         secret = secrets.token_urlsafe(PAIRING_SECRET_BYTES)
@@ -80,8 +96,9 @@ class PairingTransactions:
 
     def redeem(self, *, pairing_id: str, pairing_secret: str, device_id: str) -> str:
         """Redeem approved pairing once and issue device credential."""
-        if not device_id or len(device_id.encode()) > 128:
-            raise PairingError("invalid device")
+        _bounded_text(pairing_id, 128, "pairing unavailable")
+        _bounded_text(pairing_secret, 512, "pairing secret invalid")
+        _bounded_text(device_id, 128, "invalid device")
         now = self._clock()
         with self._lock:
             self._purge_expired(now)
