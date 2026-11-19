@@ -32,8 +32,8 @@ internal class PairingV2WssExchange(
         .writeTimeout(10, TimeUnit.SECONDS)
         .callTimeout(15, TimeUnit.SECONDS)
         .build(),
-) {
-    fun exchange(
+) : PairingV2FrameExchange {
+    override fun exchange(
         endpoint: String,
         fingerprintSha256: String,
         requestFrame: JSONObject,
