@@ -49,7 +49,7 @@ def _decode(value: object, expected: int, error: str) -> bytes:
         raw = base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
     except (ValueError, TypeError):
         raise PairingV2Error(error) from None
-    if len(raw) != expected:
+    if len(raw) != expected or _encode(raw) != value.rstrip('='):
         raise PairingV2Error(error)
     return raw
 
@@ -67,6 +67,7 @@ class _PendingV2:
     device_id: str | None = None
     public_key: bytes | None = None
     challenge: bytes | None = None
+    challenge_id: str | None = None
     approved: bool | None = None
 
 
