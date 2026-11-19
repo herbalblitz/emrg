@@ -30,6 +30,11 @@ internal class PairingV2SessionController(
         require(isSha256Fingerprint(fingerprintSha256))
         require(AndroidKeystoreCredentialStore.isValidCredentialAlias(credentialAlias))
         require(deviceId.matches(Regex("[A-Za-z0-9._:-]{1,128}")))
+        require(endpoint == transport.endpoint &&
+            fingerprintSha256.equals(transport.fingerprintSha256, ignoreCase = true) &&
+            pairingId == transport.pairingId &&
+            deviceId == transport.deviceId
+        ) { "Session metadata must match the pinned pairing transport identity" }
         require(this.scopes.isNotEmpty() && this.scopes.all {
             it == PairingScope.READ_STATUS || it == PairingScope.LIST_SESSIONS
         }) { "Requested pairing scopes are not enabled for this client" }
