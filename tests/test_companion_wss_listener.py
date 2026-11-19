@@ -995,7 +995,8 @@ def test_wss_pairing_v2_does_not_reveal_unapproved_transaction_state(tmp_path):
             "type": "pairing.error", "protocol": "2.0",
             "pairing_id": pairing["pairing_id"], "code": "pairing_unavailable",
         }]
-        assert host.pending_pairings_v2()[0]["pairing_id"] == pairing["pairing_id"]
+        # A transaction without a device request is not exposed as pending UI state.
+        assert host.pending_pairings_v2() == []
 
     asyncio.run(run())
 
