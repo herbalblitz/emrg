@@ -86,7 +86,7 @@ class PairingV2FlowTest {
     private fun deliverChallenge(exchange: FakeExchange, listener: RecordingListener) {
         val request = exchange.lastRequest ?: error("Request was not sent")
         val publicKey = Base64.getUrlDecoder().decode(request.getString("public_key"))
-        val challengeId = "B".repeat(22)
+        val challengeId = Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(16) { 1 })
         val challenge = JSONObject()
             .put("client_nonce", request.getString("client_nonce"))
             .put("protocol", "2.0")
@@ -110,7 +110,7 @@ class PairingV2FlowTest {
                 .put("challenge_id", challengeId)
                 .put("challenge", encodedChallenge),
         )
-        assertNotNull(listener.challenge)
+        assertNotNull("Challenge parse failed: ${listener.failure}", listener.challenge)
     }
 
     @Test
