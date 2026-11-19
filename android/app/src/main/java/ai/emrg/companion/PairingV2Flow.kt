@@ -16,7 +16,7 @@ internal interface PairingV2SessionTransport {
     val requestedScopes: Set<String>
     fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle
     fun confirmHostApproval(challenge: PairingV2Challenge): Boolean
-    override fun redeemAfterHostApproval(
+    fun redeemAfterHostApproval(
         challenge: PairingV2Challenge,
         listener: PairingV2FlowListener,
     ): PairingV2ExchangeHandle
@@ -90,7 +90,7 @@ internal class PairingV2Flow(
     }
 
     /** Redeem is unavailable until the matching challenge has explicit host-approval confirmation. */
-    fun redeemAfterHostApproval(
+    override fun redeemAfterHostApproval(
         challenge: PairingV2Challenge,
         listener: PairingV2FlowListener,
     ): PairingV2ExchangeHandle {
