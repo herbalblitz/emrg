@@ -16,8 +16,11 @@ class ModelsTest {
             fingerprint = "AA:BB",
             deviceId = "dev1",
         )
-        val json = EmrgJson.encodeToString(host)
-        val back = EmrgJson.decodeFromString<HostProfile>(json)
+        // Explicit serializer, the same shape HostStore uses for its Record:
+        // the reified Json.encodeToString(host) overload does not resolve in
+        // this module, so pass the generated serializer directly.
+        val json = EmrgJson.encodeToString(HostProfile.serializer(), host)
+        val back = EmrgJson.decodeFromString(HostProfile.serializer(), json)
         assertEquals(host, back)
     }
 
