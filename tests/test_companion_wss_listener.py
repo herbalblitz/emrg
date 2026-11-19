@@ -863,3 +863,15 @@ def test_remote_session_metadata_ignores_controls_beyond_truncated_suffix():
         "title": "A" * 256,
     }]
 
+
+
+
+def test_wss_pairing_v2_rate_limit_is_per_peer_and_bounded(tmp_path):
+    from types import SimpleNamespace
+    listener = _listener(tmp_path)
+    peer_a = SimpleNamespace(remote_address=("192.0.2.10", 1234))
+    peer_b = SimpleNamespace(remote_address=("192.0.2.11", 1234))
+    assert all(listener._allow_pairing_attempt(peer_a) for _ in range(10))
+    assert listener._allow_pairing_attempt(peer_a) is False
+    assert listener._allow_pairing_attempt(peer_b) is True
+    assert len(listener._pairing_attempts) == 2
