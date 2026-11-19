@@ -719,10 +719,12 @@ def test_wss_pairing_v2_request_and_redeem_require_host_local_approval(tmp_path)
             "client_nonce": "nonce-abcdefghijkl",
         }))
         assert identity["workspace_id"] == "workspace-v2"
-        # Redemption is one-time; replay cannot mint a second credential.
+        # A lost response can be retried; the exact same credential is
+        # returned without minting or rotating another one.
         replay_socket = Socket(redeem)
         await listener._session(replay_socket)
-        assert replay_socket.sent[0]["type"] == "pairing.error"
+        assert replay_socket.sent[0]["type"] == "pairing.credential"
+        assert replay_socket.sent[0]["credential"] == credential_response["credential"]
 
     asyncio.run(run())
 
