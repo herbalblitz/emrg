@@ -79,11 +79,12 @@ internal class PairingV2SessionController(
     }
 
     /**
-     * Call only after the user has independently confirmed that the host UI approved
-     * this pairing. The host server still verifies its own approval before issuing a token.
+     * Redeem the challenge proof. The host's local approval is authoritative; before
+     * approval the server returns a generic unavailable response and the same signed
+     * request may safely be retried. No Android-side action can mark the host approved.
      */
     @Synchronized
-    fun redeemAfterConfirmedHostApproval(listener: PairingV2SessionListener): PairingV2ExchangeHandle {
+    fun redeemChallenge(listener: PairingV2SessionListener): PairingV2ExchangeHandle {
         val currentPhase = coordinator.state.phase
         if (currentPhase != PairingPhase.AWAITING_HOST_APPROVAL &&
             currentPhase != PairingPhase.HOST_APPROVED
@@ -92,19 +93,12 @@ internal class PairingV2SessionController(
             return PairingV2ExchangeHandle { }
         }
         val accepted = challenge
-        if (accepted == null || !transport.confirmHostApproval(accepted)) {
-            listener.onFailure("HOST_APPROVAL_NOT_CONFIRMED")
+        if (accepted == null) {
+            listener.onFailure("PAIRING_CHALLENGE_MISSING")
             return PairingV2ExchangeHandle { }
         }
-        if (currentPhase == PairingPhase.AWAITING_HOST_APPROVAL) {
-            val approvedState = coordinator.dispatch(PairingAction.HostApproved)
-            if (approvedState.phase != PairingPhase.HOST_APPROVED) {
-                listener.onFailure("PAIRING_STATE_INVALID")
-                return PairingV2ExchangeHandle { }
-            }
-        }
 
-        return transport.redeemAfterHostApproval(accepted, object : PairingV2FlowListener {
+        return transport.redeem(accepted, object : PairingV2FlowListener {
             override fun onChallenge(challenge: PairingV2Challenge) {
                 listener.onFailure("PAIRING_RESPONSE_INVALID")
             }
@@ -117,6 +111,10 @@ internal class PairingV2SessionController(
                     credentialAlias = credentialAlias,
                     scopes = scopes,
                 )
+                // Only a valid credential response proves the host approved and issued.
+                if (coordinator.state.phase == PairingPhase.AWAITING_HOST_APPROVAL) {
+                    coordinator.dispatch(PairingAction.HostApproved)
+                }
                 val state = coordinator.dispatch(PairingAction.CredentialIssued(host), credential)
                 if (state.phase == PairingPhase.PAIRED && state.pairedHost != null) {
                     listener.onPaired(state.pairedHost)
