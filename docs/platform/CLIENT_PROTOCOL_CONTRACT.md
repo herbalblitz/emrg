@@ -264,3 +264,12 @@ The listener also rejects a second concurrent `start()` while the first bind is 
 - Authentication rejection frames update the client state and are not forwarded as application events.
 - Android Companion CI run #191 (commit `fdd5d1bb`) passed: debug APK assembly, JVM unit tests, lint, and artifact upload.
 - This is a client-side state gate only. It does not make the Android WSS client interoperable with the current daemon, and does not complete pairing UI, live transport integration, chat dispatch, or end-to-end testing.
+
+
+## Pairing integration boundary (2026-11-19)
+
+- The Android pairing panel no longer offers a local “Approve pairing request” action. After local fingerprint confirmation it waits for an actual host-side decision; this prevents the phone UI from representing its own action as host consent.
+- Host pairing primitives exist in `CompanionHostService` / `PairingTransactions`: the trusted local host begins a short-lived transaction, locally approves/rejects it, and issues a device credential only on one-time redemption.
+- The current QR descriptor contains only version, WSS endpoint, TLS fingerprint and expiry. It does **not** carry a pairing transaction ID/secret or another transaction binding. The Android parser likewise has no transaction binding fields. The descriptor must remain credential-free; do not put the device credential in QR.
+- The WSS listener currently accepts auth then dispatches only `status` and `sessions.list`. It has no unauthenticated pairing redemption route and no host-local UI adapter for pending pairing decisions.
+- Consequently, do not wire Android `CredentialIssued` or attempt a live pairing handshake yet. Next design step is a versioned, one-time pairing exchange that binds QR transaction, host identity, device identity, expiry and approved scopes; expose approve/reject only through trusted local host UI; redeem over pinned TLS; then deliver the issued device credential only to the requesting device. Add replay, expiry, wrong-device, cancellation, and credential persistence tests before enabling it.
