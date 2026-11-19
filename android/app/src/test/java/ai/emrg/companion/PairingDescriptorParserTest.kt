@@ -72,7 +72,6 @@ class PairingDescriptorParserTest {
         val json = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":"2000"}"""
         assertEquals("INVALID_EXPIRY", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
     }
-}
 
     @Test fun acceptsV2DescriptorWithCanonicalOpaquePairingId() {
         val pairingId = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(32) { it.toByte() })
@@ -115,4 +114,4 @@ class PairingDescriptorParserTest {
         val json = """{"version":1,"\u0076ersion":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1100}"""
         assertEquals("DUPLICATE_FIELD", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
     }
-
+}
