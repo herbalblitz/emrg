@@ -59,6 +59,7 @@ class CompanionWssListener:
         self._cert_file = cert_file
         self._key_file = key_file
         self._server = None
+        self._starting = False
         self._semaphore = asyncio.Semaphore(config.max_connections)
         self._active = 0
         self._closing = False
@@ -75,33 +76,37 @@ class CompanionWssListener:
         return self._active
 
     async def start(self) -> None:
-        if self.running:
-            raise RuntimeError("companion listener already running")
+        if self.running or self._starting:
+            raise RuntimeError("companion listener already running or starting")
         if not self._host.enabled:
             raise CompanionTlsError("companion disabled")
-        tls = create_server_context(self._cert_file, self._key_file)
-        self._closing = False
-        self._loop = asyncio.get_running_loop()
-        server = await serve(
-            self._handle,
-            self._config.bind_address,
-            self._config.port,
-            ssl=tls,
-            max_size=256 * 1024,
-            max_queue=4,
-            open_timeout=self._config.handshake_timeout_seconds,
-            ping_interval=20,
-            ping_timeout=20,
-            close_timeout=self._config.close_timeout_seconds,
-        )
-        # Host policy may be disabled (or stop() called) while serve() is
-        # awaiting socket startup. Do not publish a newly-bound server after
-        # that shutdown signal has already been observed.
-        if self._closing or not self._host.enabled:
-            server.close()
-            await server.wait_closed()
-            raise CompanionTlsError("companion disabled during listener startup")
-        self._server = server
+        self._starting = True
+        try:
+            tls = create_server_context(self._cert_file, self._key_file)
+            self._closing = False
+            self._loop = asyncio.get_running_loop()
+            server = await serve(
+                self._handle,
+                self._config.bind_address,
+                self._config.port,
+                ssl=tls,
+                max_size=256 * 1024,
+                max_queue=4,
+                open_timeout=self._config.handshake_timeout_seconds,
+                ping_interval=20,
+                ping_timeout=20,
+                close_timeout=self._config.close_timeout_seconds,
+            )
+            # Host policy may be disabled (or stop() called) while serve() is
+            # awaiting socket startup. Do not publish a newly-bound server after
+            # that shutdown signal has already been observed.
+            if self._closing or not self._host.enabled:
+                server.close()
+                await server.wait_closed()
+                raise CompanionTlsError("companion disabled during listener startup")
+            self._server = server
+        finally:
+            self._starting = False
 
     async def stop(self) -> None:
         """Stop accepting, close clients, and wait boundedly for handlers."""
