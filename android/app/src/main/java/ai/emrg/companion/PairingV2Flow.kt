@@ -32,7 +32,15 @@ internal class PairingV2Flow(
     private val client: PairingV2Client,
     private val exchange: PairingV2FrameExchange,
 ) {
+    private var acceptedChallenge: PairingV2Challenge? = null
+    private var hostApprovalConfirmed = false
+    private var cachedRedeemFrame: JSONObject? = null
+
+    @Synchronized
     fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle {
+        acceptedChallenge = null
+        hostApprovalConfirmed = false
+        cachedRedeemFrame = null
         val request = try {
             client.createRequestFrame(pairingId)
         } catch (_: Exception) {
@@ -47,6 +55,11 @@ internal class PairingV2Flow(
                     listener.onFailure("PAIRING_CHALLENGE_INVALID")
                     return
                 }
+                synchronized(this@PairingV2Flow) {
+                    acceptedChallenge = challenge
+                    hostApprovalConfirmed = false
+                    cachedRedeemFrame = null
+                }
                 listener.onChallenge(challenge)
             }
 
@@ -54,20 +67,38 @@ internal class PairingV2Flow(
         })
     }
 
-    /** Invoke only after the host has approved locally; this method cannot approve a request. */
+    /**
+     * Records the user's confirmation that approval was completed in the trusted host UI.
+     * The host still independently enforces approval; this flag is not proof to the server.
+     */
+    @Synchronized
+    fun confirmHostApproval(challenge: PairingV2Challenge): Boolean {
+        if (acceptedChallenge != challenge) return false
+        hostApprovalConfirmed = true
+        return true
+    }
+
+    /** Redeem is unavailable until the matching challenge has explicit host-approval confirmation. */
     fun redeemAfterHostApproval(
         challenge: PairingV2Challenge,
         listener: PairingV2FlowListener,
     ): PairingV2ExchangeHandle {
-        if (challenge.pairingId != pairingId) {
-            listener.onFailure("PAIRING_TRANSACTION_MISMATCH")
-            return PairingV2ExchangeHandle { }
-        }
-        val redeem = try {
-            client.createRedeemFrame(pairingId, challenge.challengeId, challenge.encodedChallenge)
-        } catch (_: Exception) {
-            listener.onFailure("PAIRING_REDEEM_INVALID")
-            return PairingV2ExchangeHandle { }
+        val redeem = synchronized(this) {
+            if (acceptedChallenge != challenge || challenge.pairingId != pairingId) {
+                listener.onFailure("PAIRING_TRANSACTION_MISMATCH")
+                return PairingV2ExchangeHandle { }
+            }
+            if (!hostApprovalConfirmed) {
+                listener.onFailure("HOST_APPROVAL_NOT_CONFIRMED")
+                return PairingV2ExchangeHandle { }
+            }
+            cachedRedeemFrame?.let { JSONObject(it.toString()) } ?: try {
+                client.createRedeemFrame(pairingId, challenge.challengeId, challenge.encodedChallenge)
+                    .also { cachedRedeemFrame = JSONObject(it.toString()) }
+            } catch (_: Exception) {
+                listener.onFailure("PAIRING_REDEEM_INVALID")
+                return PairingV2ExchangeHandle { }
+            }
         }
         return exchange.exchange(endpoint, fingerprintSha256, redeem, object : PairingV2ExchangeListener {
             override fun onResponse(response: JSONObject) {
