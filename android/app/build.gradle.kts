@@ -12,16 +12,6 @@ plugins {
 // `EMRG_KEY_PASSWORD`). Without it the release variant is signed with the debug
 // key so the artifact installs on a test phone; the build log says so and the
 // artifact is not a Play upload until a real keystore is supplied.
-val signingProps = Properties().apply {
-    val file = rootProject.file("keystore.properties")
-    if (file.exists()) file.inputStream().use { load(it) }
-}
-fun secret(name: String): String? =
-    System.getenv(name) ?: signingProps.getProperty(name)
-
-val releaseStore = secret("EMRG_KEYSTORE_FILE")
-val hasReleaseKey = releaseStore != null && file(releaseStore).exists()
-
 android {
     namespace = "com.emrg.app"
     compileSdk = 35
@@ -36,24 +26,11 @@ android {
         buildConfigField("String", "APP_BUILD", "\"android\"")
     }
 
-    signingConfigs {
-        if (hasReleaseKey) {
-            create("release") {
-                storeFile = file(releaseStore!!)
-                storePassword = secret("EMRG_KEYSTORE_PASSWORD")
-                keyAlias = secret("EMRG_KEY_ALIAS")
-                keyPassword = secret("EMRG_KEY_PASSWORD")
-            }
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = if (hasReleaseKey) signingConfigs.getByName("release")
-                            else signingConfigs.getByName("debug")
         }
         debug {
             applicationIdSuffix = ".debug"
