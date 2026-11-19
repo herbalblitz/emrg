@@ -199,3 +199,10 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Added [COMPANION_PAIRING_V2_DESIGN.md](COMPANION_PAIRING_V2_DESIGN.md), defining the proposed QR v2 transaction reference, host-local approval, device-key proof of possession, one-time redemption, strict WSS message boundaries, state machine, and security test matrix.
 - The design deliberately keeps reusable credentials and private keys out of QR data. Pairing remains disabled end-to-end until host transaction, local approval UI, WSS exchange, Android Keystore integration, and cross-platform tests are implemented.
 - CI Android Companion #192 passed on `a85ea4c3`; it predates this documentation-only commit.
+
+
+## Pairing transaction hardening (2026-11-19)
+
+- Increased pairing transaction identifier entropy to 256 random bits (32 CSPRNG bytes encoded URL-safe).
+- Added regression coverage for identifier length and concurrent redemption: a single approved transaction must issue exactly one credential when multiple redemption attempts race.
+- Companion security CI is being used to validate the implementation on Ubuntu and Windows; do not treat the run triggered by the code-only commit as validation of the subsequent test commit.
