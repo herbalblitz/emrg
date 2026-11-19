@@ -44,6 +44,28 @@ class SecurePairingStateTest {
     }
 
     @Test
+    fun invalidQrReplacesAndClearsPreviousCandidateTransaction() {
+        val validPairingId = java.util.Base64.getUrlEncoder().withoutPadding()
+            .encodeToString(ByteArray(32) { it.toByte() })
+        val candidate = reducePairingState(
+            PairingState(),
+            PairingAction.PairingQrReceived(endpoint, fingerprint, validPairingId),
+        )
+        assertEquals(validPairingId, candidate.candidatePairingId)
+
+        val rejected = reducePairingState(
+            candidate,
+            PairingAction.PairingQrReceived("ws://attacker.example", fingerprint, validPairingId),
+        )
+        assertEquals(PairingPhase.FAILED, rejected.phase)
+        assertEquals("INVALID_PAIRING_DESCRIPTOR", rejected.errorCode)
+        assertNull(rejected.candidateEndpoint)
+        assertNull(rejected.candidateFingerprint)
+        assertNull(rejected.candidatePairingId)
+        assertNull(rejected.pairedHost)
+    }
+
+    @Test
     fun rejectsMalformedV2PairingId() {
         val rejected = reducePairingState(
             PairingState(),
