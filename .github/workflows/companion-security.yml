@@ -66,4 +66,4 @@ jobs:
           path: uv.lock
           if-no-files-found: error
       - name: Companion host security tests
-        run: uv run pytest -v tests/test_companion_auth.py tests/test_companion_credentials.py tests/test_companion_host_service.py tests/test_companion_pairing.py tests/test_companion_pairing_descriptor.py tests/test_companion_protocol.py tests/test_companion_pairing_v2.py tests/test_companion_tls.py tests/test_companion_tls_identity.py tests/test_companion_listener_policy.py tests/test_companion_wss_listener.py
+        run: uv run pytest -v tests/test_companion_auth.py tests/test_companion_credentials.py tests/test_companion_host_service.py tests/test_companion_local_control.py tests/test_companion_pairing.py tests/test_companion_pairing_descriptor.py tests/test_companion_protocol.py tests/test_companion_pairing_v2.py tests/test_companion_tls.py tests/test_companion_tls_identity.py tests/test_companion_listener_policy.py tests/test_companion_wss_listener.py
