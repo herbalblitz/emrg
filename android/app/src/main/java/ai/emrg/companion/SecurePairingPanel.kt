@@ -101,10 +101,11 @@ internal fun SecurePairingPanel() {
                     }) { Text("Fingerprint matches — continue") }
                 }
                 PairingPhase.AWAITING_HOST_APPROVAL -> {
-                    Text("Identity accepted locally. Host approval is a separate step.")
-                    Button(onClick = { state = reducePairingState(state, PairingAction.HostApproved) }) {
-                        Text("Approve pairing request")
-                    }
+                    Text("Host identity accepted locally. Waiting for approval from the host.")
+                    Text(
+                        "This device cannot approve its own pairing request. The host must explicitly approve it through the daemon pairing flow.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
                 PairingPhase.HOST_APPROVED -> {
                     Text("Local approval recorded. No credential received and no host connected.")
