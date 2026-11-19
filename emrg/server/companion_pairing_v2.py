@@ -82,6 +82,10 @@ class PairingV2Transactions:
         self._lock = threading.Lock()
         self._pending: dict[str, _PendingV2] = {}
 
+    @property
+    def host_identity(self) -> str:
+        return self._host_identity
+
     def begin(self, *, workspace_id: str, cwd: str, scopes: set[str]) -> dict[str, str | int]:
         _text(workspace_id, 128, "invalid pairing request")
         _text(cwd, 4096, "invalid pairing request")
