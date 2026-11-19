@@ -298,9 +298,10 @@ class PairingV2Transactions:
         ]
         for nonce in expired:
             del self._seen_client_nonces[nonce]
+        # Never evict an unexpired nonce: doing so would reopen a replay window.
+        # Fail closed under pressure until entries expire naturally.
         if len(self._seen_client_nonces) >= 4096:
-            oldest = min(self._seen_client_nonces, key=self._seen_client_nonces.get)
-            del self._seen_client_nonces[oldest]
+            raise PairingV2Error("client nonce replay cache is full")
 
     def _purge(self, now: float) -> None:
         expired = [key for key, item in self._pending.items()
