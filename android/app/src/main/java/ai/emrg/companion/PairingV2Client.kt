@@ -27,9 +27,12 @@ internal class PairingV2Client(
     private val nowEpochSeconds: () -> Long = { System.currentTimeMillis() / 1000L },
 ) {
     private var publicKeyBytes: ByteArray? = null
+    private var activePairingId: String? = null
 
     @Synchronized
     fun createRequestFrame(pairingId: String): JSONObject {
+        publicKeyBytes = null
+        activePairingId = null
         requireCanonicalBase64Url(pairingId, 32, "pairing id")
         require(deviceId.matches(DEVICE_ID_PATTERN)) { "Device ID is invalid" }
         val encodedPublicKey = keys.createOrLoad(keyAlias)
@@ -42,8 +45,8 @@ internal class PairingV2Client(
         require(parsedPublicKey != null && isP256(parsedPublicKey.params)) {
             "Device public key is not P-256"
         }
-        val keyDigest = sha256Hex(rawPublicKey)
         publicKeyBytes = rawPublicKey
+        activePairingId = pairingId
         return JSONObject()
             .put("type", "pairing.request")
             .put("protocol", "2.0")
@@ -57,6 +60,7 @@ internal class PairingV2Client(
     fun createRedeemFrame(pairingId: String, challengeId: String, encodedChallenge: String): JSONObject {
         requireCanonicalBase64Url(pairingId, 32, "pairing id")
         requireCanonicalBase64Url(challengeId, 16, "challenge id")
+        require(activePairingId == pairingId) { "Pairing request does not match this transaction" }
         val rawChallenge = decodeCanonicalBase64Url(encodedChallenge, 1, MAX_CHALLENGE_BYTES)
         val publicKey = publicKeyBytes
             ?: throw IllegalStateException("Pairing request must be created before redeem")
