@@ -236,3 +236,7 @@ Chat dispatch, cancellation, tool approvals, filesystem operations, pairing UI/Q
 ### Remote session metadata boundary
 
 The WSS `sessions.list` response does not forward raw session metadata. It exposes only a bounded allowlist (`session_id`, timestamps, title, and non-negative message count), truncates text fields, and caps the result at 200 entries. Local paths, transcript content, and arbitrary metadata keys are excluded.
+
+### Pairing input boundary
+
+The local pairing transaction rejects empty, malformed UTF-8, or oversized identity inputs before retaining a pending request: workspace IDs are limited to 128 UTF-8 bytes and workspace paths to 4096 bytes. Scope collections must be non-empty sets containing only the explicitly supported scope names. Redemption bounds pairing IDs to 128 bytes, pairing secrets to 512 bytes, and device IDs to 128 bytes. These checks bound the in-memory pairing surface; they do not replace local approval, TLS, or device authorization.
