@@ -49,6 +49,8 @@ from emrg.config import (
 )
 from emrg.connect import EMRGD_PORT, cleanup_server, is_server_running_sync
 from emrg.server.abort_runs import AbortRuns
+from emrg.server.companion_host_service import CompanionHostService
+from emrg.server.companion_local_control import CompanionLocalControl, CompanionLocalControlError
 from emrg.server.agents import AgentRegistry
 from emrg.server.atomic import atomic_write_bytes
 from emrg.server.config_reload import (
@@ -842,6 +844,11 @@ class EmrgServer:
         self.start_time = datetime.now()
         self.evolutions: list[EvolutionLog] = []
         self.llm = LlmClient(llm_config)
+        # Companion approval state is daemon-owned and remains disabled until an explicit local opt-in.
+        self._companion_host_service = CompanionHostService(
+            config_dir() / "companion" / "credentials.json"
+        )
+        self._companion_local_control = CompanionLocalControl(self._companion_host_service)
         # The `[update]` object the UpgradeManager's tick loop runs on (issue
         # #1356). Constructed **here**, not inside `_upgrade_tick_loop`, so the
         # reloader below and the manager share one object: a reload assigns to
@@ -2955,7 +2962,35 @@ class EmrgServer:
         if await self._refuse_an_unsafe_session_id(ws, msg_type, msg.get("session_id")):
             return
 
-        if msg_type == "ping":
+        if msg_type == "companion_local_control":
+            operation = msg.get("operation")
+            payload = msg.get("payload", {})
+            try:
+                result = self._companion_local_control.dispatch(operation, payload)
+            except CompanionLocalControlError as exc:
+                await self._send(ws, {
+                    "type": "companion_local_control_result",
+                    "ok": False,
+                    "error": str(exc)[:160],
+                })
+                return
+            except Exception:
+                # Never leak registry contents, credentials, or filesystem details.
+                logger.warning("local Companion control request failed")
+                await self._send(ws, {
+                    "type": "companion_local_control_result",
+                    "ok": False,
+                    "error": "local Companion control unavailable",
+                })
+                return
+            await self._send(ws, {
+                "type": "companion_local_control_result",
+                "ok": True,
+                "result": result,
+            })
+            return
+
+        elif msg_type == "ping":
             elapsed = int(
                 (datetime.now() - self.start_time).total_seconds()
             )
