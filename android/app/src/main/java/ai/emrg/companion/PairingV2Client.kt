@@ -1,7 +1,10 @@
 package ai.emrg.companion
 
 import org.json.JSONObject
+import java.security.KeyFactory
 import java.security.MessageDigest
+import java.security.interfaces.ECPublicKey
+import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
 
 /**
@@ -25,6 +28,14 @@ internal class PairingV2Client(
         require(deviceId.matches(DEVICE_ID_PATTERN)) { "Device ID is invalid" }
         val encodedPublicKey = keys.createOrLoad(keyAlias)
         val rawPublicKey = decodeCanonicalBase64Url(encodedPublicKey, MIN_PUBLIC_KEY_BYTES, MAX_PUBLIC_KEY_BYTES)
+        val parsedPublicKey = try {
+            KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(rawPublicKey)) as? ECPublicKey
+        } catch (_: Exception) {
+            null
+        }
+        require(parsedPublicKey != null && parsedPublicKey.params.curve.field.fieldSize == 256) {
+            "Device public key is not P-256"
+        }
         val keyDigest = sha256Hex(rawPublicKey)
         publicKeyBytes = rawPublicKey
         return JSONObject()
