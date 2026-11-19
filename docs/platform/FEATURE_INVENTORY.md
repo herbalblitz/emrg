@@ -36,7 +36,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for streaming integration run `44239121243` (`bc1d3bf2`); markdown renderer CI pending
 - [x] WSS client primitive with system TLS + pinned host certificate fingerprint, auth-envelope send, protocol/workspace-bound auth-success validation, chat-only scoped frame construction and connection generation guards; dedicated opt-in host WSS listener implements device authentication, scoped status and bounded read-only session metadata dispatch.
 - [x] Credential-safe QR descriptor parsing: WSS-only, strict allowlist, mandatory <=180-second expiry; endpoint query/user-info/fragment and invalid ports rejected.
-- [ ] Trusted host approval UI, pairing/revoke UI, Android live transport integration and end-to-end transport remain unimplemented. Host identity provisioning and the dedicated WSS listener now have host-side implementations; cross-platform runtime integration remains open.
+- [ ] Trusted host approval UI and pairing/revoke management UI remain unimplemented. Android Pairing v2 challenge/redeem transport is integrated in source; authenticated status/session-list UI operations and cross-platform end-to-end validation remain open.
 - [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
 - [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI passed in run `44239121243`); no real daemon transport yet.
 - [x] Offline UI integration for response streaming, partial text display and Stop/cancel action (no live transport; CI passed in run `44239121243`).
@@ -173,3 +173,11 @@ Still not verified: physical-device Android Keystore behavior, a real Windows-ho
 - The pairing panel ignores callbacks queued by an older QR transaction after reset or rescan, preventing stale network responses from replacing the current UI state.
 - Android workflow run `44508660928` passed APK assembly, unit tests, lint, and artifact upload for the retry-frame change. Run `44509690853` also passed APK assembly, unit tests, lint, and artifact upload for stale-callback isolation (`0a587371540cb8c49072cd1b063fad160605712e`).
 - Remaining validation: physical Android Keystore/device test and live Windows-host pairing end-to-end test.
+
+
+### Pairing state concurrency regression follow-up (2026-11-19)
+
+- [x] Synchronize coordinator state reads with reducer/store writes.
+- [x] Read pairing retry eligibility and failure code from one immutable coordinator snapshot.
+- [x] Add concurrent duplicate-credential callback regression coverage; CI verification is pending for the test-only follow-up commit.
+- [ ] Physical Android Keystore validation and real Windows-host pairing end-to-end validation.
