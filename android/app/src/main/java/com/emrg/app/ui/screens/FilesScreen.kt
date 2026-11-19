@@ -45,45 +45,43 @@ fun FilesScreen(
         get() = __error.value
         set(value) { __error.value = value }
 
-.run {
-        fun refresh() {
-            loading = true
-            error = null
-            scope.launch {
-                try {
-                    entries = repository.listFiles(current)
-                } catch (e: GatewayRequestException) {
-                    error = e.message
-                }
-                loading = false
+    fun refresh() {
+        loading = true
+        error = null
+        scope.launch {
+            try {
+                entries = repository.listFiles(current)
+            } catch (e: GatewayRequestException) {
+                error = e.message
             }
+            loading = false
         }
+    }
 
-        androidx.compose.material3.Scaffold(
-            topBar = { TopAppBar(title = { Text(text = "Files") }) },
-        ) { padding ->
-            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-                error?.let { e ->
-                    androidx.compose.material3.Text(text = e, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
-                }
-                TextField(
-                    value = current,
-                    onValueChange = { current = it },
-                    label = { Text(text = "Path") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                androidx.compose.material3.Button(onClick = { refresh() }) { Text(text = "Refresh") }
-                if (loading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp))
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = padding,
-                ) {
-                    items(entries, key = { it.first }) { (name, path, type) ->
-                        androidx.compose.material3.Text(
-                            text = "$name  ($type)",
-                        )
-                    }
+    androidx.compose.material3.Scaffold(
+        topBar = { TopAppBar(title = { Text(text = "Files") }) },
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            error?.let { e ->
+                androidx.compose.material3.Text(text = e, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
+            }
+            TextField(
+                value = current,
+                onValueChange = { current = it },
+                label = { Text(text = "Path") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            androidx.compose.material3.Button(onClick = { refresh() }) { Text(text = "Refresh") }
+            if (loading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp))
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = padding,
+            ) {
+                items(entries, key = { it.first }) { (name, path, type) ->
+                    androidx.compose.material3.Text(
+                        text = "$name  ($type)",
+                    )
                 }
             }
         }

@@ -30,7 +30,6 @@ fun HostsScreen(
     repository: GatewayRepository,
     navController: androidx.navigation.NavHostController,
 ) {
-    val scope = rememberCoroutineScope()
     val hosts by repository.hosts.collectAsState()
     val state by repository.state.collectAsState()
 
