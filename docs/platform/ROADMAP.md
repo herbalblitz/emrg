@@ -321,3 +321,11 @@ The latest Android debug APK assembly has succeeded. The first controller-integr
 - [ ] Wire authenticated status/session-list operations to the Android UI and reconcile live host state. `chat.send` remains disabled; no live chat/tool execution is claimed.
 
 The QR panel is now wired to the v2 controller, superseding earlier notes that the scanner/panel was not connected. This does not make pairing production-ready or complete Android/Windows parity.
+
+
+### Android pairing retry and callback lifecycle hardening (2026-11-19)
+
+- Pairing challenge retries now retransmit the exact original request frame and client nonce; the host returns the original challenge only for an exact match.
+- The pairing panel ignores callbacks queued by an older QR transaction after reset or rescan, preventing stale network responses from replacing the current UI state.
+- Android workflow run `44508660928` passed APK assembly, unit tests, lint, and artifact upload for the retry-frame change. The callback-isolation change is being validated in a separate workflow run.
+- Remaining validation: physical Android Keystore/device test and live Windows-host pairing end-to-end test.
