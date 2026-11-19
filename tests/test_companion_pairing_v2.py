@@ -91,6 +91,38 @@ def test_pairing_v2_rejects_wrong_device_and_wrong_signature(tmp_path):
     assert len(pairing.pending_requests()) == 1
 
 
+def test_pairing_v2_exact_request_retry_returns_original_challenge(tmp_path):
+    pairing, _, _, _, public = _setup(tmp_path)
+    tx, original = _request(pairing, public)
+
+    # Simulate the challenge response being lost and the device retransmitting
+    # the byte-for-byte same logical request with the same nonce.
+    retry = pairing.request(
+        pairing_id=tx["pairing_id"], device_id="android-device",
+        public_key=public, requested_scopes=["status", "sessions.list"],
+        client_nonce=_b64(b"n" * 32),
+    )
+    assert retry == original
+
+    # The same retry remains valid if host-local approval happened before
+    # the client received the first response.
+    assert pairing.approve(tx["pairing_id"], approved=True)
+    assert pairing.request(
+        pairing_id=tx["pairing_id"], device_id="android-device",
+        public_key=public, requested_scopes=["status", "sessions.list"],
+        client_nonce=_b64(b"n" * 32),
+    ) == original
+
+    # Idempotency is exact-request only; it cannot replace the device identity,
+    # requested scope set, public key, or nonce.
+    with pytest.raises(PairingV2Error, match="already received"):
+        pairing.request(
+            pairing_id=tx["pairing_id"], device_id="other-device",
+            public_key=public, requested_scopes=["status"],
+            client_nonce=_b64(b"z" * 32),
+        )
+
+
 def test_pairing_v2_rejects_second_device_request_and_duplicate_approval(tmp_path):
     pairing, _, _, _, public = _setup(tmp_path)
     tx, _ = _request(pairing, public)
