@@ -309,3 +309,15 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [ ] Run authenticated status/session-list operations against a real Windows host. Chat remains disabled because the workspace/cwd authorization contract is not yet complete.
 
 The latest Android debug APK assembly has succeeded. The first controller-integration CI run exposed one test assertion issue in the retry test; the test now checks the successful paired callback rather than expecting a historical failure callback to be erased. A fresh CI run is required before marking this increment verified.
+
+
+### QR-to-controller UI integration update (2026-11-19)
+
+- [x] Connect the Android QR camera/paste panel to the Pairing v2 descriptor parser and `PairingV2SessionController` (`SecurePairingPanel.kt`). The panel accepts v2 descriptors, displays endpoint and SHA-256 fingerprint, requires explicit fingerprint confirmation, creates/loads the device identity, requests the host challenge, submits the signed proof, and exposes a manual retry path for host approval/redemption.
+- [x] Cancel the active pairing exchange when the panel leaves composition; Android still cannot approve its own host request.
+- [x] Android CI run `44503538472` for commit `7df4eeb924e7a36e55b653e4ab77ddefa4a7c6de` passed: debug APK assembly, unit tests, lint, and APK artifact upload.
+- [ ] Validate non-exportable P-256 key creation/signing/persistence on physical Android devices and supported API levels.
+- [ ] Exercise QR creation, trusted-local host approval, pinned WSS request/challenge/redeem and credential persistence against a real Windows host in an end-to-end test.
+- [ ] Wire authenticated status/session-list operations to the Android UI and reconcile live host state. `chat.send` remains disabled; no live chat/tool execution is claimed.
+
+The QR panel is now wired to the v2 controller, superseding earlier notes that the scanner/panel was not connected. This does not make pairing production-ready or complete Android/Windows parity.
