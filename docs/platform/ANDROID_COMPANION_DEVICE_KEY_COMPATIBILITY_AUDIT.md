@@ -1,6 +1,6 @@
 # Android Companion Device-Key Compatibility Audit
 
-Status: implementation gate; no Android device-key generation is enabled.
+Status: P-256 Android Keystore key-manager foundation added; physical-device validation and live integration remain blocked.
 
 Date: 2026-11-19
 
@@ -26,14 +26,15 @@ Do not generate a P-256 private key in a software provider and persist its priva
 
 The Android app may keep `minSdk = 26` for its existing UI, QR parsing, credential storage, and other features. Pairing v2 must remain unavailable on a device unless a concrete provider/key-generation/signing capability check succeeds and the private key is proven to be held by the intended keystore provider. Capability failure must be explicit and fail closed.
 
-## Required next decision
+## Implementation status
 
-Choose one protocol-wide path before implementing the device-key manager:
+- Host Pairing v2 transaction verification now accepts only P-256 EC keys encoded as DER SubjectPublicKeyInfo and verifies ECDSA/SHA-256 DER signatures.
+- The strict unauthenticated pairing-frame validator requires `key_algorithm: P-256`, bounded canonical Base64URL public keys, and bounded canonical Base64URL signatures. v1 authentication remains a separate parser.
+- Host pairing transaction and protocol tests have been migrated to P-256; GitHub Actions run #149 passed on Ubuntu and Windows (194 passed on Ubuntu; Windows result is also green).
+- Added `AndroidKeystoreDeviceKeyManager` to create/load P-256 EC identities in Android Keystore, return only the encoded public key, sign challenges with `SHA256withECDSA`, and refuse exportable private keys. It has no software-key fallback.
+- The manager is not yet wired into the Android pairing coordinator. Device security-level reporting, API 26 physical-device testing, process-restart testing, and end-to-end Python/Android signature interoperability remain open.
 
-1. **Selected: P-256 ECDSA.** Host-side Pairing v2 transaction verification and strict request-frame validation now use P-256 SubjectPublicKeyInfo and ECDSA/SHA-256.
-2. **Still required:** implement AndroidKeyStore P-256 key generation and signing, runtime capability checks, and physical-device tests across the supported API range. Android's official Keystore guide documents EC key generation and SHA-256 ECDSA signing, but actual device/hardware support still needs runtime checks and physical-device tests.
-
-This is a protocol decision, not an Android-only implementation detail. It must be reflected in the wire schema, host validator, transaction core, Android parser/coordinator, and cross-platform test vectors before live pairing is enabled.
+This protocol decision is reflected in the wire schema, host validator, transaction core, and host tests. Android parser/coordinator integration and cross-platform test vectors remain before live pairing can be enabled.
 
 ## Validation still required
 
@@ -47,4 +48,4 @@ This is a protocol decision, not an Android-only implementation detail. It must 
 
 ## Status
 
-P-256 is selected for the wire protocol and host-side proof verification. This audit does not claim that all Android API 26+ devices can create a hardware-backed P-256 key; live Pairing v2 remains blocked until Android implementation and physical-device validation pass.
+P-256 is selected for the wire protocol. The Android Keystore key-manager foundation now exists, but this audit does not claim that all Android API 26+ devices can create a hardware-backed P-256 key. Live Pairing v2 remains blocked until Android build validation, physical-device testing, and coordinator integration pass.
