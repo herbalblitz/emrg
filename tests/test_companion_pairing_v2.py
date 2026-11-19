@@ -317,3 +317,22 @@ def test_pairing_v2_rejects_reused_client_nonce_across_transactions(tmp_path):
             pairing_id=second["pairing_id"], device_id="android-two",
             public_key=public, requested_scopes=["status"], client_nonce=nonce,
         )
+
+
+
+def test_pairing_v2_nonce_cache_pressure_fails_closed_without_eviction(tmp_path):
+    pairing, _, clock, _, public = _setup(tmp_path)
+    pairing._seen_client_nonces.update({
+        _b64(index.to_bytes(4, "big") + b"x" * 28): clock.now
+        for index in range(4096)
+    })
+    original = set(pairing._seen_client_nonces)
+    tx = pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
+    with pytest.raises(PairingV2Error, match="replay cache is full"):
+        pairing.request(
+            pairing_id=tx["pairing_id"], device_id="android-device",
+            public_key=public, requested_scopes=["status"],
+            client_nonce=_b64(b"fresh-client-nonce-32-bytes-long!"),
+        )
+    assert set(pairing._seen_client_nonces) == original
+    assert pairing.pending_requests() == []
