@@ -42,7 +42,7 @@ internal fun SecurePairingPanel() {
         ) {
             Text("Secure host pairing", style = MaterialTheme.typography.titleMedium)
             Text(
-                "QR identity validation is available. Live daemon pairing transport is not yet implemented.",
+                "QR identity validation is available. The Pairing v2 client, pinned WSS transport, and session controller exist, but this panel is not wired to them yet. No pairing request is sent from this screen.",
                 style = MaterialTheme.typography.bodySmall
             )
             Button(onClick = { scannerVisible = true }) { Text("Scan QR with camera") }
@@ -143,8 +143,8 @@ internal fun SecurePairingPanel() {
                     )
                 }
                 PairingPhase.HOST_APPROVED -> {
-                    Text("Local approval recorded. No credential received and no host connected.")
-                    Text("Waiting for a real daemon handshake implementation.", style = MaterialTheme.typography.bodySmall)
+                    Text("Host approval state is controlled by a validated host response, never by a local button.")
+                    Text("This screen is not yet connected to the live pairing controller.", style = MaterialTheme.typography.bodySmall)
                 }
                 PairingPhase.FAILED -> {
                     Text("Validation failed: ${state.errorCode ?: "PAIRING_FAILED"}", color = MaterialTheme.colorScheme.error)
