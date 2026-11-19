@@ -125,8 +125,11 @@ internal class PairingV2SessionController(
                 val state = synchronized(this@PairingV2SessionController) {
                     val current = coordinator.state
                     if (current.phase == PairingPhase.PAIRED) {
-                        if (current.pairedHost == host) current
-                        else current.copy(phase = PairingPhase.FAILED, errorCode = "PAIRING_TRANSACTION_MISMATCH")
+                        if (current.pairedHost != host) {
+                            listener.onFailure("PAIRING_TRANSACTION_MISMATCH")
+                            return@onCredential
+                        }
+                        current
                     } else {
                         // Only a valid credential response proves the host approved and issued.
                         if (current.phase == PairingPhase.AWAITING_HOST_APPROVAL) {
