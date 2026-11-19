@@ -50,6 +50,8 @@ internal fun SecurePairingPanel() {
     var activeHandle by remember { mutableStateOf<PairingV2ExchangeHandle?>(null) }
     var statusText by remember { mutableStateOf("Scan or paste a host pairing v2 QR descriptor.") }
     var busy by remember { mutableStateOf(false) }
+    // Ignore callbacks queued by an older QR transaction after reset or rescan.
+    var transactionGeneration by remember { mutableStateOf(0) }
 
     fun cancelActiveExchange() {
         activeHandle?.cancel()
@@ -58,6 +60,7 @@ internal fun SecurePairingPanel() {
     }
 
     fun clearTransaction() {
+        transactionGeneration += 1
         cancelActiveExchange()
         controller = null
         challenge = null
@@ -116,9 +119,14 @@ internal fun SecurePairingPanel() {
         }
     }
 
-    fun sessionListener(): PairingV2SessionListener = object : PairingV2SessionListener {
+    fun sessionListener(): PairingV2SessionListener {
+        val callbackGeneration = transactionGeneration
+        return object : PairingV2SessionListener {
+        private fun isCurrentTransaction(): Boolean = callbackGeneration == transactionGeneration
+
         override fun onChallenge(value: PairingV2Challenge) {
             mainHandler.post {
+                if (!isCurrentTransaction()) return@post
                 challenge = value
                 busy = false
                 statusText = "Challenge received. Submit the signed proof; the host must approve it locally."
@@ -136,6 +144,7 @@ internal fun SecurePairingPanel() {
 
         override fun onPaired(host: PairedHost) {
             mainHandler.post {
+                if (!isCurrentTransaction()) return@post
                 busy = false
                 state = PairingState(phase = PairingPhase.PAIRED, pairedHost = host)
                 statusText = "Paired securely. Credential stored in Android Keystore-backed storage."
@@ -144,6 +153,7 @@ internal fun SecurePairingPanel() {
 
         override fun onFailure(safeCode: String) {
             mainHandler.post {
+                if (!isCurrentTransaction()) return@post
                 busy = false
                 statusText = if (safeCode == "PAIRING_UNAVAILABLE") {
                     "Host has not approved yet (or pairing is unavailable). You can retry; the signed proof is reused."
@@ -151,6 +161,7 @@ internal fun SecurePairingPanel() {
                     "Pairing failed: $safeCode"
                 }
             }
+        }
         }
     }
 
