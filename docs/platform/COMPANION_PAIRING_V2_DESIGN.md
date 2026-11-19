@@ -199,3 +199,19 @@ The host-side strict v2 frame validator also rejects duplicate keys after JSON
 escape decoding. These parser/validator changes do not add a WSS pairing route,
 generate a device key, approve a request, or issue a credential. The transport and
 host-approval gates above remain unchanged.
+
+### Android device-key implementation gate clarification (2026-11-19)
+
+The host prototype currently fixes the proof-of-possession algorithm to Ed25519.
+The Android implementation must not silently substitute another signature
+algorithm or serialize an unencrypted private key when a device/provider cannot
+create or use the required key.
+
+Before implementing the Android key manager, add a compatibility test matrix for
+the project's supported Android API levels and representative Keystore providers.
+The test must cover key generation, public-key encoding, signing the exact
+canonical challenge bytes, signature verification by the host, persistence across
+process restart, and key invalidation. If the required operation is unavailable,
+pairing must fail closed with a user-safe unsupported-device result until a
+protocol-approved alternative is designed and documented. This gate does not
+change the existing host Ed25519 wire contract.
