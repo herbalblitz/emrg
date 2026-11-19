@@ -122,6 +122,20 @@ class PairingV2ClientTest {
     }
 
     @Test
+    fun refusesRedeemForDifferentPairingTransaction() {
+        val keys = FakeDeviceKeys()
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val activePairingId = b64(32)
+        val otherPairingId = b64(32, seed = 3)
+        val challengeId = b64(16)
+        client.createRequestFrame(activePairingId)
+        val raw = challenge(otherPairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
+        assertThrows(IllegalArgumentException::class.java) {
+            client.createRedeemFrame(otherPairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(raw))
+        }
+    }
+
+    @Test
     fun refusesRedeemBeforeCreatingDeviceRequest() {
         val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
         assertThrows(IllegalStateException::class.java) {
