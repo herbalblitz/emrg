@@ -14,8 +14,18 @@ dependencies = [
     "websockets>=17.0.1",
 ]
 
+[project.optional-dependencies]
+# The Android bridge. Not a core dependency: a desktop install that never pairs
+# a phone must not need a TLS stack or a TOML editor.
+gateway = [
+    "cryptography>=42.0",
+    "tomlkit>=0.12",
+    "qrcode>=7.4",
+]
+
 [project.scripts]
 emrg = "emrg.__main__:main"
+emrg-gateway = "emrg.gateway.__main__:main"
 
 [tool.hatch.metadata]
 allow-direct-references = true
