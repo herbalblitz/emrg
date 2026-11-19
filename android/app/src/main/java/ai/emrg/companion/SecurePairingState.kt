@@ -72,13 +72,23 @@ internal fun isSha256Fingerprint(value: String): Boolean =
 internal fun reducePairingState(state: PairingState, action: PairingAction): PairingState =
     when (action) {
         is PairingAction.PairingQrReceived -> {
-            if (!isSecurePairingEndpoint(action.endpoint) || !isSha256Fingerprint(action.fingerprintSha256)) {
+            val validPairingId = action.pairingId == null || try {
+                val decoded = java.util.Base64.getUrlDecoder().decode(action.pairingId)
+                decoded.size == 32 &&
+                    java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(decoded) == action.pairingId
+            } catch (_: IllegalArgumentException) {
+                false
+            }
+            if (!isSecurePairingEndpoint(action.endpoint) ||
+                !isSha256Fingerprint(action.fingerprintSha256) || !validPairingId
+            ) {
                 state.copy(phase = PairingPhase.FAILED, errorCode = "INVALID_PAIRING_DESCRIPTOR")
             } else {
                 PairingState(
                     phase = PairingPhase.AWAITING_HOST_VERIFICATION,
                     candidateEndpoint = action.endpoint,
                     candidateFingerprint = action.fingerprintSha256.uppercase(),
+                    candidatePairingId = action.pairingId,
                 )
             }
         }
