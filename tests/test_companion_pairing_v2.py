@@ -195,3 +195,23 @@ def test_pairing_v2_cancel_rejects_noncanonical_identifier(tmp_path):
     assert len(pairing.pending_requests()) == 0
     assert pairing.cancel(pairing_id) is True
     assert len(pairing.pending_requests()) == 0
+
+def test_pairing_v2_consumes_approved_transaction_if_credential_issuance_fails(tmp_path, monkeypatch):
+    pairing, registry, _, private, public = _setup(tmp_path)
+    tx, request = _request(pairing, public)
+    assert pairing.approve(tx["pairing_id"], approved=True)
+    signature = _signature(private, request)
+
+    def fail_issue(**kwargs):
+        raise OSError("credential storage unavailable")
+
+    monkeypatch.setattr(registry, "issue", fail_issue)
+    with pytest.raises(OSError, match="storage unavailable"):
+        pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
+                        challenge_id=request["challenge_id"], signature=signature)
+
+    # A storage failure must not leave a signed, approved challenge reusable.
+    assert pairing.pending_requests() == []
+    with pytest.raises(PairingV2Error, match="unavailable"):
+        pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
+                        challenge_id=request["challenge_id"], signature=signature)
