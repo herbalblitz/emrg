@@ -29,10 +29,10 @@ _MAX_REMOTE_SESSIONS = 200
 _SESSION_TEXT_LIMITS = {"session_id": 128, "created_at": 64, "updated_at": 64, "title": 256}
 
 
-def _safe_remote_text(value: str) -> bool:
+def _safe_remote_text(value: str, limit: int) -> bool:
     """Reject display-control and invalid Unicode before metadata reaches clients."""
     return not any(unicodedata.category(char) in {"Cc", "Cf", "Cs"}
-                   for char in value)
+                   for char in value[:limit])
 
 
 def _remote_session_metadata(records: object) -> list[dict[str, Any]]:
@@ -46,7 +46,7 @@ def _remote_session_metadata(records: object) -> list[dict[str, Any]]:
         item: dict[str, Any] = {}
         for key, limit in _SESSION_TEXT_LIMITS.items():
             value = record.get(key)
-            if isinstance(value, str) and _safe_remote_text(value):
+            if isinstance(value, str) and _safe_remote_text(value, limit):
                 item[key] = value[:limit]
         count = record.get("message_count")
         if (isinstance(count, int) and not isinstance(count, bool)
