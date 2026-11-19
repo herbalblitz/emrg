@@ -68,9 +68,12 @@ def test_pairing_v2_requires_local_approval_and_binds_exact_device_key(tmp_path)
     identity = registry.verify(device_id="android-device", credential=token)
     assert identity["workspace_id"] == "workspace"
     assert identity["scopes"] == frozenset({"status", "sessions.list"})
-    with pytest.raises(PairingV2Error, match="unavailable"):
-        pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
-                       challenge_id=request["challenge_id"], signature=sig)
+    # A lost first response is recoverable: the exact signed transaction
+    # returns the same credential without rotating or issuing another one.
+    assert pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
+                          challenge_id=request["challenge_id"], signature=sig) == token
+    assert pairing.pending_requests() == []
+    assert len(registry.list_devices()) == 1
 
 
 def test_pairing_v2_rejects_wrong_device_and_wrong_signature(tmp_path):
@@ -138,7 +141,9 @@ def test_pairing_v2_concurrent_redemption_issues_exactly_one_credential(tmp_path
         results = list(pool.map(lambda _: redeem(), range(8)))
 
     issued = [token for token in results if token is not None]
-    assert len(issued) == 1
+    # Concurrent duplicate redeems all receive one identical token.
+    assert len(issued) == 8
+    assert len(set(issued)) == 1
     identity = registry.verify(device_id="android-device", credential=issued[0])
     assert identity is not None
     assert identity["workspace_id"] == "workspace"
@@ -213,11 +218,17 @@ def test_pairing_v2_consumes_approved_transaction_if_credential_issuance_fails(t
         pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
                         challenge_id=request["challenge_id"], signature=signature)
 
-    # A storage failure must not leave a signed, approved challenge reusable.
-    assert pairing.pending_requests() == []
-    with pytest.raises(PairingV2Error, match="unavailable"):
-        pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
-                        challenge_id=request["challenge_id"], signature=signature)
+    # A failed write leaves the approved transaction retryable. No token
+    # has been issued, and the same exact proof can safely be retried.
+    assert len(pairing.pending_requests()) == 1
+    monkeypatch.undo()
+    token = pairing.redeem(
+        pairing_id=tx["pairing_id"], device_id="android-device",
+        challenge_id=request["challenge_id"], signature=signature)
+    assert registry.verify(device_id="android-device", credential=token) is not None
+    assert pairing.redeem(
+        pairing_id=tx["pairing_id"], device_id="android-device",
+        challenge_id=request["challenge_id"], signature=signature) == token
 
 @pytest.mark.parametrize("unsafe", ["workspace\nforged", "workspace\u202Eforged"])
 def test_pairing_v2_rejects_display_control_characters_in_workspace(tmp_path, unsafe):
