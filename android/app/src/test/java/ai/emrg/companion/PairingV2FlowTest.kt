@@ -129,6 +129,30 @@ class PairingV2FlowTest {
     }
 
     @Test
+    fun challengeRequestRetriesReuseTheExactSameFrameAndClientNonce() {
+        val exchange = FakeExchange()
+        val listener = RecordingListener()
+        val pairingFlow = flow(exchange)
+
+        // First host response is lost after the host may have accepted the request.
+        pairingFlow.requestChallenge(listener)
+        val first = exchange.lastRequest!!.toString()
+        val firstNonce = exchange.lastRequest!!.getString("client_nonce")
+
+        pairingFlow.requestChallenge(listener)
+        val second = exchange.lastRequest!!.toString()
+
+        assertEquals(first, second)
+        assertEquals(firstNonce, exchange.lastRequest!!.getString("client_nonce"))
+        assertEquals(2, exchange.calls)
+
+        // The original challenge is still accepted by the same client transaction.
+        deliverChallenge(exchange, listener)
+        assertNotNull(listener.challenge)
+        assertTrue(listener.failure == null)
+    }
+
+    @Test
     fun redeemRetriesReuseTheExactSameSignedFrameUntilHostApproval() {
         val exchange = FakeExchange()
         val listener = RecordingListener()
