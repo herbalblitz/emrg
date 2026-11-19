@@ -85,12 +85,15 @@ internal fun SecurePairingPanel() {
                 label = { Text("SHA-256 fingerprint (colon-separated)") },
                 singleLine = true
             )
+            if (descriptorVersion == 2 && pairingId != null) {
+                Text("Pairing v2 transaction: $pairingId")
+            }
             Button(
                 enabled = endpoint.isNotBlank() && fingerprint.isNotBlank(),
                 onClick = {
                     state = reducePairingState(
                         PairingState(),
-                        PairingAction.PairingQrReceived(endpoint.trim(), fingerprint.trim())
+                        PairingAction.PairingQrReceived(endpoint.trim(), fingerprint.trim(), pairingId)
                     )
                 }
             ) { Text("Validate descriptor") }
