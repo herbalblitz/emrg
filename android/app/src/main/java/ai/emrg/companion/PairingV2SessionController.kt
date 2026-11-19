@@ -125,7 +125,9 @@ internal class PairingV2SessionController(
                 val state = synchronized(this@PairingV2SessionController) {
                     val current = coordinator.state
                     if (current.phase == PairingPhase.PAIRED) {
-                        if (current.pairedHost != host) {
+                        if (current.pairedHost != host ||
+                            !coordinator.matchesStoredCredential(credentialAlias, credential)
+                        ) {
                             listener.onFailure("PAIRING_TRANSACTION_MISMATCH")
                             return
                         }
