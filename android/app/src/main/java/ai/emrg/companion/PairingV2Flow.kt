@@ -30,9 +30,9 @@ internal interface PairingV2FlowListener {
 /**
  * Composes the device-key protocol helper with the pinned one-frame WSS transport.
  *
- * Host approval is deliberately not inferred here: callers may redeem only after the
- * trusted host UI has approved the transaction. Credential persistence/state transition
- * remains the responsibility of SecurePairingCoordinator after onCredential.
+ * Host approval is enforced by the host server, never inferred from Android UI state.
+ * Credential persistence/state transition remains the responsibility of
+ * SecurePairingCoordinator after a validated credential response.
  */
 internal class PairingV2Flow(
     private val endpoint: String,
