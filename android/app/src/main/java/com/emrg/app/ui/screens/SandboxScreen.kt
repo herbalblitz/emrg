@@ -91,9 +91,9 @@ fun SandboxScreen(
             }
             if (expanded) {
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    for (m in listOf("read-only", "workspace-write", "danger-full-access")) {
-                        DropdownMenuItem(text = { Text(text = m) }, onClick = { mode = m; expanded = false })
-                    }
+                    DropdownMenuItem(text = { Text(text = "read-only") }, onClick = { mode = "read-only"; expanded = false })
+                    DropdownMenuItem(text = { Text(text = "workspace-write") }, onClick = { mode = "workspace-write"; expanded = false })
+                    DropdownMenuItem(text = { Text(text = "danger-full-access") }, onClick = { mode = "danger-full-access"; expanded = false })
                 }
             }
             androidx.compose.material3.Button(onClick = { apply() }) { Text(text = "Apply mode") }

@@ -22,13 +22,34 @@ fun PairScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val scope = rememberCoroutineScope()
-    var hostText by remember { mutableStateOf("") }
-    var portText by remember { mutableStateOf("56032") }
-    var pinText by remember { mutableStateOf("") }
-    var codeText by remember { mutableStateOf("") }
-    var nameText by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var pairing by remember { mutableStateOf(false) }
+    val __hostText = remember { mutableStateOf("") }
+    var hostText: String
+        get() = __hostText.value
+        set(value) { __hostText.value = value }
+    val __portText = remember { mutableStateOf("56032") }
+    var portText: String
+        get() = __portText.value
+        set(value) { __portText.value = value }
+    val __pinText = remember { mutableStateOf("") }
+    var pinText: String
+        get() = __pinText.value
+        set(value) { __pinText.value = value }
+    val __codeText = remember { mutableStateOf("") }
+    var codeText: String
+        get() = __codeText.value
+        set(value) { __codeText.value = value }
+    val __nameText = remember { mutableStateOf("") }
+    var nameText: String
+        get() = __nameText.value
+        set(value) { __nameText.value = value }
+    val __error = remember { mutableStateOf<String?>(null) }
+    var error: String?
+        get() = __error.value
+        set(value) { __error.value = value }
+    val __pairing = remember { mutableStateOf(false) }
+    var pairing: Boolean
+        get() = __pairing.value
+        set(value) { __pairing.value = value }
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Pair host") }) },
