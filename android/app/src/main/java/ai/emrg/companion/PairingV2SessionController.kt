@@ -90,10 +90,13 @@ internal class PairingV2SessionController(
      */
     @Synchronized
     fun redeemChallenge(listener: PairingV2SessionListener): PairingV2ExchangeHandle {
-        val currentPhase = coordinator.state.phase
+        // Read one immutable snapshot so phase and error code cannot come from
+        // different concurrent state transitions.
+        val currentState = coordinator.state
+        val currentPhase = currentState.phase
         val retryingCredentialPersistence =
             currentPhase == PairingPhase.FAILED &&
-                coordinator.state.errorCode == "CREDENTIAL_STORAGE_FAILED"
+                currentState.errorCode == "CREDENTIAL_STORAGE_FAILED"
         if (currentPhase != PairingPhase.AWAITING_HOST_APPROVAL &&
             currentPhase != PairingPhase.HOST_APPROVED &&
             !retryingCredentialPersistence
