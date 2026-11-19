@@ -405,3 +405,46 @@ def test_wss_rejects_sessions_list_without_scope_before_dispatch(tmp_path, monke
         assert calls == []
 
     asyncio.run(run())
+
+
+
+def test_wss_closes_existing_socket_after_credential_rotation(tmp_path):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        credential = host.registry.issue(
+            device_id="phone-rotate-live", workspace_id="ws-rotate-live",
+            cwd=str(tmp_path), scopes={"status"})
+        listener = _listener(tmp_path, host)
+        auth = {"type": "auth", "protocol": "1.0",
+                "device_id": "phone-rotate-live", "credential": credential,
+                "client_nonce": "nonce-rotate-live-1234"}
+        status = {"type": "status", "request_id": "must-not-dispatch"}
+
+        class Socket:
+            def __init__(self):
+                self.calls = 0
+                self.sent = []
+                self.closed = []
+            async def recv(self):
+                self.calls += 1
+                if self.calls == 1:
+                    return json.dumps(auth)
+                # Replace the credential without changing workspace or scopes.
+                host.registry.issue(
+                    device_id="phone-rotate-live", workspace_id="ws-rotate-live",
+                    cwd=str(tmp_path), scopes={"status"})
+                return json.dumps(status)
+            async def send(self, data):
+                self.sent.append(json.loads(data))
+            async def close(self, **kwargs):
+                self.closed.append(kwargs)
+
+        ws = Socket()
+        await listener._session(ws)
+        assert [frame["type"] for frame in ws.sent] == ["auth.ok"]
+        assert ws.closed == [{
+            "code": 1008, "reason": "Device authorization changed"
+        }]
+
+    asyncio.run(run())
