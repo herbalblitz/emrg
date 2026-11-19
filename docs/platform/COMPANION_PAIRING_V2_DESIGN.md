@@ -250,3 +250,10 @@ contract; it does not change the host credential format or pairing protocol.
 JVM tests cover the 512-byte boundary, blank values, oversized ASCII values, and
 multi-byte UTF-8 values. Android CI must pass for the complete source/test commit.
 These JVM tests do not substitute for physical-device Android Keystore validation.
+
+
+### Credential text encoding boundary (2026-11-19)
+
+- Android credential validation now uses a reporting UTF-8 encoder rather than replacement-based string conversion. Malformed UTF-16 input (including unpaired surrogates) is rejected before the 512-byte bound is evaluated or persistence is attempted.
+- Regression coverage includes an unpaired high surrogate. This prevents Java/Kotlin replacement encoding from silently changing credential bytes before storage.
+- Android CI #207 failed during Gradle dependency resolution because Maven Central returned HTTP 429 for multiple artifacts; APK assembly did not reach Kotlin compilation. CI #210 is still running for the prior full credential-boundary changes; the newest malformed-Unicode commits are queued in #212.
