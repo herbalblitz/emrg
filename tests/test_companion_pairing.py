@@ -134,3 +134,42 @@ def test_cancel_all_invalidates_every_pending_transaction(tmp_path):
         with pytest.raises(PairingError, match="unavailable"):
             pairing.redeem(pairing_id=request["pairing_id"],
                            pairing_secret=request["pairing_secret"], device_id="d")
+
+
+def test_pairing_id_has_256_bits_of_random_entropy(tmp_path):
+    pairing = make_pairing(tmp_path)
+    request = pairing.begin(workspace_id="ws", cwd="/w", scopes={"status"})
+    # 32 random bytes encode to 43 unpadded URL-safe base64 characters.
+    assert len(request["pairing_id"]) == 43
+
+
+def test_concurrent_redemption_issues_exactly_one_credential(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    pairing = make_pairing(tmp_path)
+    request = pairing.begin(workspace_id="ws", cwd="/w", scopes={"status"})
+    assert pairing.approve(request["pairing_id"], approved=True)
+    workers = 8
+    barrier = Barrier(workers)
+
+    def redeem_once():
+        barrier.wait()
+        try:
+            return pairing.redeem(
+                pairing_id=request["pairing_id"],
+                pairing_secret=request["pairing_secret"],
+                device_id="single-device")
+        except PairingError:
+            return None
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        results = list(pool.map(lambda _: redeem_once(), range(workers)))
+
+    issued = [value for value in results if value is not None]
+    assert len(issued) == 1
+    identity = pairing._registry.verify(device_id="single-device", credential=issued[0])
+    assert identity["scopes"] == frozenset({"status"})
+    with pytest.raises(PairingError, match="unavailable"):
+        pairing.redeem(pairing_id=request["pairing_id"],
+                       pairing_secret=request["pairing_secret"], device_id="replay")
