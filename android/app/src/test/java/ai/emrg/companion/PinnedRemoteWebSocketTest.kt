@@ -137,8 +137,6 @@ class PinnedRemoteWebSocketTest {
             fail("invalid pin must be rejected")
         } catch (_: IllegalArgumentException) { }
     }
-}
-
 
     @Test fun applicationFramesAreRejectedUntilAuthenticationCompletes() {
         assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "auth_ok"))
@@ -156,3 +154,4 @@ class PinnedRemoteWebSocketTest {
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, null))
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, null))
     }
+}
