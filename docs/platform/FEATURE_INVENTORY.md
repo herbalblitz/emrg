@@ -110,6 +110,15 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] WSS session listing returns only bounded, allowlisted metadata; local cwd, transcripts, and arbitrary meta fields are excluded.
 
 
+## Trusted local Companion control bridge
+
+- [x] Daemon owns a disabled-by-default `CompanionHostService` and an allow-listed `CompanionLocalControl` facade; credential registry path is daemon-owned.
+- [x] Authenticated daemon command routes only `status`, `pairing.pending.list`, `pairing.decide`, and `pairing.cancel`; unknown operations and malformed payloads fail closed.
+- [x] Electron Main exposes fixed status/pending/decision IPC handlers and validates primary BrowserWindow, top-level frame, and local `file://` origin.
+- [x] Preload exposes only named Companion methods; preload API contract test updated.
+- [ ] React renderer approval screen, host enable/disable UX, TLS identity provisioning, QR descriptor display, and WSS listener lifecycle are not wired.
+- [ ] Windows/Linux daemon and Electron IPC sender-origin tests and live Android-to-host pairing remain open. This bridge is not an end-to-end pairing implementation.
+
 ## Pairing v2 host transaction core
 
 - [x] Host trusted-local pending v2 approval listing is bounded to display/decision metadata and SHA-256 public-key fingerprint; tests assert raw public key, client nonce, challenge bytes, and issued credential are not exposed, and redeemed transactions leave the pending queue. Companion security CI #182 passed on Ubuntu (210) and Windows (206 passed, 4 skipped).
