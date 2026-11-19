@@ -88,9 +88,10 @@ internal fun SecurePairingPanel() {
                 value = endpoint,
                 onValueChange = {
                     endpoint = it
-                    // A manually edited endpoint must not inherit a QR transaction ID.
+                    // Manual edits invalidate both the QR transaction and any prior verification state.
                     pairingId = null
                     descriptorVersion = null
+                    state = PairingState()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Host endpoint (wss://)") },
@@ -100,9 +101,10 @@ internal fun SecurePairingPanel() {
                 value = fingerprint,
                 onValueChange = {
                     fingerprint = it
-                    // A manually edited pin invalidates the parsed QR transaction context.
+                    // Manual edits invalidate both the QR transaction and any prior verification state.
                     pairingId = null
                     descriptorVersion = null
+                    state = PairingState()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("SHA-256 fingerprint (colon-separated)") },
