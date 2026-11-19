@@ -655,52 +655,129 @@ def test_close_during_listener_start_prevents_late_bind_and_unregisters_callback
     asyncio.run(run())
 
 
-@pytest.mark.parametrize("frame", [
-    {
-        "type": "pairing.request", "protocol": "2.0",
-        "pairing_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        "device_id": "untrusted-device",
-        "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-    },
-    {
-        "type": "pairing.redeem", "protocol": "2.0",
-        "pairing_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        "device_id": "untrusted-device",
-        "challenge_id": "AAAAAAAAAAAAAAAAAAAAAA",
-        "signature": "A" * 86,
-    },
-])
-def test_wss_does_not_accept_unauthenticated_pairing_v2_frames(tmp_path, frame, monkeypatch):
-    """Pairing v2 must not bypass auth until a dedicated pinned-TLS adapter exists."""
-    from emrg.server.companion_auth import CompanionAuthenticationError
+def test_wss_pairing_v2_request_and_redeem_require_host_local_approval(tmp_path):
+    import base64
+    import hashlib
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
 
     async def run():
-        host = CompanionHostService(tmp_path / "registry.json")
+        host = CompanionHostService(tmp_path / "registry-v2.json")
         host.enable()
-        tx = host.begin_pairing_v2(
-            host_identity="host-test", workspace_id="workspace-test",
+        transaction = host.begin_pairing_v2(
+            host_identity="host-test", workspace_id="workspace-v2",
             cwd=str(tmp_path), scopes={"status"})
         listener = _listener(tmp_path, host)
-        dispatched = []
-        monkeypatch.setattr(host, "request_pairing_v2", lambda **kw: dispatched.append(("request", kw)))
-        monkeypatch.setattr(host, "redeem_pairing_v2", lambda **kw: dispatched.append(("redeem", kw)))
+        private_key = ec.generate_private_key(ec.SECP256R1())
+        public_der = private_key.public_key().public_bytes(
+            serialization.Encoding.DER,
+            serialization.PublicFormat.SubjectPublicKeyInfo)
+        enc = lambda raw: base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
 
         class Socket:
+            def __init__(self, frame):
+                self.frame = json.dumps(frame)
+                self.sent = []
+                self.closed = []
             async def recv(self):
-                return json.dumps(frame)
+                return self.frame
             async def send(self, data):
-                raise AssertionError("unauthenticated socket must receive no success frame")
+                self.sent.append(json.loads(data))
+            async def close(self, **kwargs):
+                self.closed.append(kwargs)
+
+        request = {
+            "type": "pairing.request", "protocol": "2.0",
+            "pairing_id": transaction["pairing_id"], "device_id": "android-v2",
+            "key_algorithm": "P-256", "public_key": enc(public_der),
+        }
+        request_socket = Socket(request)
+        await listener._session(request_socket)
+        challenge_response = request_socket.sent[0]
+        assert challenge_response["type"] == "pairing.challenge"
+        assert challenge_response["pairing_id"] == transaction["pairing_id"]
+        assert host.pending_pairings_v2()[0]["approved"] is None
+
+        assert host.decide_pairing_v2(transaction["pairing_id"], approved=True)
+        challenge = base64.urlsafe_b64decode(
+            challenge_response["challenge"] + "=" * (-len(challenge_response["challenge"]) % 4))
+        signature = private_key.sign(challenge, ec.ECDSA(hashes.SHA256()))
+        redeem = {
+            "type": "pairing.redeem", "protocol": "2.0",
+            "pairing_id": transaction["pairing_id"], "device_id": "android-v2",
+            "challenge_id": challenge_response["challenge_id"],
+            "signature": enc(signature),
+        }
+        redeem_socket = Socket(redeem)
+        await listener._session(redeem_socket)
+        credential_response = redeem_socket.sent[0]
+        assert credential_response["type"] == "pairing.credential"
+        assert credential_response["device_id"] == "android-v2"
+        identity = host.authenticate(json.dumps({
+            "type": "auth", "protocol": "1.0", "device_id": "android-v2",
+            "credential": credential_response["credential"],
+            "client_nonce": "nonce-abcdefghijkl",
+        }))
+        assert identity["workspace_id"] == "workspace-v2"
+        # Redemption is one-time; replay cannot mint a second credential.
+        replay_socket = Socket(redeem)
+        await listener._session(replay_socket)
+        assert replay_socket.sent[0]["type"] == "pairing.error"
+
+    asyncio.run(run())
+
+
+def test_wss_pairing_v2_redeem_before_local_approval_fails_closed(tmp_path):
+    import base64
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    async def run():
+        host = CompanionHostService(tmp_path / "registry-v2-unapproved.json")
+        host.enable()
+        transaction = host.begin_pairing_v2(
+            host_identity="host-test", workspace_id="workspace-v2",
+            cwd=str(tmp_path), scopes={"status"})
+        private_key = ec.generate_private_key(ec.SECP256R1())
+        public_der = private_key.public_key().public_bytes(
+            serialization.Encoding.DER,
+            serialization.PublicFormat.SubjectPublicKeyInfo)
+        enc = lambda raw: base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
+        listener = _listener(tmp_path, host)
+
+        class Socket:
+            def __init__(self, frame):
+                self.frame = json.dumps(frame)
+                self.sent = []
+            async def recv(self):
+                return self.frame
+            async def send(self, data):
+                self.sent.append(json.loads(data))
             async def close(self, **kwargs):
                 pass
 
-        with pytest.raises(CompanionAuthenticationError):
-            await listener._session(Socket())
-
-        # The frame was rejected by the existing auth gate and never reached
-        # the host-local v2 request/redeem APIs.
-        assert host.pending_pairings_v2() == []
-        assert dispatched == []
-        assert tx["pairing_id"]
+        request_socket = Socket({
+            "type": "pairing.request", "protocol": "2.0",
+            "pairing_id": transaction["pairing_id"], "device_id": "android-v2",
+            "key_algorithm": "P-256", "public_key": enc(public_der),
+        })
+        await listener._session(request_socket)
+        challenge = request_socket.sent[0]
+        raw_challenge = base64.urlsafe_b64decode(
+            challenge["challenge"] + "=" * (-len(challenge["challenge"]) % 4))
+        signature = private_key.sign(raw_challenge, ec.ECDSA(
+            __import__("cryptography.hazmat.primitives.hashes", fromlist=["SHA256"]).SHA256()))
+        redeem_socket = Socket({
+            "type": "pairing.redeem", "protocol": "2.0",
+            "pairing_id": transaction["pairing_id"], "device_id": "android-v2",
+            "challenge_id": challenge["challenge_id"], "signature": enc(signature),
+        })
+        await listener._session(redeem_socket)
+        assert redeem_socket.sent == [{
+            "type": "pairing.error", "protocol": "2.0",
+            "pairing_id": transaction["pairing_id"], "code": "pairing_unavailable",
+        }]
+        assert host.registered_devices() == []
 
     asyncio.run(run())
 
