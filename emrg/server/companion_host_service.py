@@ -133,14 +133,15 @@ class CompanionHostService:
             return self._pairings_v2.begin(
                 workspace_id=workspace_id, cwd=cwd, scopes=scopes)
 
-    def request_pairing_v2(self, *, pairing_id: str, device_id: str,
-                           public_key: str) -> dict[str, str]:
+    def request_pairing_v2(self, *, pairing_id: str, device_id: str, public_key: str,
+                           requested_scopes: list[str] | tuple[str, ...], client_nonce: str) -> dict[str, str]:
         with self._lifecycle_lock:
             self._require_enabled()
             if self._pairings_v2 is None:
                 raise PairingV2Error("pairing unavailable")
             return self._pairings_v2.request(
-                pairing_id=pairing_id, device_id=device_id, public_key=public_key)
+                pairing_id=pairing_id, device_id=device_id, public_key=public_key,
+                requested_scopes=requested_scopes, client_nonce=client_nonce)
 
     def pending_pairings_v2(self) -> list[dict[str, object]]:
         with self._lifecycle_lock:
