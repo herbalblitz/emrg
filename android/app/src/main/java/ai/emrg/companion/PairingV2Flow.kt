@@ -48,14 +48,18 @@ internal class PairingV2Flow(
     override val deviceId: String get() = client.deviceId
     override val requestedScopes: Set<String> get() = client.requestedScopes
     private var acceptedChallenge: PairingV2Challenge? = null
+    private var cachedRequestFrame: JSONObject? = null
     private var cachedRedeemFrame: JSONObject? = null
 
     @Synchronized
     override fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle {
-        acceptedChallenge = null
-        cachedRedeemFrame = null
-        val request = try {
-            client.createRequestFrame(pairingId)
+        // A challenge response can be lost after the host records this request.
+        // Reuse the exact frame (especially its client nonce) on retries so the
+        // host can return the original challenge instead of treating it as a new request.
+        val request = cachedRequestFrame?.let { JSONObject(it.toString()) } ?: try {
+            client.createRequestFrame(pairingId).also {
+                cachedRequestFrame = JSONObject(it.toString())
+            }
         } catch (_: Exception) {
             listener.onFailure("PAIRING_REQUEST_INVALID")
             return PairingV2ExchangeHandle { }
@@ -74,7 +78,6 @@ internal class PairingV2Flow(
                 }
                 synchronized(this@PairingV2Flow) {
                     acceptedChallenge = challenge
-                    cachedRedeemFrame = null
                 }
                 listener.onChallenge(challenge)
             }
