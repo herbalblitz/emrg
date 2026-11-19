@@ -236,3 +236,17 @@ before invoking the Keystore cipher:
 This hardening does not alter credential encryption, key aliases, AAD binding,
 credential contents, or the host protocol. Android CI must pass before treating
 the change as validated; device/Keystore integration remains a separate test gate.
+
+
+### Android credential size and encryption-parameter hardening (2026-11-19)
+
+The Android credential store and pairing coordinator now enforce the host credential
+registry's 512-byte UTF-8 credential limit before persistence. Blank, oversized, and
+multi-byte values exceeding the byte limit are rejected without writing a credential.
+The AES-256-GCM Android Keystore key-generation specification also explicitly requires
+randomized encryption. This documents and reinforces the existing envelope/AAD
+contract; it does not change the host credential format or pairing protocol.
+
+JVM tests cover the 512-byte boundary, blank values, oversized ASCII values, and
+multi-byte UTF-8 values. Android CI must pass for the complete source/test commit.
+These JVM tests do not substitute for physical-device Android Keystore validation.
