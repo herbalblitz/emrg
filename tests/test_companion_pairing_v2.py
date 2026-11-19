@@ -153,3 +153,34 @@ def test_pairing_v2_pending_capacity_is_bounded_and_cancel_all_clears(tmp_path):
     assert pairing.cancel_all() == 0
     fresh = pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
     assert fresh["pairing_id"]
+
+
+def test_pairing_v2_rejects_padded_or_noncanonical_base64url(tmp_path):
+    pairing, _, _, _, public = _setup(tmp_path)
+    tx = pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
+    with pytest.raises(PairingV2Error, match="invalid device key"):
+        pairing.request(pairing_id=tx["pairing_id"], device_id="android-device",
+                        public_key=public + "=")
+    with pytest.raises(PairingV2Error, match="pairing unavailable"):
+        pairing.request(pairing_id=tx["pairing_id"] + "=", device_id="android-device",
+                        public_key=public)
+    with pytest.raises(PairingV2Error, match="invalid device"):
+        pairing.request(pairing_id=tx["pairing_id"], device_id="android device",
+                        public_key=public)
+    with pytest.raises(PairingV2Error, match="invalid device"):
+        pairing.request(pairing_id=tx["pairing_id"], device_id="android\\nforged",
+                        public_key=public)
+
+
+def test_pairing_v2_rejects_padded_challenge_and_signature(tmp_path):
+    pairing, _, _, private, public = _setup(tmp_path)
+    tx, request = _request(pairing, public)
+    assert pairing.approve(tx["pairing_id"], approved=True)
+    signature = _signature(private, request)
+    with pytest.raises(PairingV2Error, match="invalid challenge"):
+        pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
+                        challenge_id=request["challenge_id"] + "=",
+                        signature=signature)
+    with pytest.raises(PairingV2Error, match="invalid proof"):
+        pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
+                        challenge_id=request["challenge_id"], signature=signature + "=")
