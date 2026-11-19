@@ -203,9 +203,11 @@ internal class PinnedRemoteWebSocket(
     }
 
     companion object {
-        internal fun isAllowedFrameInAuthState(authenticated: Boolean, frameType: String): Boolean {
+        internal fun isAllowedFrameInAuthState(authenticated: Boolean, frameType: String?): Boolean {
             val authFrames = setOf("auth_ok", "auth_error", "auth_rejected")
-            return if (authenticated) frameType !in authFrames else frameType in authFrames
+            return frameType?.let {
+                if (authenticated) it !in authFrames else it in authFrames
+            } == true
         }
 
         internal fun isValidAuthSuccess(frame: ProtocolFrame, host: PairedHost): Boolean {
