@@ -70,4 +70,5 @@ class CompanionAuthenticator:
             "workspace_id": record["workspace_id"],
             "cwd": record["cwd"],
             "scopes": record["scopes"],
+            "generation": record["generation"],
         }
