@@ -3,7 +3,6 @@ package ai.emrg.companion
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -114,51 +113,42 @@ class PairingV2FlowTest {
     }
 
     @Test
-    fun redeemRequiresExplicitConfirmationForMatchingHostApproval() {
+    fun challengeFromAnotherFlowIsRejectedBeforeOpeningRedeemTransport() {
         val exchange = FakeExchange()
         val listener = RecordingListener()
         val pairingFlow = flow(exchange)
         pairingFlow.requestChallenge(listener)
         deliverChallenge(exchange, listener)
-        val challenge = listener.challenge!!
 
-        pairingFlow.redeemAfterHostApproval(challenge, listener)
-
-        assertEquals("HOST_APPROVAL_NOT_CONFIRMED", listener.failure)
-        assertEquals(1, exchange.calls)
-        assertTrue(listener.credential == null)
-    }
-
-    @Test
-    fun hostApprovalMustReferToChallengeFromThisFlow() {
-        val exchange = FakeExchange()
-        val listener = RecordingListener()
-        val pairingFlow = flow(exchange)
-        pairingFlow.requestChallenge(listener)
-        deliverChallenge(exchange, listener)
-        val challenge = listener.challenge!!
-
-        assertFalse(pairingFlow.confirmHostApproval(challenge.copy(pairingId = "D".repeat(43))))
-        assertTrue(pairingFlow.confirmHostApproval(challenge))
-
+        val otherExchange = FakeExchange()
         val otherListener = RecordingListener()
-        flow(FakeExchange()).redeemAfterHostApproval(challenge, otherListener)
+        flow(otherExchange).redeem(listener.challenge!!, otherListener)
+
         assertEquals("PAIRING_TRANSACTION_MISMATCH", otherListener.failure)
+        assertEquals(0, otherExchange.calls)
     }
 
     @Test
-    fun retriesReuseTheSameSignedRedeemFrame() {
+    fun redeemRetriesReuseTheExactSameSignedFrameUntilHostApproval() {
         val exchange = FakeExchange()
         val listener = RecordingListener()
         val pairingFlow = flow(exchange)
         pairingFlow.requestChallenge(listener)
         deliverChallenge(exchange, listener)
         val challenge = listener.challenge!!
-        assertTrue(pairingFlow.confirmHostApproval(challenge))
 
-        pairingFlow.redeemAfterHostApproval(challenge, listener)
+        pairingFlow.redeem(challenge, listener)
         val first = exchange.lastRequest!!.toString()
-        pairingFlow.redeemAfterHostApproval(challenge, listener)
+        exchange.respond(
+            JSONObject()
+                .put("type", "pairing.error")
+                .put("protocol", "2.0")
+                .put("pairing_id", pairingId)
+                .put("code", "pairing_unavailable"),
+        )
+        assertEquals("PAIRING_UNAVAILABLE", listener.failure)
+
+        pairingFlow.redeem(challenge, listener)
         val second = exchange.lastRequest!!.toString()
 
         assertEquals(first, second)
@@ -172,9 +162,7 @@ class PairingV2FlowTest {
         val pairingFlow = flow(exchange)
         pairingFlow.requestChallenge(listener)
         deliverChallenge(exchange, listener)
-        val challenge = listener.challenge!!
-        assertTrue(pairingFlow.confirmHostApproval(challenge))
-        pairingFlow.redeemAfterHostApproval(challenge, listener)
+        pairingFlow.redeem(listener.challenge!!, listener)
 
         exchange.respond(
             JSONObject()
@@ -196,9 +184,7 @@ class PairingV2FlowTest {
         val pairingFlow = flow(exchange)
         pairingFlow.requestChallenge(listener)
         deliverChallenge(exchange, listener)
-        val challenge = listener.challenge!!
-        assertTrue(pairingFlow.confirmHostApproval(challenge))
-        pairingFlow.redeemAfterHostApproval(challenge, listener)
+        pairingFlow.redeem(listener.challenge!!, listener)
 
         exchange.respond(
             JSONObject()
