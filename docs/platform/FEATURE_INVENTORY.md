@@ -116,3 +116,11 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Unit tests cover approval gating, device/key proof binding, wrong-device and wrong-signature rejection, duplicate request/approval, expiry, cancellation and credential scope issuance.
 - [x] Added `tests/test_companion_pairing_v2.py` to the companion-security workflow's explicit pytest invocation; CI run [#111](https://github.com/herbalblitz/emrg/actions/runs/44447348538) passed with the initial five v2 tests, then CI run [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797) passed with all seven tests, including concurrent one-time redemption and the 32-entry pending-cap/cancel-all regression.
 - [ ] WSS request/redeem adapter, trusted local approval UI, Android private-key proof/credential persistence integration and end-to-end pairing remain unimplemented.
+
+
+## Android encrypted credential envelope
+
+- [x] Replaced permissive envelope parsing with strict canonical standard-Base64 validation; exact separator count, 12-byte IV and minimum 16-byte AES-GCM ciphertext are enforced.
+- [x] Added platform-independent JVM regression tests for canonical round-trip, malformed separators/whitespace, invalid lengths and noncanonical Base64.
+- [x] Android Companion CI #206 passed: APK assembly, unit tests, lint and artifact upload.
+- [ ] Validate actual Android Keystore encryption/decryption and key deletion on supported physical Android devices; JVM CI does not exercise the platform Keystore provider.
