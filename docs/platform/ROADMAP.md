@@ -297,3 +297,15 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Android Companion CI #267 passed on commit `2fbdf7d0d92c`: debug APK assembly, unit tests, lint, and artifact upload succeeded.
 - [ ] Wire the exchange to `PairingV2Client`, `SecurePairingCoordinator`, host-approval wait/redeem flow, and the QR UI. This increment is a transport primitive, not end-to-end pairing.
 - [ ] Verify Android Keystore behavior on physical devices and complete cross-platform end-to-end pairing tests.
+
+### Pairing v2 integration status (2026-11-19)
+
+- [x] Compose the Android Pairing v2 client with the pinned WSS exchange through `PairingV2Flow`; bind endpoint, certificate fingerprint, pairing ID, device ID, and requested scopes to the same transport instance.
+- [x] Add `PairingV2SessionController` to coordinate challenge delivery, redemption, reducer transitions, and encrypted credential persistence.
+- [x] Keep host-local approval authoritative. Android never fabricates approval; a generic unavailable response leaves the coordinator awaiting host approval and permits a bounded user-initiated retry using the cached signed redeem frame.
+- [x] Persist credentials only after a valid host-issued credential response and successful coordinator/store validation.
+- [ ] Wire the QR scanner/panel and lifecycle-safe retry UX to the controller.
+- [ ] Run Android Keystore compatibility tests on physical devices and validate Android ↔ Windows pairing end-to-end.
+- [ ] Run authenticated status/session-list operations against a real Windows host. Chat remains disabled because the workspace/cwd authorization contract is not yet complete.
+
+The latest Android debug APK assembly has succeeded. The first controller-integration CI run exposed one test assertion issue in the retry test; the test now checks the successful paired callback rather than expecting a historical failure callback to be erased. A fresh CI run is required before marking this increment verified.
