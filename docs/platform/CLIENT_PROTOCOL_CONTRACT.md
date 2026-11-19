@@ -235,7 +235,7 @@ Chat dispatch, cancellation, tool approvals, filesystem operations, pairing UI/Q
 
 ### Remote session metadata boundary
 
-The WSS `sessions.list` response does not forward raw session metadata. It exposes only a bounded allowlist (`session_id`, timestamps, title, and non-negative message count), truncates text fields, and caps the result at 200 entries. Local paths, transcript content, and arbitrary metadata keys are excluded.
+The WSS `sessions.list` response does not forward raw session metadata. It exposes only a bounded allowlist (`session_id`, timestamps, title, and message counts in the range 0–2^31−1), truncates text fields, and caps the result at 200 entries. Local paths, transcript content, and arbitrary metadata keys are excluded.
 
 ### Pairing input boundary
 
@@ -248,3 +248,8 @@ The currently unimplemented `chat.send` frame validator also rejects empty, non-
 ### WSS dispatch allowlist and negative-path tests
 
 The WSS listener dispatches only authenticated `status` and read-only `sessions.list` requests. A correctly scoped `chat.send` frame is currently answered with `not_implemented`; it is not forwarded to a chat executor. Requests without the required scope are rejected at protocol validation before the corresponding host operation runs. Tests cover both properties so adding protocol validation for a future operation cannot silently enable its execution.
+
+
+### Listener startup/shutdown race boundary
+
+The WSS listener does not publish a newly-bound server if local Companion policy is disabled or `stop()` is called while the asynchronous socket bind is still in progress. The returned server is closed and awaited before startup fails. A regression test exercises disable-during-startup to prevent a late bind from resurrecting the listener after local shutdown.
