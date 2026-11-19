@@ -122,6 +122,7 @@ class PairingV2Transactions:
         self._clock = clock
         self._lock = threading.Lock()
         self._pending: dict[str, _PendingV2] = {}
+        self._seen_client_nonces: dict[str, float] = {}
 
     @property
     def host_identity(self) -> str:
@@ -173,12 +174,16 @@ class PairingV2Transactions:
                 raise PairingV2Error("pairing unavailable")
             if item.device_id is not None:
                 raise PairingV2Error("pairing request already received")
+            self._purge_client_nonces(now)
+            if client_nonce in self._seen_client_nonces:
+                raise PairingV2Error("client nonce replay")
             if not requested <= item.scopes:
                 raise PairingV2Error("requested scopes exceed host grant")
             item.device_id = device_id
             item.public_key = raw_key
             item.requested_scopes = requested
             item.client_nonce = client_nonce
+            self._seen_client_nonces[client_nonce] = now
             item.challenge = secrets.token_bytes(32)
             challenge_id = _encode(secrets.token_bytes(16))
             # challenge_id is carried inside the signed canonical payload.
@@ -285,6 +290,17 @@ class PairingV2Transactions:
             count = len(self._pending)
             self._pending.clear()
             return count
+
+    def _purge_client_nonces(self, now: float) -> None:
+        expired = [
+            nonce for nonce, created_at in self._seen_client_nonces.items()
+            if now - created_at >= PAIRING_V2_TTL_SECONDS
+        ]
+        for nonce in expired:
+            del self._seen_client_nonces[nonce]
+        if len(self._seen_client_nonces) >= 4096:
+            oldest = min(self._seen_client_nonces, key=self._seen_client_nonces.get)
+            del self._seen_client_nonces[oldest]
 
     def _purge(self, now: float) -> None:
         expired = [key for key, item in self._pending.items()
