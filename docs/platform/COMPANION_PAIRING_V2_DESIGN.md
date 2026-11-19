@@ -178,3 +178,24 @@ The host-side v2 transaction core now has an isolated implementation in `emrg/se
 - Host service exposes local begin/pending/approve/reject operations and adapter-facing request/redeem methods. Disabling the service cancels v2 pending transactions.
 
 This is a transport-independent core only. The current WSS listener does not call these methods; QR v2 generation, TLS-certificate fingerprint plumbing, rate limiting at the new request endpoint, Android Keystore signing, and Windows/Android end-to-end integration remain gates. Do not describe v2 pairing as live until those pieces and CI are complete.
+
+### Android descriptor/parser progress (2026-11-19)
+
+The Android companion now has a versioned descriptor parser in
+`android/app/src/main/java/ai/emrg/companion/PairingDescriptorParser.kt`:
+
+- v1 remains compatible and produces no pairing transaction ID.
+- v2 requires a canonical, unpadded Base64URL `pairing_id` encoding exactly 32 bytes.
+- Both versions require a secure WSS endpoint, a SHA-256 certificate fingerprint,
+  and an expiry no more than 180 seconds in the future.
+- Duplicate top-level JSON keys are rejected before `JSONObject` parsing, including
+  names that become duplicates only after JSON escape decoding.
+- Credential-bearing field names are rejected case-insensitively; unknown fields
+  and incorrect endpoint/fingerprint JSON types fail closed.
+- The parser requires `pairing_id` to be a JSON string; it does not coerce other
+  JSON types into strings.
+
+The host-side strict v2 frame validator also rejects duplicate keys after JSON
+escape decoding. These parser/validator changes do not add a WSS pairing route,
+generate a device key, approve a request, or issue a credential. The transport and
+host-approval gates above remain unchanged.
