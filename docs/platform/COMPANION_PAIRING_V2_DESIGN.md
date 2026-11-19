@@ -152,6 +152,14 @@ Every transition is host-authoritative and atomic. Duplicate requests, approvals
 - Approval, rejection, timeout, cancellation, host shutdown, replay, wrong device, and credential revocation.
 - Verify that existing v1 QR parsing and authenticated status/session operations do not regress.
 
+## Android device-key compatibility gate (2026-11-19)
+
+The current host prototype is Ed25519-only, while Android targets API 26+. The Android Keystore documentation demonstrates EC key generation and SHA-256 ECDSA signing, but does not establish Ed25519 AndroidKeyStore support across API 26+ devices. StrongBox's documented required algorithm subset also does not include Ed25519.
+
+Do not assume Ed25519 support from API level or JCA signature-provider availability. Do not silently fall back to software-generated/exportable keys or change the wire algorithm on the Android client alone. Pairing v2 remains disabled until the protocol makes an explicit cross-platform algorithm decision and physical-device tests establish non-exportable key generation, persistence, and signing.
+
+See [ANDROID_COMPANION_DEVICE_KEY_COMPATIBILITY_AUDIT.md](ANDROID_COMPANION_DEVICE_KEY_COMPATIBILITY_AUDIT.md) for evidence, options, and required validation.
+
 ## 9. Implementation gates and sequencing
 
 1. Select and document public-key algorithm, canonical challenge encoding, signature algorithm, and credential key-binding format.
