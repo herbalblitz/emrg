@@ -156,7 +156,7 @@ Every transition is host-authoritative and atomic. Duplicate requests, approvals
 
 The protocol decision is P-256 ECDSA to align with Android Keystore's documented EC key-generation and SHA-256 ECDSA signing APIs. The host transaction core and strict frame validator now accept only P-256 SPKI public keys and ECDSA/SHA-256 proofs; the request frame carries the explicit `key_algorithm: P-256` marker.
 
-This removes the unsupported assumption that Ed25519 is available in Android Keystore across API 26+ devices. It does not prove every Android device has a usable secure implementation. Pairing v2 remains disabled until an Android Keystore P-256 key manager is implemented and physical-device tests establish non-exportable key generation, persistence, and signing. Do not silently fall back to software-generated/exportable keys.
+This removes the unsupported assumption that Ed25519 is available in Android Keystore across API 26+ devices. It does not prove every Android device has a usable secure implementation. An Android Keystore P-256 key-manager implementation now exists, with a transport-neutral client helper and JVM protocol tests. Pairing v2 remains disabled until physical-device tests establish non-exportable key generation, persistence, and signing on supported API levels. Do not silently fall back to software-generated/exportable keys.
 
 See [ANDROID_COMPANION_DEVICE_KEY_COMPATIBILITY_AUDIT.md](ANDROID_COMPANION_DEVICE_KEY_COMPATIBILITY_AUDIT.md) for evidence, options, and required validation.
 
@@ -182,7 +182,7 @@ The host-side v2 transaction core now has an isolated implementation in `emrg/se
 - Host creates a 256-bit opaque transaction ID; a device submits one public key and device ID for that transaction.
 - The host-local pending view exposes the device ID and SHA-256 public-key fingerprint for the approval decision; it does not expose private key material.
 - The signed canonical JSON challenge binds protocol version, transaction ID, challenge ID/nonce, device ID, public-key fingerprint, configured host identity, workspace, exact scopes, and transaction expiry.
-- Redemption verifies the Ed25519 proof and exact device/challenge binding, then consumes the transaction before issuing the credential.
+- Redemption verifies the P-256 ECDSA/SHA-256 proof and exact device/challenge binding, then consumes the transaction before issuing the credential.
 - Host service exposes local begin/pending/approve/reject operations and adapter-facing request/redeem methods. Disabling the service cancels v2 pending transactions.
 
 This is a transport-independent core only. The current WSS listener does not call these methods; QR v2 generation, TLS-certificate fingerprint plumbing, rate limiting at the new request endpoint, Android Keystore signing, and Windows/Android end-to-end integration remain gates. Do not describe v2 pairing as live until those pieces and CI are complete.
@@ -301,3 +301,11 @@ and transport integration, physical-device Keystore tests (including API 26),
 process-restart persistence, and end-to-end Python/Android signature
 interoperability are verified. JVM tests do not prove secure-hardware availability
 or actual Android Keystore behavior.
+
+
+### Pairing v2 client hardening follow-up (2026-11-19)
+
+- Android now binds a redeem attempt to the exact pairing ID used by the most recent successfully constructed request frame. A challenge for a different transaction is rejected before signing.
+- Starting a new request clears the prior in-memory transaction/key binding first, so a failed new request cannot leave the previous transaction eligible for redemption.
+- Regression coverage rejects redeeming a different pairing transaction.
+- These are protocol-helper safeguards only. They do not add a WSS route or enable live pairing; host-side approval, transport integration, credential response binding, and physical-device validation remain release gates.
