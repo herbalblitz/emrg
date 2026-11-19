@@ -19,7 +19,7 @@ This design does **not** enable remote chat, tool execution, filesystem access, 
 - Android parses descriptor v1 and has a secure credential store and pinned-WSS primitive, but its pairing UI/coordinator is not connected to a complete host-side exchange.
 - Android's self-approval affordance has been removed. The device must wait for a host-side decision.
 
-These components must not be treated as an end-to-end pairing implementation. In particular, the current request-frame validator/adapter still does not require the design's `requested_scopes` and `client_nonce` fields, and the host transaction API does not yet validate or bind those values. The Android request builder likewise omits them. This wire-contract mismatch is a blocking integration task; do not silently widen scopes or claim replay protection from a client nonce.
+These components must not be treated as an end-to-end pairing implementation. The request-frame validator, host transaction service, and Android request helper now require and bind `requested_scopes` and `client_nonce`; remaining blockers are coordinator/transport integration and physical-device/end-to-end validation.
 
 ## 3. Security invariants
 
@@ -328,6 +328,30 @@ This is still only a transport adapter prototype: the wire request does not yet
 carry or enforce `requested_scopes` and `client_nonce`, and Android does not
 yet connect its coordinator to this route. Those are explicit blockers, not
 implicitly satisfied requirements.
+
+
+### Pairing v2 request scope and nonce contract alignment (2026-11-19)
+
+The unauthenticated WSS request frame now requires both `requested_scopes`
+and `client_nonce`. The protocol validator rejects missing/extra fields,
+unknown or duplicate scopes, and non-canonical Base64URL nonces shorter than
+128 bits. Android generates a fresh 256-bit nonce with `SecureRandom` and
+includes its selected scope set in the request.
+
+The host accepts only non-empty requested scopes that are a subset of the
+scope ceiling configured when the host-local pairing transaction is created.
+The effective requested set, rather than the broader ceiling, is shown in
+pending local approval state and becomes the issued credential's scopes.
+The nonce and requested scopes are included in the exact challenge bytes
+signed by the device key. The host keeps a bounded, TTL-scoped nonce replay
+cache; Android checks that the challenge echoes its request nonce and exact
+requested scope set before signing.
+
+Python tests cover malformed scope/nonce fields, scope escalation, nonce
+replay across transactions, challenge binding, and WSS request/redeem.
+Android JVM tests cover request generation and challenge nonce/scope binding.
+This aligns the request contract but does not connect the Android coordinator
+to the pinned WSS transport or constitute physical-device/end-to-end validation.
 
 
 ### Pairing v2 request scope and nonce contract alignment (2026-11-19)
