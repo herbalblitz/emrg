@@ -79,7 +79,7 @@ Required fields:
 - `pairing_id`
 - `device_id`
 - `public_key` (bounded encoded public key; algorithm explicitly named)
-- `key_algorithm` (initial allowlist to be selected and documented)
+- `key_algorithm = P-256` (the only supported v2 key algorithm)
 - `requested_scopes` (unique, bounded allowlist)
 - `client_nonce` (at least 128 bits of cryptographic randomness)
 
@@ -154,9 +154,9 @@ Every transition is host-authoritative and atomic. Duplicate requests, approvals
 
 ## Android device-key compatibility gate (2026-11-19)
 
-The current host prototype is P-256 ECDSA-only, while Android targets API 26+. The Android Keystore documentation demonstrates EC key generation and SHA-256 ECDSA signing, but does not establish Ed25519 AndroidKeyStore support across API 26+ devices. StrongBox's documented required algorithm subset also does not include Ed25519.
+The protocol decision is P-256 ECDSA to align with Android Keystore's documented EC key-generation and SHA-256 ECDSA signing APIs. The host transaction core and strict frame validator now accept only P-256 SPKI public keys and ECDSA/SHA-256 proofs; the request frame carries the explicit `key_algorithm: P-256` marker.
 
-Do not assume Ed25519 support from API level or JCA signature-provider availability. Do not silently fall back to software-generated/exportable keys or change the wire algorithm on the Android client alone. Pairing v2 remains disabled until the protocol makes an explicit cross-platform algorithm decision and physical-device tests establish non-exportable key generation, persistence, and signing.
+This removes the unsupported assumption that Ed25519 is available in Android Keystore across API 26+ devices. It does not prove every Android device has a usable secure implementation. Pairing v2 remains disabled until an Android Keystore P-256 key manager is implemented and physical-device tests establish non-exportable key generation, persistence, and signing. Do not silently fall back to software-generated/exportable keys.
 
 See [ANDROID_COMPANION_DEVICE_KEY_COMPATIBILITY_AUDIT.md](ANDROID_COMPANION_DEVICE_KEY_COMPATIBILITY_AUDIT.md) for evidence, options, and required validation.
 
@@ -210,7 +210,7 @@ host-approval gates above remain unchanged.
 
 ### Android device-key implementation gate clarification (2026-11-19)
 
-The host prototype currently fixes the proof-of-possession algorithm to Ed25519.
+The host prototype now fixes proof-of-possession to P-256 ECDSA with SHA-256.
 The Android implementation must not silently substitute another signature
 algorithm or serialize an unencrypted private key when a device/provider cannot
 create or use the required key.
@@ -222,7 +222,7 @@ canonical challenge bytes, signature verification by the host, persistence acros
 process restart, and key invalidation. If the required operation is unavailable,
 pairing must fail closed with a user-safe unsupported-device result until a
 protocol-approved alternative is designed and documented. This gate does not
-change the existing host Ed25519 wire contract.
+use the explicit P-256 ECDSA wire contract.
 
 
 ### Android credential-envelope hardening (2026-11-19)
@@ -272,14 +272,13 @@ These JVM tests do not substitute for physical-device Android Keystore validatio
 ### Android Keystore Ed25519 implementation plan (2026-11-19)
 
 The Android device-key work remains a gated implementation, not a completed capability.
-The host contract currently verifies raw 32-byte Ed25519 public keys and 64-byte
-Ed25519 signatures. Android must produce exactly those bytes and sign the exact
+The host contract currently verifies DER-encoded P-256 SubjectPublicKeyInfo public keys and DER ECDSA signatures over SHA-256. Android must use the same P-256 key and signature format and sign the exact
 canonical challenge payload; a generic Java signature-provider success is not
 sufficient evidence of Android Keystore hardware/provider support.
 
 The key-manager implementation must therefore:
 
-- Probe the Android Keystore provider at runtime and attempt Ed25519 key-pair
+- Probe the Android Keystore provider at runtime and attempt P-256 EC key-pair
   generation using a per-host, non-exportable alias.
 - Verify that the generated public key can be exported in the host's expected
   raw 32-byte representation without exporting private material.
@@ -294,5 +293,5 @@ The key-manager implementation must therefore:
 
 The API-level compatibility boundary must be established by executing the
 instrumentation matrix, not inferred solely from `minSdk` or the availability of
-the JCA Ed25519 algorithm on the host JVM. Until that matrix passes, the Android
+the JCA SHA256withECDSA algorithm on the host JVM. Until that matrix passes, the Android
 pairing coordinator must not issue a v2 proof or claim the device is pairable.
