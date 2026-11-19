@@ -133,3 +133,10 @@ The earlier sections above were written incrementally and some statements became
 | Android | QR parser, secure credential storage and pinned WSS primitive | Device-key lifecycle, v2 handshake, live transport integration and physical-device verification |
 
 The standalone WSS listener must not be described as absent, but it must also not be described as a complete Companion service. No live Android-to-host pairing or remote chat claim is supported by the current code.
+
+## Remote session metadata display-safety hardening (2026-11-19)
+
+The standalone WSS `sessions.list` response now rejects Unicode control (`Cc`), format/bidirectional (`Cf`), and surrogate (`Cs`) code points from each transmitted text-field prefix before returning metadata to a remote client. The existing field allowlist, per-field truncation limits, 200-record cap, numeric message-count validation, and exclusion of local paths/transcripts remain in force.
+
+Regression coverage verifies that newline/control and bidirectional override characters are omitted, malformed surrogate values are omitted, ordinary Vietnamese/CJK/emoji text remains intact, and characters beyond a truncated suffix do not cause safe transmitted text to be dropped. This is presentation-metadata hardening only; it does not add remote chat, session mutation, or pairing-v2 transport.
+
