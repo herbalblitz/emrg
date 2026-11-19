@@ -13,6 +13,7 @@ internal interface PairingV2FrameExchange {
 }
 
 internal interface PairingV2SessionTransport {
+    val requestedScopes: Set<String>
     fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle
     fun confirmHostApproval(challenge: PairingV2Challenge): Boolean
     override fun redeemAfterHostApproval(
@@ -41,6 +42,7 @@ internal class PairingV2Flow(
     private val client: PairingV2Client,
     private val exchange: PairingV2FrameExchange,
 ) : PairingV2SessionTransport {
+    override val requestedScopes: Set<String> get() = client.requestedScopes
     private var acceptedChallenge: PairingV2Challenge? = null
     private var hostApprovalConfirmed = false
     private var cachedRedeemFrame: JSONObject? = null
