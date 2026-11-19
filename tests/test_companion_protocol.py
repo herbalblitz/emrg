@@ -96,14 +96,16 @@ def test_session_list_rejects_client_supplied_path_or_extra_fields():
 
 
 def test_pairing_v2_request_and_redeem_frames_have_strict_shapes():
+    import base64
     from emrg.server.companion_protocol import validate_pairing_v2_frame
+    enc = lambda size: base64.urlsafe_b64encode(bytes(size)).rstrip(b"=").decode()
     request = {"type": "pairing.request", "protocol": "2.0",
-               "pairing_id": "A" * 43, "device_id": "android-1",
-               "public_key": "B" * 43}
+               "pairing_id": enc(32), "device_id": "android-1",
+               "public_key": enc(32)}
     assert validate_pairing_v2_frame(json.dumps(request)) == request
     redeem = {"type": "pairing.redeem", "protocol": "2.0",
-              "pairing_id": "A" * 43, "device_id": "android-1",
-              "challenge_id": "C" * 22, "signature": "D" * 86}
+              "pairing_id": enc(32), "device_id": "android-1",
+              "challenge_id": enc(16), "signature": enc(64)}
     assert validate_pairing_v2_frame(json.dumps(redeem)) == redeem
 
 
@@ -116,9 +118,11 @@ def test_pairing_v2_request_and_redeem_frames_have_strict_shapes():
 ])
 def test_pairing_v2_request_rejects_malformed_or_unknown_fields(mutate):
     from emrg.server.companion_protocol import validate_pairing_v2_frame
+    import base64
     frame = {"type": "pairing.request", "protocol": "2.0",
-             "pairing_id": "A" * 43, "device_id": "android-1",
-             "public_key": "B" * 43}
+             "pairing_id": base64.urlsafe_b64encode(bytes(32)).rstrip(b"=").decode(),
+             "device_id": "android-1",
+             "public_key": base64.urlsafe_b64encode(bytes(32)).rstrip(b"=").decode()}
     frame.update(mutate)
     with pytest.raises(CompanionProtocolError):
         validate_pairing_v2_frame(json.dumps(frame))
