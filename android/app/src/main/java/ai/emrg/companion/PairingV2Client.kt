@@ -32,7 +32,7 @@ internal class PairingV2Client(
     private val keys: CompanionDeviceKeyManager,
     private val deviceId: String,
     private val keyAlias: String,
-    private val requestedScopes: Set<String> = setOf("status"),
+    internal val requestedScopes: Set<String> = setOf("status"),
     private val nowEpochSeconds: () -> Long = { System.currentTimeMillis() / 1000L },
     /** SHA-256 identity from the QR descriptor, compared with the signed host challenge. */
     private val expectedHostIdentity: String,
