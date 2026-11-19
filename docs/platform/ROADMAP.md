@@ -221,7 +221,7 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 
 - Added transport-independent Ed25519 device-key-bound pairing transactions and host-service lifecycle methods.
 - Added tests for local approval, exact device binding, invalid signatures, duplicate device requests, expiry, cancellation, credential issuance, and host disable cleanup.
-- WSS listener and Android are not wired to the prototype; QR v2 and TLS identity plumbing remain incomplete.
+- At this historical prototype stage, WSS listener and Android were not yet wired; subsequent sections below record the later WSS, Android controller, and QR-panel integration. Trusted-local host UI and end-to-end validation remain open.
 
 
 ### Pairing v2 cross-platform host CI (2026-11-19)
@@ -277,7 +277,7 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Android pairing coordinator and encrypted credential store now enforce the host registry's 512-byte UTF-8 credential bound before persistence; blank and oversized credentials fail closed.
 - AES-256-GCM Android Keystore key generation explicitly requires randomized encryption.
 - Regression tests cover blank credentials, exact 512-byte acceptance, oversized ASCII and multibyte UTF-8 rejection, and coordinator non-persistence on oversized issuance.
-- Android CI #207 is running for the first storage change; #210 is queued for the complete source and test set at `69ca6a82`. Do not treat either as passed until the latest run completes.
+- Historical CI state at this point: Android runs #207/#210 were pending. Later Android CI runs #320/#322 supersede this status for subsequent pairing changes; physical-device Keystore testing remains separate.
 - App minSdk is 26; the platform-independent envelope codec's `java.util.Base64` dependency is therefore compatible with the configured minimum API.
 - Physical-device Android Keystore behavior remains unverified and is a separate validation gate.
 
