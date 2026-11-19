@@ -206,7 +206,9 @@ def validate_pairing_v2_frame(payload: str | bytes) -> dict[str, Any]:
         raise CompanionProtocolError("invalid pairing field")
     if kind == "pairing.request" and frame["key_algorithm"] != "P-256":
         raise CompanionProtocolError("unsupported pairing key algorithm")
-    for name, (encoded_length, decoded_length) in _PAIRING_V2_FIXED_BASE64URL.items():
+    names = ("pairing_id", "challenge_id") if kind == "pairing.redeem" else ("pairing_id",)
+    for name in names:
+        encoded_length, decoded_length = _PAIRING_V2_FIXED_BASE64URL[name]
         value = frame.get(name)
         if not isinstance(value, str) or len(value) != encoded_length:
             raise CompanionProtocolError("invalid pairing field")
