@@ -147,7 +147,8 @@ def test_wss_session_lists_only_credential_bound_workspace(tmp_path, monkeypatch
 
         def list_sessions(cwd):
             observed.append(cwd)
-            return [{"session_id": "session-1", "title": "Approved workspace"}]
+            return [{"session_id": "session-1", "title": "Approved workspace",
+                     "cwd": "/private/host/path", "history": "must-not-leak"}]
 
         monkeypatch.setattr("emrg.server.companion_wss_listener.Session.list_sessions", list_sessions)
 
