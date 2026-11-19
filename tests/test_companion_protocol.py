@@ -150,8 +150,8 @@ def test_v2_pairing_frames_remain_rejected_by_v1_pre_auth_gate():
     import base64
     frame = {"type": "pairing.request", "protocol": "2.0",
              "pairing_id": base64.urlsafe_b64encode(bytes(32)).rstrip(b"=").decode(),
-             "device_id": "android-1",
-             "public_key": base64.urlsafe_b64encode(bytes(32)).rstrip(b"=").decode()}
+             "device_id": "android-1", "key_algorithm": "P-256",
+             "public_key": base64.urlsafe_b64encode(bytes(91)).rstrip(b"=").decode()}
     with pytest.raises(CompanionProtocolError):
         validate_client_frame(json.dumps(frame))
     assert validate_pairing_v2_frame(json.dumps(frame))["type"] == "pairing.request"
