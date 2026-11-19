@@ -166,6 +166,54 @@ class PairingV2FlowTest {
     }
 
     @Test
+    fun credentialIsDeliveredOnlyAfterClientValidatesDeviceAndTransactionBinding() {
+        val exchange = FakeExchange()
+        val listener = RecordingListener()
+        val pairingFlow = flow(exchange)
+        pairingFlow.requestChallenge(listener)
+        deliverChallenge(exchange, listener)
+        val challenge = listener.challenge!!
+        assertTrue(pairingFlow.confirmHostApproval(challenge))
+        pairingFlow.redeemAfterHostApproval(challenge, listener)
+
+        exchange.respond(
+            JSONObject()
+                .put("type", "pairing.credential")
+                .put("protocol", "2.0")
+                .put("pairing_id", pairingId)
+                .put("device_id", "android-device")
+                .put("credential", "c".repeat(64)),
+        )
+
+        assertEquals("c".repeat(64), listener.credential)
+        assertTrue(listener.failure == null)
+    }
+
+    @Test
+    fun credentialForAnotherDeviceIsRejected() {
+        val exchange = FakeExchange()
+        val listener = RecordingListener()
+        val pairingFlow = flow(exchange)
+        pairingFlow.requestChallenge(listener)
+        deliverChallenge(exchange, listener)
+        val challenge = listener.challenge!!
+        assertTrue(pairingFlow.confirmHostApproval(challenge))
+        pairingFlow.redeemAfterHostApproval(challenge, listener)
+
+        exchange.respond(
+            JSONObject()
+                .put("type", "pairing.credential")
+                .put("protocol", "2.0")
+                .put("pairing_id", pairingId)
+                .put("device_id", "different-device")
+                .put("credential", "c".repeat(64)),
+        )
+
+        assertEquals("PAIRING_CREDENTIAL_INVALID", listener.failure)
+        assertTrue(listener.credential == null)
+    }
+
+    @Test
     fun invalidRequestDoesNotOpenTransport() {
         val exchange = FakeExchange()
         val listener = RecordingListener()
