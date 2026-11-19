@@ -736,3 +736,32 @@ def test_stale_disable_callback_does_not_shutdown_reenabled_listener(tmp_path):
 
     asyncio.run(run())
 
+def test_remote_session_metadata_rejects_display_controls_and_invalid_unicode():
+    records = [{
+        "session_id": "safe\nspoofed",
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "title": "trusted\u202eexe.txt",
+        "message_count": 3,
+        "cwd": "/private/path",
+        "history": "not exposed",
+    }, {
+        "session_id": "session-\ud800",
+        "title": "valid title",
+    }]
+
+    assert _remote_session_metadata(records) == [
+        {
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z",
+            "message_count": 3,
+        },
+        {"title": "valid title"},
+    ]
+
+
+def test_remote_session_metadata_keeps_existing_field_length_bounds():
+    long_title = "x" * 300
+    result = _remote_session_metadata([{"title": long_title}])
+    assert result == [{"title": "x" * 256}]
+
