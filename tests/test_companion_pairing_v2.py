@@ -215,3 +215,26 @@ def test_pairing_v2_consumes_approved_transaction_if_credential_issuance_fails(t
     with pytest.raises(PairingV2Error, match="unavailable"):
         pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
                         challenge_id=request["challenge_id"], signature=signature)
+
+@pytest.mark.parametrize("unsafe", ["workspace\\nforged", "workspace\\u202Eforged"])
+def test_pairing_v2_rejects_display_control_characters_in_workspace(tmp_path, unsafe):
+    pairing, _, _, _, _ = _setup(tmp_path)
+    with pytest.raises(PairingV2Error, match="invalid pairing request"):
+        pairing.begin(workspace_id=unsafe, cwd="/safe/work", scopes={"status"})
+
+
+@pytest.mark.parametrize("unsafe_cwd", ["/safe\\n/forged", "/safe/\\u202Eforged"])
+def test_pairing_v2_rejects_display_control_characters_in_cwd(tmp_path, unsafe_cwd):
+    pairing, _, _, _, _ = _setup(tmp_path)
+    with pytest.raises(PairingV2Error, match="invalid pairing request"):
+        pairing.begin(workspace_id="workspace", cwd=unsafe_cwd, scopes={"status"})
+
+
+@pytest.mark.parametrize("unsafe_identity", ["host\\nforged", "host\\u202Eforged"])
+def test_pairing_v2_rejects_display_control_characters_in_host_identity(
+    tmp_path, unsafe_identity
+):
+    registry = CredentialRegistry(tmp_path / "credentials.json")
+    with pytest.raises(PairingV2Error, match="invalid host identity"):
+        PairingV2Transactions(registry, host_identity=unsafe_identity)
+
