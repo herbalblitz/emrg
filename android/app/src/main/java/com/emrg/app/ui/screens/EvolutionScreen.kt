@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -24,15 +25,15 @@ fun EvolutionScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __count = remember { mutableStateOf(0) }
-        var count: Int = 0
+    var count: Int
         get() = __count.value
         set(value) { __count.value = value }
     val __records = remember { mutableStateOf(emptyList<com.emrg.app.model.EvolutionRecord>()) }
-        var records: List<com.emrg.app.model.EvolutionRecord> = emptyList()
+    var records: List<com.emrg.app.model.EvolutionRecord>
         get() = __records.value
         set(value) { __records.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
+    var error: String?
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -72,15 +73,15 @@ fun TasksScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __tasks = remember { mutableStateOf(emptyList<com.emrg.app.model.TaskInfo>()) }
-        var tasks: List<com.emrg.app.model.TaskInfo> = emptyList()
+    var tasks: List<com.emrg.app.model.TaskInfo>
         get() = __tasks.value
         set(value) { __tasks.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
+    var error: String?
         get() = __error.value
         set(value) { __error.value = value }
     val __taskName = remember { mutableStateOf("") }
-        var taskName: String = null
+    var taskName: String
         get() = __taskName.value
         set(value) { __taskName.value = value }
 
@@ -137,11 +138,11 @@ fun SkillsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __skills = remember { mutableStateOf(emptyList<com.emrg.app.model.SkillInfo>()) }
-        var skills: List<com.emrg.app.model.SkillInfo> = emptyList()
+    var skills: List<com.emrg.app.model.SkillInfo>
         get() = __skills.value
         set(value) { __skills.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
+    var error: String?
         get() = __error.value
         set(value) { __error.value = value }
 

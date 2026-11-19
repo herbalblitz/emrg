@@ -29,19 +29,19 @@ fun FilesScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __current = remember { mutableStateOf(path) }
-        var current: String = null
+    var current: String
         get() = __current.value
         set(value) { __current.value = value }
     val __entries = remember { mutableStateOf(emptyList<Triple<String, String, String>>()) }
-        var entries: List<Triple<String, String, String>> = emptyList()
+    var entries: List<Triple<String, String, String>>
         get() = __entries.value
         set(value) { __entries.value = value }
     val __loading = remember { mutableStateOf(false) }
-        var loading: Boolean = false
+    var loading: Boolean
         get() = __loading.value
         set(value) { __loading.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
+    var error: String?
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -97,15 +97,15 @@ fun EditorScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __content = remember { mutableStateOf("") }
-        var content: String = null
+    var content: String
         get() = __content.value
         set(value) { __content.value = value }
     val __saving = remember { mutableStateOf(false) }
-        var saving: Boolean = false
+    var saving: Boolean
         get() = __saving.value
         set(value) { __saving.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
+    var error: String?
         get() = __error.value
         set(value) { __error.value = value }
 

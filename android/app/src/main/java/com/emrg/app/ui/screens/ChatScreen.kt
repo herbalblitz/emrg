@@ -42,15 +42,15 @@ fun ChatScreen(
     val frames = repository.frames
 
     val __frameList = remember { mutableStateOf(emptyList<JsonObject>()) }
-        var frameList: List<JsonObject> = emptyList()
+    var frameList: List<JsonObject>
         get() = __frameList.value
         set(value) { __frameList.value = value }
     val __input = remember { mutableStateOf("") }
-        var input: String = null
+    var input: String
         get() = __input.value
         set(value) { __input.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
+    var error: String?
         get() = __error.value
         set(value) { __error.value = value }
 

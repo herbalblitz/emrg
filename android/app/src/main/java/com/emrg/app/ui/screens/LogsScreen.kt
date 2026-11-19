@@ -27,15 +27,15 @@ fun LogsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __source = remember { mutableStateOf("daemon") }
-        var source: String = null
+    var source: String
         get() = __source.value
         set(value) { __source.value = value }
     val __lines = remember { mutableStateOf<com.emrg.app.model.LogPage?>(null) }
-    var lines: com.emrg.app.model.LogPage? = null
+    var lines: com.emrg.app.model.LogPage?
         get() = __lines.value
         set(value) { __lines.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
+    var error: String?
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -79,11 +79,11 @@ fun AuditScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __entries = remember { mutableStateOf(emptyList<com.emrg.app.model.AuditEntry>()) }
-        var entries: List<com.emrg.app.model.AuditEntry> = emptyList()
+    var entries: List<com.emrg.app.model.AuditEntry>
         get() = __entries.value
         set(value) { __entries.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
+    var error: String?
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -121,11 +121,11 @@ fun DevicesScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __devices = remember { mutableStateOf(emptyList<com.emrg.app.model.DeviceInfo>()) }
-        var devices: List<com.emrg.app.model.DeviceInfo> = emptyList()
+    var devices: List<com.emrg.app.model.DeviceInfo>
         get() = __devices.value
         set(value) { __devices.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
+    var error: String?
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -161,7 +161,7 @@ fun SettingsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val __danger = remember { mutableStateOf(false) }
-        var danger: Boolean = false
+    var danger: Boolean
         get() = __danger.value
         set(value) { __danger.value = value }
 

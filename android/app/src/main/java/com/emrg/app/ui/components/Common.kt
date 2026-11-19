@@ -61,7 +61,7 @@ fun EmrgScaffold(
 }
 
 @Composable
-fun LoadingContent(message: String = "Loading\u2026") {
+fun LoadingContent(message: String = "Loading…") {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,

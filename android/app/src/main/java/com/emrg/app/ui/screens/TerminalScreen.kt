@@ -26,23 +26,23 @@ fun TerminalScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __command = remember { mutableStateOf("") }
-        var command: String = null
+    var command: String
         get() = __command.value
         set(value) { __command.value = value }
     val __running = remember { mutableStateOf(false) }
-        var running: Boolean = false
+    var running: Boolean
         get() = __running.value
         set(value) { __running.value = value }
     val __output = remember { mutableStateOf("") }
-        var output: String = null
+    var output: String
         get() = __output.value
         set(value) { __output.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
+    var error: String?
         get() = __error.value
         set(value) { __error.value = value }
     val __mode = remember { mutableStateOf("workspace-write") }
-        var mode: String = null
+    var mode: String
         get() = __mode.value
         set(value) { __mode.value = value }
 
@@ -69,7 +69,7 @@ fun TerminalScreen(
     }
 
     val __expanded = remember { mutableStateOf(false) }
-        var expanded: Boolean = false
+    var expanded: Boolean
         get() = __expanded.value
         set(value) { __expanded.value = value }
 
