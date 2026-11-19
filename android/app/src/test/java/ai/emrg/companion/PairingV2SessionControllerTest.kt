@@ -26,6 +26,7 @@ class PairingV2SessionControllerTest {
         var challengeListener: PairingV2FlowListener? = null
         var challenge: PairingV2Challenge? = null
         var redeemCalls = 0
+        var lastRedeemListener: PairingV2FlowListener? = null
         var unavailableFirst = false
 
         override fun requestChallenge(listener: PairingV2FlowListener): PairingV2ExchangeHandle {
@@ -40,6 +41,7 @@ class PairingV2SessionControllerTest {
         ): PairingV2ExchangeHandle {
             check(this.challenge == challenge)
             redeemCalls += 1
+            lastRedeemListener = listener
             if (unavailableFirst && redeemCalls == 1) {
                 listener.onFailure("PAIRING_UNAVAILABLE")
             } else {
@@ -100,6 +102,11 @@ class PairingV2SessionControllerTest {
         assertEquals("a".repeat(64), store.values["host-credential"])
         assertEquals("host-credential", listener.paired?.credentialAlias)
         assertTrue(listener.failure == null)
+
+        // A duplicated transport callback must be harmless and must not demote PAIRED.
+        transport.lastRedeemListener!!.onCredential("a".repeat(64))
+        assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
+        assertEquals("host-credential", coordinator.state.pairedHost?.credentialAlias)
     }
 
 
