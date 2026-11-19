@@ -152,4 +152,18 @@ class PairingV2ClientTest {
         }
     }
 
+
+    @Test
+    fun refusesNonDerOrNonP256DevicePublicKey() {
+        val invalidKeys = object : CompanionDeviceKeyManager {
+            override fun createOrLoad(alias: String): String = b64(91)
+            override fun sign(alias: String, challenge: ByteArray): String = b64(70)
+            override fun delete(alias: String) = Unit
+        }
+        val client = PairingV2Client(invalidKeys, "android-device-1", "emrg-host-1")
+        assertThrows(IllegalArgumentException::class.java) {
+            client.createRequestFrame(b64(32))
+        }
+    }
+
 }
