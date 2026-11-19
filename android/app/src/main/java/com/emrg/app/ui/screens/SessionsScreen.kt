@@ -35,7 +35,7 @@ fun SessionsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __cwd = remember { mutableStateOf(repository.currentWorkspace()) }
-    var cwd: String
+    var cwd: String? = null
         get() = __cwd.value
         set(value) { __cwd.value = value }
     val __sessions = remember { mutableStateOf(emptyList<com.emrg.app.model.SessionSummary>()) }
@@ -43,7 +43,7 @@ fun SessionsScreen(
         get() = __sessions.value
         set(value) { __sessions.value = value }
     val __loading = remember { mutableStateOf(false) }
-    var loading: Boolean
+    var loading: Boolean = false
         get() = __loading.value
         set(value) { __loading.value = value }
     val __error = remember { mutableStateOf<String?>(null) }

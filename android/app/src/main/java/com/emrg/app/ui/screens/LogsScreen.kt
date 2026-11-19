@@ -27,7 +27,7 @@ fun LogsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __source = remember { mutableStateOf("daemon") }
-    var source: String
+    var source: String? = null
         get() = __source.value
         set(value) { __source.value = value }
     val __lines = remember { mutableStateOf<com.emrg.app.model.LogPage?>(null) }
@@ -161,7 +161,7 @@ fun SettingsScreen(
     navController: androidx.navigation.NavHostController,
 ) {
     val __danger = remember { mutableStateOf(false) }
-    var danger: Boolean
+    var danger: Boolean = false
         get() = __danger.value
         set(value) { __danger.value = value }
 

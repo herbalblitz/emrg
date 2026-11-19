@@ -25,11 +25,11 @@ fun ToolMonitorScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __command = remember { mutableStateOf("") }
-    var command: String
+    var command: String? = null
         get() = __command.value
         set(value) { __command.value = value }
     val __running = remember { mutableStateOf(false) }
-    var running: Boolean
+    var running: Boolean = false
         get() = __running.value
         set(value) { __running.value = value }
     val __result = remember { mutableStateOf<String?>(null) }

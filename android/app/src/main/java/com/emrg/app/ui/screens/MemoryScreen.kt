@@ -29,7 +29,7 @@ fun MemoryScreen(
         get() = __memories.value
         set(value) { __memories.value = value }
     val __loading = remember { mutableStateOf(false) }
-    var loading: Boolean
+    var loading: Boolean = false
         get() = __loading.value
         set(value) { __loading.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
@@ -73,7 +73,7 @@ fun ModelsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __current = remember { mutableStateOf("") }
-    var current: String
+    var current: String? = null
         get() = __current.value
         set(value) { __current.value = value }
     val __models = remember { mutableStateOf(emptyList<com.emrg.app.model.ModelInfo>()) }
@@ -121,15 +121,15 @@ fun RantScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __message = remember { mutableStateOf("") }
-    var message: String
+    var message: String? = null
         get() = __message.value
         set(value) { __message.value = value }
     val __agent = remember { mutableStateOf("") }
-    var agent: String
+    var agent: String? = null
         get() = __agent.value
         set(value) { __agent.value = value }
     val __submitting = remember { mutableStateOf(false) }
-    var submitting: Boolean
+    var submitting: Boolean = false
         get() = __submitting.value
         set(value) { __submitting.value = value }
     val __result = remember { mutableStateOf<Int?>(null) }

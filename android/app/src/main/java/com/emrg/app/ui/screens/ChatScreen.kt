@@ -46,7 +46,7 @@ fun ChatScreen(
         get() = __frameList.value
         set(value) { __frameList.value = value }
     val __input = remember { mutableStateOf("") }
-    var input: String
+    var input: String? = null
         get() = __input.value
         set(value) { __input.value = value }
     val __error = remember { mutableStateOf<String?>(null) }

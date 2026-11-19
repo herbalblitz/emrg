@@ -25,7 +25,7 @@ fun EvolutionScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __count = remember { mutableStateOf(0) }
-    var count: Int
+    var count: Int = 0
         get() = __count.value
         set(value) { __count.value = value }
     val __records = remember { mutableStateOf(emptyList<com.emrg.app.model.EvolutionRecord>()) }
@@ -81,7 +81,7 @@ fun TasksScreen(
         get() = __error.value
         set(value) { __error.value = value }
     val __taskName = remember { mutableStateOf("") }
-    var taskName: String
+    var taskName: String? = null
         get() = __taskName.value
         set(value) { __taskName.value = value }
 
