@@ -255,3 +255,12 @@ The WSS listener dispatches only authenticated `status` and read-only `sessions.
 The WSS listener does not publish a newly-bound server if local Companion policy is disabled or `stop()` is called while the asynchronous socket bind is still in progress. The returned server is closed and awaited before startup fails. A regression test exercises disable-during-startup to prevent a late bind from resurrecting the listener after local shutdown.
 
 The listener also rejects a second concurrent `start()` while the first bind is pending. This prevents two independent WSS servers from being bound by racing lifecycle calls; the in-progress state is cleared on both successful and failed startup.
+
+
+## Android inbound authentication-state gate (2026-11-19)
+
+- The Android WSS client now accepts only `auth_ok`, `auth_error`, or `auth_rejected` while authentication is pending. Application frames received before authentication are rejected and the socket is closed with policy code 1008.
+- After successful authentication, further authentication-control frames are rejected; application frames may be delivered to the listener. A missing/null frame type is rejected in either state.
+- Authentication rejection frames update the client state and are not forwarded as application events.
+- Android Companion CI run #191 (commit `fdd5d1bb`) passed: debug APK assembly, JVM unit tests, lint, and artifact upload.
+- This is a client-side state gate only. It does not make the Android WSS client interoperable with the current daemon, and does not complete pairing UI, live transport integration, chat dispatch, or end-to-end testing.
