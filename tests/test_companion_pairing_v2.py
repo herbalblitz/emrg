@@ -52,6 +52,8 @@ def test_pairing_v2_requires_local_approval_and_binds_exact_device_key(tmp_path)
     assert challenge_fields["host_identity"] == "tls-sha256-fingerprint"
     assert isinstance(challenge_fields["expires_at"], int)
     assert challenge_fields["device_id"] == "android-device"
+    assert challenge_fields["client_nonce"] == _b64(b"n" * 32)
+    assert challenge_fields["scopes"] == ["status", "sessions.list"]
     sig = _signature(private, request)
     with pytest.raises(PairingV2Error, match="not approved"):
         pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
@@ -279,3 +281,22 @@ def test_pairing_v2_cancel_and_redeem_race_has_one_terminal_winner(tmp_path):
         identity = registry.verify(device_id="android-device", credential=token)
         assert identity is not None
 
+
+
+
+def test_pairing_v2_rejects_scope_escalation_and_invalid_client_nonce(tmp_path):
+    pairing, _, _, _, public = _setup(tmp_path)
+    tx = pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
+    with pytest.raises(PairingV2Error, match="requested scopes exceed"):
+        pairing.request(
+            pairing_id=tx["pairing_id"], device_id="android-device",
+            public_key=public, requested_scopes=["status", "chat.send"],
+            client_nonce=_b64(b"n" * 32),
+        )
+    with pytest.raises(PairingV2Error, match="client nonce"):
+        pairing.request(
+            pairing_id=tx["pairing_id"], device_id="android-device",
+            public_key=public, requested_scopes=["status"],
+            client_nonce=_b64(b"short"),
+        )
+    assert pairing.pending_requests() == []
