@@ -87,7 +87,11 @@ internal class PairingV2Client(
             "Pairing challenge expiry is invalid"
         }
         val expiresAt = expiryValue.toLong()
-        require(expiresAt > nowEpochSeconds()) { "Pairing challenge expired" }
+        val now = nowEpochSeconds()
+        require(expiresAt > now) { "Pairing challenge expired" }
+        require(expiresAt <= now + MAX_CHALLENGE_LIFETIME_SECONDS) {
+            "Pairing challenge expiry exceeds the allowed lifetime"
+        }
         val nonceValue = challenge.opt("nonce")
         require(nonceValue is String) { "Pairing challenge nonce is invalid" }
         val nonce = nonceValue
@@ -148,6 +152,7 @@ internal class PairingV2Client(
         const val MIN_SIGNATURE_BYTES = 64
         const val MAX_SIGNATURE_BYTES = 80
         const val MAX_CHALLENGE_BYTES = 8192
+        const val MAX_CHALLENGE_LIFETIME_SECONDS = 180
         val DEVICE_ID_PATTERN = Regex("[A-Za-z0-9._:-]{1,128}")
         val BASE64URL_PATTERN = Regex("[A-Za-z0-9_-]+")
     }
