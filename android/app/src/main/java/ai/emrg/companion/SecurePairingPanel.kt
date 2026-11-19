@@ -167,7 +167,16 @@ internal fun SecurePairingPanel() {
     }
     if (scannerVisible) {
         CameraQrScannerDialog(
-            onQrDetected = { value -> qrPayload = value; scannerVisible = false },
+            onQrDetected = { value ->
+                qrPayload = value
+                scannerVisible = false
+                // A newly scanned QR must invalidate every field and verification from the prior scan.
+                endpoint = ""
+                fingerprint = ""
+                pairingId = null
+                descriptorVersion = null
+                state = PairingState()
+            },
             onDismiss = { scannerVisible = false }
         )
     }
