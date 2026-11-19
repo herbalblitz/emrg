@@ -20,6 +20,7 @@ from emrg.server.companion_credentials import CredentialRegistry
 PAIRING_TTL_SECONDS = 180
 PAIRING_MAX_ATTEMPTS = 5
 PAIRING_SECRET_BYTES = 24
+PAIRING_ID_BYTES = 32
 PAIRING_MAX_PENDING = 32
 
 
@@ -67,7 +68,7 @@ class PairingTransactions:
                 or not all(isinstance(scope, str) for scope in scopes)
                 or not scopes <= allowed):
             raise PairingError("invalid pairing request")
-        pairing_id = secrets.token_urlsafe(18)
+        pairing_id = secrets.token_urlsafe(PAIRING_ID_BYTES)
         secret = secrets.token_urlsafe(PAIRING_SECRET_BYTES)
         now = self._clock()
         with self._lock:
