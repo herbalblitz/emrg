@@ -19,6 +19,8 @@ from emrg.server.companion_protocol import (
     CompanionProtocolError, encode_server_frame, validate_client_frame,
 )
 from emrg.server.companion_tls import create_server_context, CompanionTlsError
+from emrg.session import Session
+from pathlib import Path
 
 _LOG = logging.getLogger(__name__)
 
@@ -148,6 +150,15 @@ class CompanionWssListener:
                 response: dict[str, Any] = {
                     "type": "status.result", "request_id": frame["request_id"],
                     "listener": "wss", "enabled": self._host.enabled,
+                }
+            elif frame["type"] == "sessions.list":
+                # The workspace path is taken only from the approved device
+                # credential record. Never accept a remote cwd/path override.
+                sessions = await asyncio.to_thread(
+                    Session.list_sessions, Path(identity["cwd"]))
+                response = {
+                    "type": "sessions.result", "request_id": frame["request_id"],
+                    "workspace_id": identity["workspace_id"], "sessions": sessions,
                 }
             else:
                 response = {"type": "error", "request_id": frame.get("request_id"),
