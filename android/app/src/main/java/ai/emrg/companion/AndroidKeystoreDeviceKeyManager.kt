@@ -16,9 +16,15 @@ import java.util.Base64
  * SubjectPublicKeyInfo public key and DER ECDSA signatures cross the wire.
  * This class deliberately has no software-key fallback.
  */
-internal class AndroidKeystoreDeviceKeyManager {
+internal interface CompanionDeviceKeyManager {
+    fun createOrLoad(alias: String): String
+    fun sign(alias: String, challenge: ByteArray): String
+    fun delete(alias: String)
+}
+
+internal class AndroidKeystoreDeviceKeyManager : CompanionDeviceKeyManager {
     @Synchronized
-    fun createOrLoad(alias: String): String {
+    override fun createOrLoad(alias: String): String {
         requireValidAlias(alias)
         val keyStore = loadKeyStore()
         if (!keyStore.containsAlias(alias)) {
@@ -52,7 +58,7 @@ internal class AndroidKeystoreDeviceKeyManager {
     }
 
     @Synchronized
-    fun sign(alias: String, challenge: ByteArray): String {
+    override fun sign(alias: String, challenge: ByteArray): String {
         requireValidAlias(alias)
         require(challenge.isNotEmpty()) { "Challenge is empty" }
         val keyStore = loadKeyStore()
@@ -68,7 +74,7 @@ internal class AndroidKeystoreDeviceKeyManager {
     }
 
     @Synchronized
-    fun delete(alias: String) {
+    override fun delete(alias: String) {
         requireValidAlias(alias)
         val keyStore = loadKeyStore()
         if (keyStore.containsAlias(alias)) {
