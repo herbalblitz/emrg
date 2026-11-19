@@ -6,7 +6,7 @@ import pytest
 from emrg.server.companion_host_service import CompanionHostService
 from emrg.server.companion_listener_policy import CompanionListenerConfig
 from emrg.server.companion_tls import CompanionTlsError
-from emrg.server.companion_wss_listener import CompanionWssListener
+from emrg.server.companion_wss_listener import CompanionWssListener, _remote_session_metadata
 
 
 def _listener(tmp_path, host=None):
@@ -277,3 +277,20 @@ def test_active_identity_check_fails_closed_when_registry_unavailable(tmp_path, 
         "cwd": str(tmp_path), "scopes": frozenset({"status"}),
     }
     assert not host.is_identity_current(identity)
+
+
+
+def test_remote_session_metadata_is_allowlisted_bounded_and_capped():
+    records = [{
+        "session_id": "s-1", "title": "A" * 400,
+        "cwd": "/private/path", "history": "private transcript",
+        "message_count": 3, "created_at": "2026-01-01",
+    }] + [{"session_id": f"s-{i}"} for i in range(250)]
+    safe = _remote_session_metadata(records)
+    assert len(safe) == 200
+    assert safe[0] == {
+        "session_id": "s-1", "title": "A" * 256,
+        "message_count": 3, "created_at": "2026-01-01",
+    }
+    assert all("cwd" not in item and "history" not in item for item in safe)
+    assert _remote_session_metadata("not-a-list") == []
