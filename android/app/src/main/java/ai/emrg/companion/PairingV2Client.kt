@@ -34,6 +34,8 @@ internal class PairingV2Client(
     private val keyAlias: String,
     private val requestedScopes: Set<String> = setOf("status"),
     private val nowEpochSeconds: () -> Long = { System.currentTimeMillis() / 1000L },
+    /** SHA-256 identity from the QR descriptor, compared with the signed host challenge. */
+    private val expectedHostIdentity: String,
 ) {
     private var publicKeyBytes: ByteArray? = null
     private var activePairingId: String? = null
@@ -151,8 +153,10 @@ internal class PairingV2Client(
             challenge.getString("public_key_sha256") == sha256Hex(publicKey)) {
             "Pairing challenge key mismatch"
         }
-        require(challenge.opt("host_identity") is String && challenge.getString("host_identity").isNotBlank()) {
-            "Pairing host identity is missing"
+        val challengeHostIdentity = challenge.opt("host_identity")
+        require(challengeHostIdentity is String &&
+            normalizeHostIdentity(challengeHostIdentity) == normalizeHostIdentity(expectedHostIdentity)) {
+            "Pairing challenge host identity does not match the QR-pinned host"
         }
         require(challenge.opt("workspace_id") is String && challenge.getString("workspace_id").isNotBlank()) {
             "Pairing workspace is missing"
@@ -232,6 +236,10 @@ internal class PairingV2Client(
             actual.order == expected.order &&
             actual.cofactor == expected.cofactor
     }
+
+    private fun normalizeHostIdentity(value: String): String =
+        value.replace(":", "").replace(" ", "").trim().uppercase()
+            .also { require(it.matches(Regex("[0-9A-F]{64}"))) { "Host identity fingerprint is invalid" } }
 
     private fun sha256Hex(value: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(value)
