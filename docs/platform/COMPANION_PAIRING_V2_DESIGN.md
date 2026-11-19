@@ -441,3 +441,8 @@ The panel requests only the `status` scope. The host remains the sole approval a
 Android CI run `44503538472` on commit `7df4eeb924e7a36e55b653e4ab77ddefa4a7c6de` passed debug APK assembly, JVM unit tests, lint, and artifact upload.
 
 This integration is not proof of production-ready/live pairing. Physical-device Keystore validation, real Windows host QR generation and trusted-local approval, Android-to-Windows WSS end-to-end interoperability, and live status/session-list operation wiring remain open. `chat.send`, tools, and remote execution remain disabled.
+
+
+### Lost challenge-response retry behavior (2026-11-19)
+
+The Android `PairingV2Flow` now caches the original `pairing.request` frame for the lifetime of the QR pairing transaction and retransmits that exact frame, including the original client nonce, when a challenge response is lost. The host accepts only an exact retransmission matching the original device ID, DER public key, requested scope set, and client nonce, and returns the original challenge payload. It does not replace the transaction identity or mint a second challenge. A Kotlin unit test covers the lost-response/retry path. On commit `8a826d450074d8a4d73682de4fa5a24a583f3510`, Android CI debug APK assembly and unit tests passed; lint was still running at the time of this update.
