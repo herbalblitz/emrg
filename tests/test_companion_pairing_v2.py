@@ -300,3 +300,20 @@ def test_pairing_v2_rejects_scope_escalation_and_invalid_client_nonce(tmp_path):
             client_nonce=_b64(b"short"),
         )
     assert pairing.pending_requests() == []
+
+
+
+def test_pairing_v2_rejects_reused_client_nonce_across_transactions(tmp_path):
+    pairing, _, _, _, public = _setup(tmp_path)
+    nonce = _b64(b"unique-client-nonce-32-bytes!!")
+    first = pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
+    pairing.request(
+        pairing_id=first["pairing_id"], device_id="android-one",
+        public_key=public, requested_scopes=["status"], client_nonce=nonce,
+    )
+    second = pairing.begin(workspace_id="workspace", cwd="/safe/work", scopes={"status"})
+    with pytest.raises(PairingV2Error, match="nonce replay"):
+        pairing.request(
+            pairing_id=second["pairing_id"], device_id="android-two",
+            public_key=public, requested_scopes=["status"], client_nonce=nonce,
+        )
