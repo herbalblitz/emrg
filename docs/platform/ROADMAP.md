@@ -327,5 +327,5 @@ The QR panel is now wired to the v2 controller, superseding earlier notes that t
 
 - Pairing challenge retries now retransmit the exact original request frame and client nonce; the host returns the original challenge only for an exact match.
 - The pairing panel ignores callbacks queued by an older QR transaction after reset or rescan, preventing stale network responses from replacing the current UI state.
-- Android workflow run `44508660928` passed APK assembly, unit tests, lint, and artifact upload for the retry-frame change. The callback-isolation change is being validated in a separate workflow run.
+- Android workflow run `44508660928` passed APK assembly, unit tests, lint, and artifact upload for the retry-frame change. Run `44509690853` also passed the same checks for the stale-callback isolation change (`0a587371540cb8c49072cd1b063fad160605712e`).
 - Remaining validation: physical Android Keystore/device test and live Windows-host pairing end-to-end test.
