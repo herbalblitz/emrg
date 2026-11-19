@@ -27,7 +27,7 @@ Add a dedicated daemon-side Companion controller/facade. It must accept only the
 | status | Return enabled/running state, bind endpoint, active connection count, and non-secret TLS fingerprint |
 | identity.ensure | Provision or validate the persistent TLS identity; never silently replace a corrupt/missing identity |
 | pairing.begin | Create one short-lived host transaction and return a credential-free v2 QR descriptor |
-| pairing.pending.list | Return bounded pending requests with device label, device ID, public-key fingerprint, workspace, scopes, and expiry |
+| pairing.pending.list | Return bounded pending requests with device label, device ID, public-key fingerprint, workspace, scopes, approval state, and expiry. The current host service projection exposes only the SHA-256 public-key fingerprint, never raw public key, client nonce, challenge bytes, signature, or issued credential |
 | pairing.decide | Approve/reject one exact pending transaction; approval binds its immutable device key, workspace, and scopes |
 | pairing.cancel | Cancel one exact pending transaction |
 | devices.list | Return bounded non-secret registered-device metadata |
