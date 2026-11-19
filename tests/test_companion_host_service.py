@@ -92,3 +92,43 @@ def test_host_service_lifecycle_hook_invalidates_pending_requests(tmp_path):
         with pytest.raises(ValueError, match="unavailable"):
             host.redeem_pairing(pairing_id=item["pairing_id"],
                                 pairing_secret=item["pairing_secret"], device_id="d")
+
+
+def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
+    import base64
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    host = CompanionHostService(tmp_path / "registry-v2.json")
+    host.enable()
+    tx = host.begin_pairing_v2(
+        host_identity="tls-fingerprint", workspace_id="ws",
+        cwd="/safe/work", scopes={"status"})
+    private = Ed25519PrivateKey.generate()
+    public = private.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw)
+    public_text = base64.urlsafe_b64encode(public).rstrip(b"=").decode("ascii")
+    challenge = host.request_pairing_v2(
+        pairing_id=tx["pairing_id"], device_id="android-v2",
+        public_key=public_text)
+    pending = host.pending_pairings_v2()
+    assert pending[0]["device_id"] == "android-v2"
+    assert pending[0]["public_key_sha256"]
+    assert host.decide_pairing_v2(tx["pairing_id"], approved=True)
+    payload = base64.urlsafe_b64decode(
+        challenge["challenge"] + "=" * (-len(challenge["challenge"]) % 4))
+    signature = base64.urlsafe_b64encode(private.sign(payload)).rstrip(b"=").decode("ascii")
+    token = host.redeem_pairing_v2(
+        pairing_id=tx["pairing_id"], device_id="android-v2",
+        challenge_id=challenge["challenge_id"], signature=signature)
+    assert host.registry.verify(device_id="android-v2", credential=token)["scopes"] == frozenset({"status"})
+
+    pending2 = host.begin_pairing_v2(
+        host_identity="tls-fingerprint", workspace_id="ws",
+        cwd="/safe/work", scopes={"status"})
+    assert host.disable() == 1
+    assert host.pending_pairings_v2() == []
+    with pytest.raises(ValueError, match="disabled"):
+        host.request_pairing_v2(pairing_id=pending2["pairing_id"],
+                                 device_id="other", public_key=public_text)
