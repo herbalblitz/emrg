@@ -26,7 +26,7 @@ def test_invalid_unicode_is_rejected_without_leaking_encoding_error():
     with pytest.raises(CompanionProtocolError):
         validate_client_frame("\ud800")
     with pytest.raises(CompanionProtocolError):
-        validate_client_frame('{"type":"auth","protocol":"1.0","device_id":"\\ud800","credential":"c","client_nonce":"n"}')
+        validate_client_frame('{"type":"auth","protocol":"1.0","device_id":"\ud800","credential":"c","client_nonce":"n"}')
 
 def test_status_requires_request_id_after_auth():
     assert validate_client_frame('{"type":"status","request_id":"r"}',authenticated=True,scopes=frozenset({"status"}))["type"]=="status"
@@ -49,7 +49,7 @@ def test_chat_send_normalizes_allowed_fields():
     assert result=={"type":"chat.send","request_id":"r","workspace_id":"w","session_id":None,"prompt":"hello"}
 
 @pytest.mark.parametrize("field,value", [("cwd","C:/other"),("tools",["pwsh"]),("sandbox","danger-full-access"),("provider","remote")])
-@pytest.mark.parametrize("session_id", ["", "x" * 129, "\\ud800", 42, []])
+@pytest.mark.parametrize("session_id", ["", "x" * 129, "\ud800", 42, []])
 def test_chat_rejects_invalid_session_identifiers(session_id):
     frame={"type":"chat.send","request_id":"r","workspace_id":"w",
            "prompt":"hello","session_id":session_id}
