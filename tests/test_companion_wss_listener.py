@@ -654,3 +654,49 @@ def test_close_during_listener_start_prevents_late_bind_and_unregisters_callback
         assert listener._starting is False
 
     asyncio.run(run())
+
+
+@pytest.mark.parametrize("frame", [
+    {
+        "type": "pairing.request", "protocol": "2.0",
+        "pairing_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "device_id": "untrusted-device",
+        "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    },
+    {
+        "type": "pairing.redeem", "protocol": "2.0",
+        "pairing_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "device_id": "untrusted-device",
+        "challenge_id": "AAAAAAAAAAAAAAAAAAAAAA",
+        "signature": "A" * 86,
+    },
+])
+def test_wss_does_not_accept_unauthenticated_pairing_v2_frames(tmp_path, frame):
+    """Pairing v2 must not bypass auth until a dedicated pinned-TLS adapter exists."""
+    from emrg.server.companion_auth import CompanionAuthenticationError
+
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        tx = host.begin_pairing_v2(
+            host_identity="host-test", workspace_id="workspace-test",
+            cwd=str(tmp_path), scopes={"status"})
+        listener = _listener(tmp_path, host)
+
+        class Socket:
+            async def recv(self):
+                return json.dumps(frame)
+            async def send(self, data):
+                raise AssertionError("unauthenticated socket must receive no success frame")
+            async def close(self, **kwargs):
+                pass
+
+        with pytest.raises(CompanionAuthenticationError):
+            await listener._session(Socket())
+
+        # The frame was rejected by the existing auth gate and never reached
+        # the host-local v2 request/redeem APIs.
+        assert host.pending_pairings_v2() == []
+        assert host.redeem_pairing_v2 if tx["pairing_id"] else False
+
+    asyncio.run(run())
