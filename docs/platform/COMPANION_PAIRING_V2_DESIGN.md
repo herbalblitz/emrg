@@ -430,3 +430,14 @@ Security and state guarantees implemented:
 - The Android controller currently enables only `status` and `sessions.list`. `chat.send` remains disabled until the signed pairing and host authorization contract safely binds the workspace and working directory.
 
 Remaining integration gates: connect the QR scanner/panel and lifecycle-aware retry UI to this controller; validate non-exportable Android Keystore behavior on physical devices; and complete Android-to-Windows end-to-end tests. This implementation does not by itself mean live pairing or authenticated remote operations are release-ready.
+
+
+## QR panel/controller integration status (2026-11-19)
+
+The Android QR pairing panel is now wired to the Pairing v2 parser and `PairingV2SessionController` in `SecurePairingPanel.kt`; earlier statements in this document that the scanner/panel is not yet connected are historical and superseded by this update. The user can scan or paste a descriptor, inspect the endpoint and SHA-256 host fingerprint, explicitly confirm the fingerprint, request a challenge, submit the device-signed proof, and manually retry while awaiting trusted-local host approval. The exchange is cancelled when the panel leaves composition.
+
+The panel requests only the `status` scope. The host remains the sole approval authority; the Android client cannot self-approve. Successful credential persistence is gated by a valid host response and the secure coordinator/store path.
+
+Android CI run `44503538472` on commit `7df4eeb924e7a36e55b653e4ab77ddefa4a7c6de` passed debug APK assembly, JVM unit tests, lint, and artifact upload.
+
+This integration is not proof of production-ready/live pairing. Physical-device Keystore validation, real Windows host QR generation and trusted-local approval, Android-to-Windows WSS end-to-end interoperability, and live status/session-list operation wiring remain open. `chat.send`, tools, and remote execution remain disabled.
