@@ -142,3 +142,17 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] JVM regression tests and Android CI #267 passed on commit `2fbdf7d0d92c` (APK assembly, unit tests, lint, artifact upload).
 - [ ] Production integration with `PairingV2Client`, `SecurePairingCoordinator`, host approval/redeem lifecycle, and QR UI remains open; no end-to-end pairing is claimed.
 - [ ] Physical-device Android Keystore validation and full Android-to-Windows host integration remain open.
+
+## Pairing v2 Android integration status (2026-11-19)
+
+Implemented in source:
+- `PairingV2Flow` composes the signed Pairing v2 client with the pinned WSS exchange and exposes immutable transport identity metadata.
+- `PairingV2SessionController` validates that QR/session metadata (WSS endpoint, TLS fingerprint, pairing ID, device ID, and scopes) exactly matches the transport that created the signed request.
+- Host-local approval remains the only approval authority. A generic unavailable response leaves Android in `AWAITING_HOST_APPROVAL`; retry reuses the exact signed redeem frame.
+- A credential is reported as paired only after a valid host credential response is accepted by the coordinator and secure credential storage succeeds.
+- Enabled scopes remain read-only (`status`, `sessions.list`). `chat.send` is intentionally not enabled.
+
+Not yet complete:
+- QR scanner/panel is not wired to the controller.
+- No physical-device Android Keystore validation or Android ↔ Windows end-to-end pairing has been completed.
+- No live authenticated status/session-list transport is claimed; remote chat/tool execution remains unavailable.
