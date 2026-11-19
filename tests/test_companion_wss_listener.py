@@ -875,3 +875,127 @@ def test_wss_pairing_v2_rate_limit_is_per_peer_and_bounded(tmp_path):
     assert listener._allow_pairing_attempt(peer_a) is False
     assert listener._allow_pairing_attempt(peer_b) is True
     assert len(listener._pairing_attempts) == 2
+
+def test_wss_pairing_v2_request_and_redeem_are_one_frame_local_approval_only(tmp_path):
+    import base64
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        pairing = host.begin_pairing_v2(
+            host_identity="host-certificate-sha256",
+            workspace_id="approved-workspace",
+            cwd=str(tmp_path / "approved-workspace"),
+            scopes={"status", "sessions.list"},
+        )
+        listener = _listener(tmp_path, host)
+
+        class Socket:
+            def __init__(self, frame):
+                self.frame = frame
+                self.sent = []
+                self.received = False
+            async def recv(self):
+                if self.received:
+                    raise asyncio.TimeoutError()
+                self.received = True
+                return json.dumps(self.frame)
+            async def send(self, data):
+                self.sent.append(json.loads(data))
+            async def close(self, **kwargs):
+                pass
+
+        private_key = ec.generate_private_key(ec.SECP256R1())
+        public_key = private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        encode = lambda value: base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+        request = {
+            "type": "pairing.request", "protocol": "2.0",
+            "pairing_id": pairing["pairing_id"], "device_id": "android-v2",
+            "key_algorithm": "P-256", "public_key": encode(public_key),
+        }
+        request_socket = Socket(request)
+        await listener._session(request_socket)
+        assert len(request_socket.sent) == 1
+        challenge_response = request_socket.sent[0]
+        assert challenge_response["type"] == "pairing.challenge"
+        assert challenge_response["pairing_id"] == pairing["pairing_id"]
+        assert "credential" not in challenge_response
+
+        # The only approval path is the host-local service operation.
+        pending = host.pending_pairings_v2()
+        assert len(pending) == 1
+        assert pending[0]["device_id"] == "android-v2"
+        assert host.decide_pairing_v2(pairing["pairing_id"], approved=True)
+
+        challenge = base64.urlsafe_b64decode(
+            challenge_response["challenge"] + "=" * (-len(challenge_response["challenge"]) % 4)
+        )
+        signature = encode(private_key.sign(challenge, ec.ECDSA(hashes.SHA256())))
+        redeem = {
+            "type": "pairing.redeem", "protocol": "2.0",
+            "pairing_id": pairing["pairing_id"], "device_id": "android-v2",
+            "challenge_id": challenge_response["challenge_id"], "signature": signature,
+        }
+        redeem_socket = Socket(redeem)
+        await listener._session(redeem_socket)
+        assert len(redeem_socket.sent) == 1
+        credential_response = redeem_socket.sent[0]
+        assert credential_response["type"] == "pairing.credential"
+        assert credential_response["protocol"] == "2.0"
+        assert credential_response["pairing_id"] == pairing["pairing_id"]
+        assert credential_response["device_id"] == "android-v2"
+        identity = host.registry.verify(
+            device_id="android-v2", credential=credential_response["credential"]
+        )
+        assert identity["workspace_id"] == "approved-workspace"
+        assert identity["scopes"] == frozenset({"status", "sessions.list")}
+        assert host.pending_pairings_v2() == []
+
+    asyncio.run(run())
+
+
+def test_wss_pairing_v2_does_not_reveal_unapproved_transaction_state(tmp_path):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        pairing = host.begin_pairing_v2(
+            host_identity="host-certificate-sha256",
+            workspace_id="workspace", cwd=str(tmp_path), scopes={"status"},
+        )
+        listener = _listener(tmp_path, host)
+
+        class Socket:
+            def __init__(self, frame):
+                self.frame = frame
+                self.sent = []
+            async def recv(self):
+                return json.dumps(self.frame)
+            async def send(self, data):
+                self.sent.append(json.loads(data))
+            async def close(self, **kwargs):
+                pass
+
+        # A syntactically valid redeem that arrives before a device request or
+        # local approval receives only the generic transport error.
+        import base64
+        frame = {
+            "type": "pairing.redeem", "protocol": "2.0",
+            "pairing_id": pairing["pairing_id"], "device_id": "android-v2",
+            "challenge_id": base64.urlsafe_b64encode(b"c" * 16).rstrip(b"=").decode(),
+            "signature": base64.urlsafe_b64encode(b"s" * 64).rstrip(b"=").decode(),
+        }
+        socket = Socket(frame)
+        await listener._session(socket)
+        assert socket.sent == [{
+            "type": "pairing.error", "protocol": "2.0",
+            "pairing_id": pairing["pairing_id"], "code": "pairing_unavailable",
+        }]
+        assert host.pending_pairings_v2()[0]["pairing_id"] == pairing["pairing_id"]
+
+    asyncio.run(run())
+
