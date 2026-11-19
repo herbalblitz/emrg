@@ -280,3 +280,11 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Android CI #207 is running for the first storage change; #210 is queued for the complete source and test set at `69ca6a82`. Do not treat either as passed until the latest run completes.
 - App minSdk is 26; the platform-independent envelope codec's `java.util.Base64` dependency is therefore compatible with the configured minimum API.
 - Physical-device Android Keystore behavior remains unverified and is a separate validation gate.
+
+
+### Pairing v2 WSS route and cross-platform regression (2026-11-19)
+
+- The dedicated opt-in WSS listener now accepts strict one-frame Pairing v2 `pairing.request` and `pairing.redeem` messages, separate from the authenticated v1 session protocol. The host remains the only approval authority; network peers cannot approve or inspect transaction state.
+- The route returns a generic unavailable response for failed redemption and applies a bounded per-peer unauthenticated-attempt limiter.
+- Companion security CI #158 passed on commit `85f6af746220c80e97f36b859b41f5b3c01767e6`. This validates host-side WSS security tests on Ubuntu and Windows.
+- Remaining gates: daemon lifecycle/configuration integration, trusted Electron local approval UI, Android live pinned-WSS coordinator and retry flow, physical-device Keystore verification, and end-to-end pairing. No Android-to-host pairing completion is claimed.
