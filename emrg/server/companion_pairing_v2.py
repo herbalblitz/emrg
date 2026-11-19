@@ -108,6 +108,8 @@ class _PendingV2:
     challenge: bytes | None = None
     challenge_id: str | None = None
     approved: bool | None = None
+    requested_scopes: frozenset[str] | None = None
+    client_nonce: str | None = None
 
 
 class PairingV2Transactions:
@@ -142,10 +144,20 @@ class PairingV2Transactions:
                 int(time.time()) + PAIRING_V2_TTL_SECONDS)
         return {"pairing_id": pairing_id, "expires_in": PAIRING_V2_TTL_SECONDS}
 
-    def request(self, *, pairing_id: str, device_id: str,
-                public_key: str) -> dict[str, str]:
+    def request(self, *, pairing_id: str, device_id: str, public_key: str,
+                requested_scopes: list[str] | tuple[str, ...], client_nonce: str) -> dict[str, str]:
         _pairing_id(pairing_id)
         _device_id(device_id)
+        if (not isinstance(requested_scopes, (list, tuple)) or not 1 <= len(requested_scopes) <= 3
+                or any(not isinstance(scope, str) for scope in requested_scopes)
+                or len(set(requested_scopes)) != len(requested_scopes)):
+            raise PairingV2Error("invalid requested scopes")
+        requested = frozenset(requested_scopes)
+        if not requested <= {"status", "sessions.list", "chat.send"}:
+            raise PairingV2Error("invalid requested scopes")
+        _decode_bounded(client_nonce, 64, "invalid client nonce")
+        if len(_decode_bounded(client_nonce, 64, "invalid client nonce")) < 16:
+            raise PairingV2Error("invalid client nonce")
         raw_key = _decode_bounded(public_key, P256_PUBLIC_KEY_MAX_BYTES, "invalid device key")
         try:
             parsed_key = serialization.load_der_public_key(raw_key)
@@ -161,8 +173,12 @@ class PairingV2Transactions:
                 raise PairingV2Error("pairing unavailable")
             if item.device_id is not None:
                 raise PairingV2Error("pairing request already received")
+            if not requested <= item.scopes:
+                raise PairingV2Error("requested scopes exceed host grant")
             item.device_id = device_id
             item.public_key = raw_key
+            item.requested_scopes = requested
+            item.client_nonce = client_nonce
             item.challenge = secrets.token_bytes(32)
             challenge_id = _encode(secrets.token_bytes(16))
             # challenge_id is carried inside the signed canonical payload.
@@ -178,11 +194,12 @@ class PairingV2Transactions:
             "pairing_id": pairing_id,
             "challenge_id": item.challenge_id,
             "nonce": _encode(item.challenge),
+            "client_nonce": item.client_nonce,
             "device_id": item.device_id,
             "public_key_sha256": hashlib.sha256(item.public_key).hexdigest(),
             "host_identity": self._host_identity,
             "workspace_id": item.workspace_id,
-            "scopes": sorted(item.scopes),
+            "scopes": sorted(item.requested_scopes or item.scopes),
             "expires_at": item.expires_at,
         }
         return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -201,7 +218,7 @@ class PairingV2Transactions:
                     "public_key_sha256": hashlib.sha256(item.public_key).hexdigest(),
                     "workspace_id": item.workspace_id,
                     "cwd": item.cwd,
-                    "scopes": sorted(item.scopes),
+                    "scopes": sorted(item.requested_scopes or item.scopes),
                     "approved": item.approved,
                     "expires_in": max(0, int(PAIRING_V2_TTL_SECONDS - (now - item.created_at))),
                 })
@@ -251,7 +268,7 @@ class PairingV2Transactions:
             except (InvalidSignature, ValueError):
                 raise PairingV2Error("device proof rejected") from None
             del self._pending[pairing_id]
-            workspace_id, cwd, scopes = item.workspace_id, item.cwd, set(item.scopes)
+            workspace_id, cwd, scopes = item.workspace_id, item.cwd, set(item.requested_scopes or item.scopes)
         return self._registry.issue(device_id=device_id, workspace_id=workspace_id,
                                     cwd=cwd, scopes=scopes)
 
