@@ -114,8 +114,20 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
         pairing_id=tx["pairing_id"], device_id="android-v2",
         public_key=public_text, requested_scopes=["status"], client_nonce=base64.urlsafe_b64encode(b"n" * 32).rstrip(b"=").decode("ascii"))
     pending = host.pending_pairings_v2()
+    assert len(pending) == 1
     assert pending[0]["device_id"] == "android-v2"
     assert pending[0]["public_key_sha256"]
+    # The trusted local approval surface receives only the display/decision
+    # contract; raw public key, nonce, challenge bytes, and bearer token stay
+    # inside the host transaction and are never exposed by this listing.
+    assert set(pending[0]) == {
+        "pairing_id", "device_id", "public_key_sha256", "workspace_id",
+        "cwd", "scopes", "approved", "expires_in",
+    }
+    assert "public_key" not in pending[0]
+    assert "client_nonce" not in pending[0]
+    assert "challenge" not in pending[0]
+    assert "credential_token" not in pending[0]
     assert host.decide_pairing_v2(tx["pairing_id"], approved=True)
     payload = base64.urlsafe_b64decode(
         challenge["challenge"] + "=" * (-len(challenge["challenge"]) % 4))
@@ -124,6 +136,9 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
         pairing_id=tx["pairing_id"], device_id="android-v2",
         challenge_id=challenge["challenge_id"], signature=signature)
     assert host.registry.verify(device_id="android-v2", credential=token)["scopes"] == frozenset({"status"})
+    # Redeemed transactions must disappear from the approval queue and the
+    # listing must never surface the issued bearer credential.
+    assert host.pending_pairings_v2() == []
 
     pending2 = host.begin_pairing_v2(
         host_identity="tls-fingerprint", workspace_id="ws",
