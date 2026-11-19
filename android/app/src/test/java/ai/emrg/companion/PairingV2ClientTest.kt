@@ -180,11 +180,11 @@ class PairingV2ClientTest {
         val challengeId = b64(16)
         client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val raw = challenge(pairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
-        val marker = "host-identity".toByteArray(Charsets.UTF_8)
+        val marker = "\"host_identity\":\"".toByteArray(Charsets.UTF_8)
         val offset = raw.indices.first { index ->
             index + marker.size <= raw.size && raw.copyOfRange(index, index + marker.size).contentEquals(marker)
         }
-        raw[offset + 5] = 0xC3.toByte()
+        raw[offset + marker.size] = 0xC3.toByte()
         assertThrows(IllegalArgumentException::class.java) {
             client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(raw))
         }
