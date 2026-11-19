@@ -288,3 +288,12 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - The route returns a generic unavailable response for failed redemption and applies a bounded per-peer unauthenticated-attempt limiter.
 - Companion security CI #158 passed on commit `85f6af746220c80e97f36b859b41f5b3c01767e6`. This validates host-side WSS security tests on Ubuntu and Windows.
 - Remaining gates: daemon lifecycle/configuration integration, trusted Electron local approval UI, Android live pinned-WSS coordinator and retry flow, physical-device Keystore verification, and end-to-end pairing. No Android-to-host pairing completion is claimed.
+
+
+### Pairing v2 Android transport increment (2026-11-19)
+
+- [x] Add a one-frame pinned-WSS exchange primitive for Pairing v2 request/redeem messages. The TLS leaf SHA-256 pin is checked before application data is sent; responses are bounded to 16 KiB and bound to the pairing transaction, response type, and device ID where applicable.
+- [x] Add JVM tests for strict challenge/credential envelopes, transaction mismatch, unexpected response types, and device binding.
+- [x] Android Companion CI #267 passed on commit `2fbdf7d0d92c`: debug APK assembly, unit tests, lint, and artifact upload succeeded.
+- [ ] Wire the exchange to `PairingV2Client`, `SecurePairingCoordinator`, host-approval wait/redeem flow, and the QR UI. This increment is a transport primitive, not end-to-end pairing.
+- [ ] Verify Android Keystore behavior on physical devices and complete cross-platform end-to-end pairing tests.
