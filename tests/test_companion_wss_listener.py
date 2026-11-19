@@ -69,7 +69,7 @@ def test_disabling_host_closes_registered_connections(tmp_path):
         class Client:
             def __init__(self):
                 self.closed = []
-            self.close_event = asyncio.Event()
+                self.close_event = asyncio.Event()
             async def close(self, *, code, reason):
                 self.closed.append((code, reason))
                 self.close_event.set()
