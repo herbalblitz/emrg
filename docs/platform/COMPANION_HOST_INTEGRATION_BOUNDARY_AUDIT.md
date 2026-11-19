@@ -144,3 +144,6 @@ Regression coverage verifies that newline/control and bidirectional override cha
 
 Added [`COMPANION_ELECTRON_LOCAL_CONTROL_DESIGN.md`](COMPANION_ELECTRON_LOCAL_CONTROL_DESIGN.md) as the implementation contract for the missing trusted desktop boundary. It defines the narrow daemon operations, primary-window/top-frame sender checks, fixed preload methods, immutable approval binding, listener lifecycle ownership, and daemon/Electron/end-to-end test gates. These are requirements for future implementation, not claims that Electron or daemon integration now exists.
 
+### Daemon lifecycle and desktop IPC source audit (2026-11-19)
+
+Added [COMPANION_DAEMON_LIFECYCLE_AND_IPC_AUDIT.md](COMPANION_DAEMON_LIFECYCLE_AND_IPC_AUDIT.md) after inspecting the actual daemon WebSocket authentication/dispatch path, Electron daemon client, and daemon shutdown sequence. It confirms that the desktop daemon channel is broad same-user IPC, not a Companion-only management API, and records the required separate controller/lifecycle ownership and security gates. No daemon or Electron runtime integration is claimed by this audit.
