@@ -170,3 +170,11 @@ The standalone WSS listener now accepts the strict, one-frame Pairing v2 request
 - The route is available only through the separately configured TLS WSS listener. Android must verify the out-of-band host identity pin before sending either frame; this server-side route does not itself establish the QR trust ceremony.
 
 Regression tests exercise challenge creation, host-local approval, signature-bound redemption, credential authentication, replay rejection, redemption-before-approval rejection, and per-peer rate limiting. This is host-side transport integration only: daemon lifecycle/configuration, trusted Electron approval UI, Android coordinator/live WSS integration, physical-device validation, cross-process limiter coordination, and production TLS identity presentation remain open. Do not describe the Android-to-host pairing flow as end-to-end complete.
+
+
+## Android Pairing v2 response-envelope hardening (2026-11-19)
+
+- `PairingV2Client.parseChallengeResponse` accepts only the exact five-field `pairing.challenge` envelope and binds its pairing ID to the most recent device request. It validates the canonical challenge ID and bounded canonical Base64URL challenge payload before the signed challenge parser runs.
+- `parseCredentialResponse` accepts only the exact five-field `pairing.credential` envelope, binds both pairing ID and device ID to the active request, and validates the credential's UTF-8 size/shape before the coordinator may persist it.
+- JVM regression tests cover valid host envelopes, transaction/device substitution, unexpected fields, and malformed credentials.
+- These helpers close response-parsing gaps but do not open a socket, implement approval polling, or wire the Compose pairing panel to live transport. Android coordinator/WSS integration and physical-device verification remain open.
