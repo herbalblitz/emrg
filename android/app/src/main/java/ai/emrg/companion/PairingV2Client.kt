@@ -12,6 +12,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.util.Base64
+import java.security.SecureRandom
 
 /** A validated challenge envelope returned by the dedicated host WSS endpoint. */
 internal data class PairingV2Challenge(
@@ -31,15 +32,18 @@ internal class PairingV2Client(
     private val keys: CompanionDeviceKeyManager,
     private val deviceId: String,
     private val keyAlias: String,
+    private val requestedScopes: Set<String> = setOf("status"),
     private val nowEpochSeconds: () -> Long = { System.currentTimeMillis() / 1000L },
 ) {
     private var publicKeyBytes: ByteArray? = null
     private var activePairingId: String? = null
+    private var activeClientNonce: String? = null
 
     @Synchronized
     fun createRequestFrame(pairingId: String): JSONObject {
         publicKeyBytes = null
         activePairingId = null
+        activeClientNonce = null
         requireCanonicalBase64Url(pairingId, 32, "pairing id")
         require(deviceId.matches(DEVICE_ID_PATTERN)) { "Device ID is invalid" }
         val encodedPublicKey = keys.createOrLoad(keyAlias)
@@ -52,8 +56,13 @@ internal class PairingV2Client(
         require(parsedPublicKey != null && isP256(parsedPublicKey.params)) {
             "Device public key is not P-256"
         }
+        require(requestedScopes.isNotEmpty() && requestedScopes.size <= 3 &&
+            requestedScopes.all { it in ALLOWED_SCOPES }) { "Requested scopes are invalid" }
+        val nonceBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val clientNonce = Base64.getUrlEncoder().withoutPadding().encodeToString(nonceBytes)
         publicKeyBytes = rawPublicKey
         activePairingId = pairingId
+        activeClientNonce = clientNonce
         return JSONObject()
             .put("type", "pairing.request")
             .put("protocol", "2.0")
@@ -61,6 +70,8 @@ internal class PairingV2Client(
             .put("device_id", deviceId)
             .put("key_algorithm", KEY_ALGORITHM)
             .put("public_key", encodedPublicKey)
+            .put("requested_scopes", org.json.JSONArray(requestedScopes.sorted()))
+            .put("client_nonce", clientNonce)
     }
 
     /** Validate the host's challenge envelope before interpreting its signed payload. */
@@ -120,6 +131,10 @@ internal class PairingV2Client(
         } catch (_: Exception) {
             throw IllegalArgumentException("Pairing challenge is invalid")
         }
+        require(challenge.opt("client_nonce") is String &&
+            challenge.getString("client_nonce") == activeClientNonce) {
+            "Pairing challenge client nonce mismatch"
+        }
         require(challenge.opt("protocol") is String && challenge.getString("protocol") == "2.0") {
             "Pairing challenge protocol mismatch"
         }
@@ -159,7 +174,7 @@ internal class PairingV2Client(
         requireCanonicalBase64Url(nonce, 32, "challenge nonce")
         val scopes = challenge.optJSONArray("scopes") ?: throw IllegalArgumentException("Pairing scopes are missing")
         require(scopes.length() in 1..3) { "Pairing scopes are invalid" }
-        val allowedScopes = setOf("status", "sessions.list", "chat.send")
+        val allowedScopes = ALLOWED_SCOPES
         val seenScopes = HashSet<String>()
         for (index in 0 until scopes.length()) {
             val scopeValue = scopes.opt(index)
@@ -167,6 +182,8 @@ internal class PairingV2Client(
             val scope = scopeValue
             require(scope in allowedScopes && seenScopes.add(scope)) { "Pairing scopes are invalid" }
         }
+
+        require(seenScopes == requestedScopes) { "Pairing host changed requested scopes" }
 
         // Sign the exact UTF-8 bytes returned by the host, not a reserialized JSON object.
         val signature = keys.sign(keyAlias, rawChallenge)
@@ -230,5 +247,6 @@ internal class PairingV2Client(
         const val MAX_CHALLENGE_LIFETIME_SECONDS = 180
         val DEVICE_ID_PATTERN = Regex("[A-Za-z0-9._:-]{1,128}")
         val BASE64URL_PATTERN = Regex("[A-Za-z0-9_-]+")
+        val ALLOWED_SCOPES = setOf("status", "sessions.list", "chat.send")
     }
 }
