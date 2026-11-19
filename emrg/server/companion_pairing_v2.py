@@ -305,7 +305,10 @@ class PairingV2Transactions:
 
     def cancel_all(self) -> int:
         with self._lock:
-            count = len(self._pending)
+            # Count only transactions still awaiting completion. Redeemed
+            # entries are short-lived response-retry cache records, not
+            # pending approvals, but are cleared on host shutdown as well.
+            count = sum(item.credential_token is None for item in self._pending.values())
             self._pending.clear()
             return count
 
