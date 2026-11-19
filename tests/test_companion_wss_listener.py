@@ -586,3 +586,23 @@ def test_concurrent_listener_start_is_rejected_without_second_bind(tmp_path, mon
         assert calls == ["bind", "close", "wait_closed"]
 
     asyncio.run(run())
+
+
+
+def test_close_disposes_listener_and_unregisters_host_callback(tmp_path):
+    host = CompanionHostService(tmp_path / "registry.json")
+    host.enable()
+    listener = _listener(tmp_path, host)
+    callback = listener._on_host_state
+    assert callback in host._state_callbacks
+
+    async def run():
+        await listener.close()
+        await listener.close()  # disposal is idempotent
+
+    asyncio.run(run())
+    assert callback not in host._state_callbacks
+    assert listener._disposed is True
+    assert listener.running is False
+    with pytest.raises(RuntimeError, match="disposed"):
+        asyncio.run(listener.start())
