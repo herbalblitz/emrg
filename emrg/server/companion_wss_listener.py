@@ -203,16 +203,22 @@ class CompanionWssListener:
         address = getattr(websocket, "remote_address", None)
         peer = str(address[0]) if isinstance(address, tuple) and address else "unknown"
         now = time.monotonic()
+        # Expire old peer buckets before enforcing the memory cap. Never
+        # evict a live peer bucket to admit a new address: doing so would let
+        # an attacker rotate source addresses and reset another peer's limit.
+        expired_peers = [
+            key for key, stamps in self._pairing_attempts.items()
+            if not stamps or now - stamps[-1] >= _PAIRING_RATE_WINDOW_SECONDS
+        ]
+        for key in expired_peers:
+            del self._pairing_attempts[key]
+        if peer not in self._pairing_attempts and len(self._pairing_attempts) >= _PAIRING_RATE_MAX_PEERS:
+            return False
         attempts = [stamp for stamp in self._pairing_attempts.get(peer, [])
                     if now - stamp < _PAIRING_RATE_WINDOW_SECONDS]
         if len(attempts) >= _PAIRING_RATE_MAX_ATTEMPTS:
             self._pairing_attempts[peer] = attempts
             return False
-        if peer not in self._pairing_attempts and len(self._pairing_attempts) >= _PAIRING_RATE_MAX_PEERS:
-            oldest = min(self._pairing_attempts,
-                         key=lambda key: self._pairing_attempts[key][-1]
-                         if self._pairing_attempts[key] else 0.0)
-            del self._pairing_attempts[oldest]
         attempts.append(now)
         self._pairing_attempts[peer] = attempts
         return True
