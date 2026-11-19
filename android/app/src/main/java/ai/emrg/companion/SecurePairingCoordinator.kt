@@ -1,5 +1,7 @@
 package ai.emrg.companion
 
+import java.security.MessageDigest
+
 /**
  * Coordinates the fail-closed pairing reducer with encrypted credential persistence.
  * Credentials are persisted only after host approval and successful state validation.
@@ -10,6 +12,23 @@ internal class SecurePairingCoordinator(
 ) {
     var state: PairingState = initialState
         private set
+
+    /** Compare a duplicate host response with the encrypted credential already persisted. */
+    @Synchronized
+    fun matchesStoredCredential(alias: String, candidate: String): Boolean {
+        if (!AndroidKeystoreCredentialStore.isValidCredentialAlias(alias) ||
+            !AndroidKeystoreCredentialStore.isValidCredential(candidate)
+        ) return false
+        return try {
+            val stored = credentialStore.get(alias) ?: return false
+            MessageDigest.isEqual(
+                stored.toByteArray(Charsets.UTF_8),
+                candidate.toByteArray(Charsets.UTF_8),
+            )
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     @Synchronized
     fun dispatch(action: PairingAction, issuedCredential: String? = null): PairingState {
