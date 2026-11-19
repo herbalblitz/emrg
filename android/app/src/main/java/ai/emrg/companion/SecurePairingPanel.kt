@@ -134,6 +134,8 @@ internal fun SecurePairingPanel() {
                     qrPayload = ""
                     endpoint = ""
                     fingerprint = ""
+                    pairingId = null
+                    descriptorVersion = null
                 }) { Text("Reset") }
             }
         }
