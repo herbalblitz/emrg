@@ -140,3 +140,7 @@ The standalone WSS `sessions.list` response now rejects Unicode control (`Cc`), 
 
 Regression coverage verifies that newline/control and bidirectional override characters are omitted, malformed surrogate values are omitted, ordinary Vietnamese/CJK/emoji text remains intact, and characters beyond a truncated suffix do not cause safe transmitted text to be dropped. This is presentation-metadata hardening only; it does not add remote chat, session mutation, or pairing-v2 transport.
 
+### Electron local-control implementation contract (2026-11-19)
+
+Added [`COMPANION_ELECTRON_LOCAL_CONTROL_DESIGN.md`](COMPANION_ELECTRON_LOCAL_CONTROL_DESIGN.md) as the implementation contract for the missing trusted desktop boundary. It defines the narrow daemon operations, primary-window/top-frame sender checks, fixed preload methods, immutable approval binding, listener lifecycle ownership, and daemon/Electron/end-to-end test gates. These are requirements for future implementation, not claims that Electron or daemon integration now exists.
+
