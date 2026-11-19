@@ -218,7 +218,7 @@ class PairingV2ClientTest {
         }
         val raw = challenge(pairingId, challengeId, "android-device-1", keys.publicKeyDigest(), 1_700_000_100L)
             .toString(Charsets.UTF_8)
-            .replace("\"sessions.list\"", "\"untrusted.scope\"")
+            .replace("\"status\"", "\"untrusted.scope\"")
             .toByteArray(Charsets.UTF_8)
         assertThrows(IllegalArgumentException::class.java) {
             client.createRedeemFrame(pairingId, challengeId, Base64.getUrlEncoder().withoutPadding().encodeToString(raw))
