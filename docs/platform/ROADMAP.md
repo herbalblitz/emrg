@@ -192,3 +192,10 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Confirm host-side primitives enforce local approval, one-time redemption, expiry, attempt limits and device credential issuance; current descriptor is credential-free.
 - [ ] Design and implement versioned QR transaction binding (pairing ID/one-time secret exchange without embedding the issued device credential), trusted local host approval UI, and pinned-TLS redemption endpoint.
 - [ ] Connect Android coordinator to the real host response and persist only the credential issued by that host; add cross-platform end-to-end tests. Do not mark pairing complete until these gates pass.
+
+
+## Companion pairing v2 design (2026-11-19)
+
+- Added [COMPANION_PAIRING_V2_DESIGN.md](COMPANION_PAIRING_V2_DESIGN.md), defining the proposed QR v2 transaction reference, host-local approval, device-key proof of possession, one-time redemption, strict WSS message boundaries, state machine, and security test matrix.
+- The design deliberately keeps reusable credentials and private keys out of QR data. Pairing remains disabled end-to-end until host transaction, local approval UI, WSS exchange, Android Keystore integration, and cross-platform tests are implemented.
+- CI Android Companion #192 passed on `a85ea4c3`; it predates this documentation-only commit.
