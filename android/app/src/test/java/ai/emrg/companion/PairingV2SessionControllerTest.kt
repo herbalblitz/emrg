@@ -111,6 +111,28 @@ class PairingV2SessionControllerTest {
 
 
     @Test
+    fun mismatchedDuplicateCredentialDoesNotDemotePairedState() {
+        val store = Store()
+        val coordinator = approvedCoordinator(store)
+        val transport = FakeTransport().apply { challenge = this@PairingV2SessionControllerTest.challenge }
+        val controller = controller(coordinator, transport)
+        val listener = Listener()
+
+        controller.requestPairingChallenge(listener)
+        controller.redeemChallenge(listener)
+        assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
+
+        // A response bound to a different credential/transaction must be rejected
+        // without replacing the already persisted host credential or paired state.
+        transport.lastRedeemListener!!.onCredential("d".repeat(64))
+
+        assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
+        assertEquals("PAIRING_TRANSACTION_MISMATCH", listener.failure)
+        assertEquals("a".repeat(64), store.values["host-credential"])
+        assertEquals("host-credential", coordinator.state.pairedHost?.credentialAlias)
+    }
+
+    @Test
     fun genericUnavailableDoesNotMarkHostApprovedAndSameChallengeCanBeRetried() {
         val store = Store()
         val coordinator = approvedCoordinator(store)
