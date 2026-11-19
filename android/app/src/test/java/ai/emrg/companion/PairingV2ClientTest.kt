@@ -14,6 +14,7 @@ import java.math.BigInteger
 import java.util.Base64
 
 class PairingV2ClientTest {
+    private var activeClientNonce: String = ""
     private class FakeDeviceKeys : CompanionDeviceKeyManager {
         private val pair: KeyPair = KeyPairGenerator.getInstance("EC").apply {
             initialize(ECGenParameterSpec("secp256r1"))
@@ -66,10 +67,12 @@ class PairingV2ClientTest {
         val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
         val pairingId = b64(32)
         val challengeId = b64(16)
-        val request = client.createRequestFrame(pairingId)
+        val request = client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         assertEquals("pairing.request", request.getString("type"))
         assertEquals("2.0", request.getString("protocol"))
         assertEquals("P-256", request.getString("key_algorithm"))
+        assertEquals(43, request.getString("client_nonce").length)
+        assertEquals("[\"status\"]", request.getJSONArray("requested_scopes").toString())
         assertEquals(pairingId, request.getString("pairing_id"))
         assertEquals(122, request.getString("public_key").length)
 
