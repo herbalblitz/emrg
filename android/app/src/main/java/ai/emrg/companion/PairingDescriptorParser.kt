@@ -109,8 +109,10 @@ internal object PairingDescriptorParser {
                 return PairingDescriptorResult.Invalid("EXPIRY_TOO_FAR")
             }
             val pairingId = if (version == 2) {
-                val value = json.optString("pairing_id", "")
-                if (!isCanonicalPairingId(value)) return PairingDescriptorResult.Invalid("INVALID_PAIRING_ID")
+                val value = json.opt("pairing_id")
+                if (value !is String || !isCanonicalPairingId(value)) {
+                    return PairingDescriptorResult.Invalid("INVALID_PAIRING_ID")
+                }
                 value
             } else null
             PairingDescriptorResult.Valid(
