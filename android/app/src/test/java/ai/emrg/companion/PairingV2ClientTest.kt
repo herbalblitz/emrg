@@ -14,6 +14,7 @@ import java.math.BigInteger
 import java.util.Base64
 
 class PairingV2ClientTest {
+    private val hostFingerprint = (1..32).joinToString(":") { "%02X".format(it) }
     private var activeClientNonce: String = ""
     private class FakeDeviceKeys : CompanionDeviceKeyManager {
         private val pair: KeyPair = KeyPairGenerator.getInstance("EC").apply {
@@ -65,7 +66,7 @@ class PairingV2ClientTest {
     @Test
     fun buildsRequestAndSignsExactHostChallengeBytes() {
         val keys = FakeDeviceKeys()
-        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1", nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint)
         val pairingId = b64(32)
         val challengeId = b64(16)
         val request = client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
@@ -92,7 +93,7 @@ class PairingV2ClientTest {
     @Test
     fun refusesChallengeBoundToAnotherDeviceOrPublicKey() {
         val keys = FakeDeviceKeys()
-        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1", nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint)
         val pairingId = b64(32)
         val challengeId = b64(16)
         client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
@@ -105,7 +106,7 @@ class PairingV2ClientTest {
     @Test
     fun refusesExpiredChallenge() {
         val keys = FakeDeviceKeys()
-        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1", nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint)
         val pairingId = b64(32)
         val challengeId = b64(16)
         client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
@@ -118,7 +119,7 @@ class PairingV2ClientTest {
     @Test
     fun refusesChallengeWithExpiryBeyondProtocolLifetime() {
         val keys = FakeDeviceKeys()
-        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1", nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint)
         val pairingId = b64(32)
         val challengeId = b64(16)
         client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
@@ -131,7 +132,7 @@ class PairingV2ClientTest {
     @Test
     fun refusesRedeemForDifferentPairingTransaction() {
         val keys = FakeDeviceKeys()
-        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1", nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint)
         val activePairingId = b64(32)
         val otherPairingId = b64(32, seed = 3)
         val challengeId = b64(16)
@@ -145,7 +146,7 @@ class PairingV2ClientTest {
     @Test
     fun startingNewRequestInvalidatesPreviousPairingTransaction() {
         val keys = FakeDeviceKeys()
-        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1", nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint)
         val oldPairingId = b64(32)
         val newPairingId = b64(32, seed = 4)
         val challengeId = b64(16)
@@ -165,7 +166,7 @@ class PairingV2ClientTest {
 
     @Test
     fun refusesRedeemBeforeCreatingDeviceRequest() {
-        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
+        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1", expectedHostIdentity = hostFingerprint)
         assertThrows(IllegalStateException::class.java) {
             client.createRedeemFrame(b64(32), b64(16), b64(64))
         }
@@ -174,7 +175,7 @@ class PairingV2ClientTest {
     @Test
     fun refusesMalformedUtf8InChallenge() {
         val keys = FakeDeviceKeys()
-        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1", nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint)
         val pairingId = b64(32)
         val challengeId = b64(16)
         client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
@@ -192,7 +193,7 @@ class PairingV2ClientTest {
     @Test
     fun refusesChallengeWithWrongJsonFieldTypes() {
         val keys = FakeDeviceKeys()
-        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1", nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint)
         val pairingId = b64(32)
         val challengeId = b64(16)
         client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
@@ -208,7 +209,7 @@ class PairingV2ClientTest {
     @Test
     fun refusesChallengeWithUnexpectedScopeOrChallengeId() {
         val keys = FakeDeviceKeys()
-        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1", nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint)
         val pairingId = b64(32)
         val challengeId = b64(16)
         client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
@@ -237,7 +238,7 @@ class PairingV2ClientTest {
             p256.order.add(BigInteger.ONE),
             p256.cofactor,
         )
-        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
+        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1", expectedHostIdentity = hostFingerprint)
         assertEquals(false, client.isP256(altered))
         assertEquals(true, client.isP256(p256))
     }
@@ -249,7 +250,7 @@ class PairingV2ClientTest {
             override fun sign(alias: String, challenge: ByteArray): String = b64(70)
             override fun delete(alias: String) = Unit
         }
-        val client = PairingV2Client(invalidKeys, "android-device-1", "emrg-host-1")
+        val client = PairingV2Client(invalidKeys, "android-device-1", "emrg-host-1", expectedHostIdentity = hostFingerprint)
         assertThrows(IllegalArgumentException::class.java) {
             client.createRequestFrame(b64(32))
         }
@@ -258,7 +259,7 @@ class PairingV2ClientTest {
     @Test
     fun validatesChallengeAndCredentialResponseTransactionBindings() {
         val keys = FakeDeviceKeys()
-        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1", nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint)
         val pairingId = b64(32)
         val challengeId = b64(16)
         client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
@@ -287,7 +288,7 @@ class PairingV2ClientTest {
 
     @Test
     fun rejectsChallengeAndCredentialResponsesWithWrongBindingOrExtraFields() {
-        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
+        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1", expectedHostIdentity = hostFingerprint)
         val pairingId = b64(32)
         client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val challengeResponse = org.json.JSONObject()
@@ -317,7 +318,7 @@ class PairingV2ClientTest {
 
     @Test
     fun rejectsMalformedCredentialInCredentialResponse() {
-        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
+        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1", expectedHostIdentity = hostFingerprint)
         val pairingId = b64(32)
         client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
         val response = org.json.JSONObject()
