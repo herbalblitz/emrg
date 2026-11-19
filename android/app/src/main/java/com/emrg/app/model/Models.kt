@@ -43,6 +43,9 @@ data class SessionSummary(
     val updatedAt: String,
     val createdAt: String,
     val messageCount: Int,
+    // Which agent owns the session; filled by list_all_sessions (upstream
+    // 0.3.63), empty for the per-workspace list_sessions rows that carry none.
+    val agent: String = "",
 )
 
 data class ModelInfo(

@@ -71,6 +71,10 @@ private fun frameDisplayText(frame: JsonObject): String? {
         }
     }
     if (type == "task_queued") return null
+    // Upstream 0.3.63 broadcasts one turn_progress frame per round (round
+    // number + tokens so far); it is a progress signal, not chat text, and
+    // without this it would render as a "[turn_progress]" bubble every round.
+    if (type == "turn_progress") return null
     val content = frame.str("content").orEmpty()
     if (content.isNotBlank()) {
         // The sandbox refusal names the fix but buries it in a long

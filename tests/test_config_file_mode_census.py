@@ -97,6 +97,14 @@ _MODE_STATEMENT = re.compile(r"\bchmod(?:Sync)?\b|CONFIG_FILE_MODE|\bmode\s*:\s*
 #: day a new carrier appears, which is a discovery read as a regression.
 _EXTRACTORS = {
     "emrg/config.py": r"^CONFIG_FILE_MODE = (0o[0-7]+)$",
+    # The gateway's own config file (config.json) is written owner-only by
+    # save_config; the statement lifted here is its _chmod call.
+    "emrg/gateway/config.py": r"_chmod\(target, (0o[0-7]+)\)",
+    # The gateway's phone-edit path writes the engine config owner-only; the
+    # statement lifted here is _backup's creation of the backup copy (a copy
+    # of the config, same sensitivity, same mode) -- apply_patch itself writes
+    # through the CONFIG_FILE_MODE constant, which carries no digits to lift.
+    "emrg/gateway/config_api.py": r"os\.open\(target, os\.O_WRONLY \| os\.O_CREAT \| os\.O_EXCL, (0o[0-7]+)\)",
     "emrg/gui/config_mode.js": r"^const CONFIG_FILE_MODE = (0o[0-7]+);$",
     "emrg/gui/main.js": r"writeFileSync\(configPath\(\),.*?,\s*\{\s*mode:\s*(0o[0-7]+)\s*\}\)",
     "install.sh": r'chmod ([0-7]{3,4}) "\$cfg"',

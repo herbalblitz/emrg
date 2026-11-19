@@ -149,7 +149,7 @@ fun SessionsScreen(
                         loading = true
                         error = null
                         scope.launch {
-                            sessions = repository.sessions(cwd = cwd)
+                            sessions = repository.sessionsAll()
                             loading = false
                         }
                     }) {
@@ -168,7 +168,7 @@ fun SessionsScreen(
                     error = null
                     scope.launch {
                         repository.newSessionId(cwd = cwd)
-                        sessions = repository.sessions(cwd = cwd)
+                        sessions = repository.sessionsAll()
                         loading = false
                     }
                 },
@@ -188,12 +188,12 @@ fun SessionsScreen(
                 )
             }
             Text(
-                text = "Workspace: $cwd (change)",
+                text = "All sessions · new ones go to $cwd (change)",
                 modifier = Modifier.clickable { repository.selectWorkspace("") }.padding(8.dp),
             )
             if (loading) LoadingContent(message = "Loading sessions…")
             if (sessions.isEmpty() && !loading) {
-                EmptyContent(message = "No sessions in $cwd")
+                EmptyContent(message = "No sessions on this host yet")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),

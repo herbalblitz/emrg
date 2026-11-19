@@ -4,7 +4,10 @@ on:
   push:
     branches: [feat/termux-local, main]
   pull_request:
-    branches: [feat/termux-local, main]
+    # No `branches` filter on purpose: a base branch can be any branch.
+    # Filtering to this branch gave a stacked PR (base = another branch)
+    # zero check runs -- the upstream guard test_test_workflow_covers_pr_bases
+    # fails the workflow otherwise.
 
 env:
   EMRG_VERSION: 0.3.63
@@ -56,6 +59,9 @@ jobs:
           packages: ''  # setup-android v3 defaults to "tools platform-tools"; "tools" no longer exists
       - name: Make gradlew executable
         run: chmod +x android/gradlew
+      - name: Kotlin unit tests
+        run: ./gradlew :app:testDebugUnitTest
+        working-directory: android
       - name: Debug APK
         run: ./gradlew :app:assembleDebug
         working-directory: android

@@ -59,6 +59,19 @@ BACKSLASH = chr(92)
 #: as a path *component* of the parent directories, so a file named `vendor.js` is still read.
 VENDORED_DIRS = ("vendor", "node_modules", "dist")
 
+#: Tracked binaries. A .jar or a .keystore has no lines, so the continuation
+#: rule has nothing to read in it -- and sweep() reports a file it cannot read
+#: as UTF-8 rather than skipping it, so the two binaries the Android app
+#: tracks (the Gradle wrapper jar, the shared debug keystore) would fail the
+#: sweep as unreadable. The exclusion is by suffix, pinned below in both
+#: directions, so a text file cannot slip out by renaming.
+BINARY_SUFFIXES = (".jar", ".keystore")
+
+
+def is_binary(name: str) -> bool:
+    """Is this path a tracked binary with no lines to sweep?"""
+    return Path(name).suffix in BINARY_SUFFIXES
+
 #: How many tracked files the sweep must see before its verdict means anything. Far below the
 #: 481 measured on 2026-10-03, because the number should not need updating as files are added -
 #: but far above zero, so a moved checkout or an empty `git` answer cannot pass.
@@ -94,7 +107,7 @@ def tracked_files() -> list[str]:
     return [
         line
         for line in proc.stdout.splitlines()
-        if line.strip() and not is_vendored(line)
+        if line.strip() and not is_vendored(line) and not is_binary(line)
     ]
 
 
@@ -179,6 +192,19 @@ def test_the_vendored_bundles_are_out_of_class() -> None:
         "a file *named* vendor.py is this repository's own code and must stay in class"
     )
     assert is_vendored("tests/test_shell_continuations.py") is False
+
+
+def test_the_binary_files_are_out_of_class() -> None:
+    """The binary boundary, pinned in both directions.
+
+    A .jar or a .keystore has no lines, so the continuation rule has nothing
+    to read in it; a boundary that let a text file out by suffix would quietly
+    shrink the corpus until the rule was about nothing.
+    """
+    assert is_binary("android/gradle/wrapper/gradle-wrapper.jar") is True
+    assert is_binary("android/debug.keystore") is True
+    assert is_binary("android/app/src/main/java/com/emrg/app/MainActivity.kt") is False
+    assert is_binary("scripts/install.sh") is False
 
 
 def test_no_tracked_file_ends_a_line_with_a_doubled_backslash() -> None:

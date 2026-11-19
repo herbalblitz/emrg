@@ -234,6 +234,32 @@ class GatewayRepository(context: Context) {
                 updatedAt = row.str("updated_at") ?: row.str("created_at").orEmpty(),
                 createdAt = row.str("created_at").orEmpty(),
                 messageCount = row.int("message_count") ?: 0,
+                agent = row.str("agent").orEmpty(),
+            )
+        }
+    }
+
+    // Every session of every registered agent, in one call (upstream 0.3.63,
+    // issue #2978): the per-workspace list_sessions above cannot answer a
+    // screen that must reach a session whose agent it never asked about.
+    // The rows carry the same fields plus the owning agent and that agent's
+    // cwd, so opening one needs no extra lookup.
+    suspend fun sessionsAll(): List<SessionSummary> {
+        val response = client.request(
+            "list_all_sessions",
+            expectType = "all_sessions",
+        )
+        return response.arr("sessions").orEmpty().mapNotNull { element ->
+            val row = element.asObject() ?: return@mapNotNull null
+            val id = row.str("session_id") ?: return@mapNotNull null
+            SessionSummary(
+                id = id,
+                title = row.str("title").orEmpty().ifEmpty { "Untitled session" },
+                cwd = row.str("cwd").orEmpty(),
+                updatedAt = row.str("updated_at") ?: row.str("created_at").orEmpty(),
+                createdAt = row.str("created_at").orEmpty(),
+                messageCount = row.int("message_count") ?: 0,
+                agent = row.str("agent").orEmpty(),
             )
         }
     }

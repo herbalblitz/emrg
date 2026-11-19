@@ -464,7 +464,12 @@ class GatewayServer:
         if type_ in BLOCKED_TYPES:
             self.audit.append(f"deny.{type_}", decision="deny", device_id=device.id,
                               device_name=device.name)
-            raise GatewayError(ERR_FORBIDDEN, f"{type_} is a host-lifecycle action and is not available from a phone")
+            reason = (
+                "a destructive edit the desktop GUI owns"
+                if type_ == "delete_rant"
+                else "a host-lifecycle action"
+            )
+            raise GatewayError(ERR_FORBIDDEN, f"{type_} is {reason} and is not available from a phone")
         if type_ in GATEWAY_TYPES:
             raise GatewayError(ERR_UNKNOWN_TYPE, f"{type_} is not implemented on this gateway")
         if type_ not in PROXIED_TYPES:

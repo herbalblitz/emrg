@@ -9,13 +9,14 @@ gateway.
 
 `EMRG-0.3.63` everywhere: `pyproject.toml`, the gateway contract `API_VERSION =
 "1.0"`, and `android/app/build.gradle.kts` (`versionName = "0.3.63"`,
-`versionCode = 355`).
+`versionCode = 363`).
 
 ## Architecture decision (confirmed)
 
-* **Base code:** upstream `argszero/emrg` commit `1682b8c` (version 0.3.63).
-  The `herbalblitz/emrg` fork is an untouched v0.3.37 snapshot, 96 commits
-  behind; results are pushed to the fork when access is provided.
+* **Base code:** upstream `argszero/emrg` commit `a7568dcf` (version 0.3.63).
+  The branch is cut directly from that upstream commit; the fork's `master`
+  is still at 0.3.57 and is not the base. The lint tag
+  `upstream-v0.3.63-a7568dcf` pins the base for the 0-diff check.
 * **Android:** remote-first via a new host gateway. No embedded Python, no
   on-device parity claim. The phone is a thin remote terminal over TLS.
 * **Gateway:** an additive sidecar under `emrg/gateway/`, a client of the

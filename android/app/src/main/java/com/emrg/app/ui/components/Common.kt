@@ -163,7 +163,7 @@ fun SessionListItem(
             ) {
                 Text(text = session.title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = session.cwd,
+                    text = if (session.agent.isNotBlank()) "${session.agent} · ${session.cwd}" else session.cwd,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

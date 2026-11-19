@@ -29,9 +29,10 @@ DAEMON = Path(__file__).resolve().parents[2] / "emrg" / "server" / "daemon.py"
 
 def _daemon_types() -> set[str]:
     text = DAEMON.read_text(encoding="utf-8", errors="replace")
-    # `auth` is handled before dispatch, and the two host-lifecycle names are
-    # in the same branch chain; the regex reads the dispatch shape, which is
-    # what the gateway's list has to answer to.
+    # `auth` is handled before dispatch, and the blocked names (the two
+    # host-lifecycle ones plus delete_rant) are in the same branch chain; the
+    # regex reads the dispatch shape, which is what the gateway's list has to
+    # answer to.
     found = set(re.findall(r'msg_type\s*==\s*"([a-z_]+)"', text))
     # `_handle_client` intercepts task/cancel/approval_response with
     # `data.get("type") == ...` before the dispatch chain; both shapes are part
@@ -68,6 +69,15 @@ def test_host_lifecycle_actions_are_never_reachable():
         assert not allowed(name)
     assert "shutdown" in BLOCKED_TYPES
     assert "init_auto_evolve" in BLOCKED_TYPES
+
+
+def test_the_destructive_rant_delete_is_never_reachable():
+    # Upstream 0.3.63 added delete_rant; the desktop GUI owns that delete and
+    # no phone screen sends it, so it belongs in BLOCKED_TYPES with the
+    # host-lifecycle names, not in the proxy list.
+    assert "delete_rant" not in PROXIED_TYPES
+    assert not allowed("delete_rant")
+    assert "delete_rant" in BLOCKED_TYPES
 
 
 def test_read_mutate_and_chat_are_classified_for_limits():

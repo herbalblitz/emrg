@@ -38,6 +38,7 @@ from emrg.gateway.config import (
 )
 from emrg.gateway.protocol import (
     ERR_APPROVAL_REQUIRED,
+    ERR_INTERNAL,
     ERR_INVALID_ARGUMENT,
     ERR_NOT_FOUND,
     ERR_POLICY_REFUSED,

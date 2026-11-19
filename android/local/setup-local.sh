@@ -21,6 +21,9 @@ if [ ! -d "$HOME/emrg" ]; then
   git clone https://github.com/herbalblitz/emrg.git "$HOME/emrg"
 fi
 cd "$HOME/emrg"
+# Fetch first: a clone made before this branch (or its lint tag) existed has
+# neither the branch nor the tag locally, so checkout would fail.
+git fetch origin
 git checkout feat/termux-local
 git pull --ff-only || true
 

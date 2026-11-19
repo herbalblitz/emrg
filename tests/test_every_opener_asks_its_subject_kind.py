@@ -200,6 +200,87 @@ EXEMPT: dict[tuple[str, str, str], str] = {
         "with the FIFO still in place. An earlier revision of this row read the loop as an "
         "acknowledgement that something may be there; it is what removes the possibility."
     ),
+    # --- emrg/gateway: the phone sidecar. Every subject below is a fixed
+    # filename the gateway itself derives from its own directory
+    # (GatewayPaths.under(config_dir() / "gateway"), root chmod 0700 at
+    # ensure()); no caller-supplied path component reaches any of these
+    # openers. A FIFO could only sit at one of these subjects if a process
+    # with the user's own UID planted it in the gateway's private directory
+    # -- the same trust boundary as the gateway process, which already holds
+    # the device tokens in that directory.
+    ("emrg/gateway/audit.py", "AuditLog.append", "open"): (
+        "the subject is paths.audit -- the fixed audit.jsonl under the "
+        "gateway's own directory; AuditLog's __init__ chmods the parent 0700. "
+        "No caller-supplied path reaches this open."
+    ),
+    ("emrg/gateway/audit.py", "AuditLog.tail", "open"): (
+        "the subject is the same fixed audit.jsonl (self.path), opened for "
+        "reading; see the append row above."
+    ),
+    ("emrg/gateway/config.py", "load_config", "read_text"): (
+        "every call site calls load_config() with no argument, so target is "
+        "always gateway_paths().config -- the fixed config.json under the "
+        "gateway's own 0700 directory."
+    ),
+    ("emrg/gateway/config.py", "save_config", "open"): (
+        "every call site passes no path, so target is the fixed config.json; "
+        "and the open itself is on a pid-suffixed tmp file the function "
+        "creates next to it, so there is no pre-existing subject to block on."
+    ),
+    ("emrg/gateway/config_api.py", "_backup", "open"): (
+        "target is a timestamp-and-pid name under the gateway's own backups "
+        "directory, opened O_CREAT|O_EXCL -- the call fails rather than blocks "
+        "if anything already occupies the path, so a planted FIFO cannot stall "
+        "the loop."
+    ),
+    ("emrg/gateway/config_api.py", "apply_patch", "open"): (
+        "the open is on a pid-suffixed tmp file created next to the engine "
+        "config, so there is no pre-existing subject to block on."
+    ),
+    ("emrg/gateway/config_api.py", "apply_patch", "read_bytes"): (
+        "the subject is config_path() -- the daemon's own config file at the "
+        "fixed location the gateway computes, never a caller-supplied path; a "
+        "FIFO there would need a same-UID planter in the daemon's own config "
+        "directory, the same trust boundary as the daemon."
+    ),
+    ("emrg/gateway/identity.py", "DeviceStore._read_devices", "read_text"): (
+        "the subject is paths.devices -- the fixed devices.json under the "
+        "gateway's own 0700 directory; no caller-supplied path reaches the read."
+    ),
+    ("emrg/gateway/identity.py", "DeviceStore._read_pairing", "read_text"): (
+        "the subject is paths.pairing -- the fixed pairing.json under the "
+        "gateway's own 0700 directory; no caller-supplied path reaches the read."
+    ),
+    ("emrg/gateway/identity.py", "_atomic_json", "open"): (
+        "the open is on a tmp name carrying the pid and 4 random hex bytes "
+        "(secrets.token_hex), created fresh under the file's own 0700 parent -- "
+        "no pre-existing subject to block on."
+    ),
+    ("emrg/gateway/logs.py", "_tail_file", "open"): (
+        "the subject comes from the SOURCES mapping -- a fixed filename "
+        "(emrgd.log, gateway.log, ...) joined onto the gateway root or the "
+        "logs dir; the caller only names which source, never a path."
+    ),
+    ("emrg/gateway/tls.py", "_read_info", "read_bytes"): (
+        "the subject is paths.cert -- the fixed cert.pem under the gateway's "
+        "own 0700 directory, passed in by ensure_certificate."
+    ),
+    ("emrg/gateway/tls.py", "_read_sans", "read_bytes"): (
+        "the subject is the same fixed cert.pem, read by _read_info's caller "
+        "chain; see the _read_info row above."
+    ),
+    ("emrg/gateway/tls.py", "_write_private", "open"): (
+        "the subject is paths.key -- the fixed key.pem under the gateway's own "
+        "0700 directory, written by the gateway's own certificate generation."
+    ),
+    ("emrg/gateway/tls.py", "_write_public", "open"): (
+        "the subject is paths.cert -- the fixed cert.pem under the gateway's "
+        "own 0700 directory, written by the gateway's own certificate generation."
+    ),
+    ("emrg/gateway/tls.py", "certificate_fingerprint", "read_bytes"): (
+        "the subject is paths.cert -- the fixed cert.pem under the gateway's "
+        "own 0700 directory."
+    ),
 }
 
 
