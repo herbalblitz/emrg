@@ -1,6 +1,5 @@
 package ai.emrg.companion
 
-import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
 import java.util.Base64
@@ -49,25 +48,47 @@ internal class PairingV2Client(
         } catch (_: Exception) {
             throw IllegalArgumentException("Pairing challenge is invalid")
         }
-        require(challenge.optString("protocol") == "2.0") { "Pairing challenge protocol mismatch" }
-        require(challenge.optString("pairing_id") == pairingId) { "Pairing challenge transaction mismatch" }
-        require(challenge.optString("challenge_id") == challengeId) { "Pairing challenge ID mismatch" }
-        require(challenge.optString("device_id") == deviceId) { "Pairing challenge device mismatch" }
-        require(challenge.optString("public_key_sha256") == sha256Hex(publicKey)) {
+        require(challenge.opt("protocol") is String && challenge.getString("protocol") == "2.0") {
+            "Pairing challenge protocol mismatch"
+        }
+        require(challenge.opt("pairing_id") is String && challenge.getString("pairing_id") == pairingId) {
+            "Pairing challenge transaction mismatch"
+        }
+        require(challenge.opt("challenge_id") is String && challenge.getString("challenge_id") == challengeId) {
+            "Pairing challenge ID mismatch"
+        }
+        require(challenge.opt("device_id") is String && challenge.getString("device_id") == deviceId) {
+            "Pairing challenge device mismatch"
+        }
+        require(challenge.opt("public_key_sha256") is String &&
+            challenge.getString("public_key_sha256") == sha256Hex(publicKey)) {
             "Pairing challenge key mismatch"
         }
-        require(challenge.optString("host_identity").isNotBlank()) { "Pairing host identity is missing" }
-        require(challenge.optString("workspace_id").isNotBlank()) { "Pairing workspace is missing" }
-        val expiresAt = challenge.optLong("expires_at", -1L)
+        require(challenge.opt("host_identity") is String && challenge.getString("host_identity").isNotBlank()) {
+            "Pairing host identity is missing"
+        }
+        require(challenge.opt("workspace_id") is String && challenge.getString("workspace_id").isNotBlank()) {
+            "Pairing workspace is missing"
+        }
+        val expiryValue = challenge.opt("expires_at")
+        require(expiryValue is Number && expiryValue.toDouble().isFinite() &&
+            expiryValue.toDouble() == expiryValue.toLong().toDouble()) {
+            "Pairing challenge expiry is invalid"
+        }
+        val expiresAt = expiryValue.toLong()
         require(expiresAt > nowEpochSeconds()) { "Pairing challenge expired" }
-        val nonce = challenge.optString("nonce")
+        val nonceValue = challenge.opt("nonce")
+        require(nonceValue is String) { "Pairing challenge nonce is invalid" }
+        val nonce = nonceValue
         requireCanonicalBase64Url(nonce, 32, "challenge nonce")
         val scopes = challenge.optJSONArray("scopes") ?: throw IllegalArgumentException("Pairing scopes are missing")
         require(scopes.length() in 1..3) { "Pairing scopes are invalid" }
         val allowedScopes = setOf("status", "sessions.list", "chat.send")
         val seenScopes = HashSet<String>()
         for (index in 0 until scopes.length()) {
-            val scope = scopes.optString(index)
+            val scopeValue = scopes.opt(index)
+            require(scopeValue is String) { "Pairing scopes are invalid" }
+            val scope = scopeValue
             require(scope in allowedScopes && seenScopes.add(scope)) { "Pairing scopes are invalid" }
         }
 
