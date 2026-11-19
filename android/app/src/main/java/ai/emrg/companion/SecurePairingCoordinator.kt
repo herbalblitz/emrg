@@ -10,6 +10,10 @@ internal class SecurePairingCoordinator(
     private val credentialStore: CredentialStore,
     initialState: PairingState = PairingState(),
 ) {
+    // Pairing callbacks may arrive on transport threads while UI code reads the state.
+    // Synchronize the getter on the same monitor as dispatch/matchesStoredCredential so
+    // readers observe a fully published immutable state transition.
+    @get:Synchronized
     var state: PairingState = initialState
         private set
 
