@@ -105,10 +105,6 @@ def test_wss_session_authenticates_and_returns_scoped_status(tmp_path):
         credential = host.registry.issue(device_id="phone-1", workspace_id="ws-1",
                                         cwd="/workspace", scopes={"status"})
         listener = _listener(tmp_path, host)
-        dispatched = []
-        monkeypatch.setattr(host, "request_pairing_v2", lambda **kw: dispatched.append(("request", kw)))
-        monkeypatch.setattr(host, "redeem_pairing_v2", lambda **kw: dispatched.append(("redeem", kw)))
-
         class Socket:
             def __init__(self, frames):
                 self.frames = iter(frames)
@@ -685,6 +681,9 @@ def test_wss_does_not_accept_unauthenticated_pairing_v2_frames(tmp_path, frame, 
             host_identity="host-test", workspace_id="workspace-test",
             cwd=str(tmp_path), scopes={"status"})
         listener = _listener(tmp_path, host)
+        dispatched = []
+        monkeypatch.setattr(host, "request_pairing_v2", lambda **kw: dispatched.append(("request", kw)))
+        monkeypatch.setattr(host, "redeem_pairing_v2", lambda **kw: dispatched.append(("redeem", kw)))
 
         class Socket:
             async def recv(self):
