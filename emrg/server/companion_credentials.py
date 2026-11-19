@@ -118,6 +118,29 @@ class CredentialRegistry:
         return {"device_id": device_id, "workspace_id": workspace_id,
                 "cwd": cwd, "scopes": frozenset(scopes)}
 
+    def is_current(self, identity: dict[str, Any]) -> bool:
+        """Check that an authenticated connection still matches an active registry record.
+
+        Revocation and credential rotation both invalidate existing connections.
+        """
+        device_id = identity.get("device_id")
+        if not isinstance(device_id, str):
+            return False
+        try:
+            with self._lock:
+                record = self._read()["devices"].get(device_id)
+        except CredentialRegistryError:
+            return False
+        if not isinstance(record, dict) or record.get("revoked"):
+            return False
+        scopes = record.get("scopes")
+        return (
+            record.get("workspace_id") == identity.get("workspace_id")
+            and record.get("cwd") == identity.get("cwd")
+            and isinstance(scopes, list)
+            and frozenset(scopes) == frozenset(identity.get("scopes", ()))
+        )
+
     def revoke(self, device_id: str) -> bool:
         """Revoke a device credential; return False if it was not registered."""
         with self._lock:
