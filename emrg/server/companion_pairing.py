@@ -84,6 +84,12 @@ class PairingTransactions:
 
     def approve(self, pairing_id: str, *, approved: bool) -> bool:
         """Local user decision. False approval decisions permanently reject the request."""
+        try:
+            _bounded_text(pairing_id, 128, "pairing unavailable")
+        except PairingError:
+            return False
+        if not isinstance(approved, bool):
+            return False
         with self._lock:
             self._purge_expired(self._clock())
             pending = self._pending.get(pairing_id)
@@ -134,6 +140,10 @@ class PairingTransactions:
             ]
 
     def cancel(self, pairing_id: str) -> bool:
+        try:
+            _bounded_text(pairing_id, 128, "pairing unavailable")
+        except PairingError:
+            return False
         with self._lock:
             return self._pending.pop(pairing_id, None) is not None
 
