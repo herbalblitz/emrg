@@ -133,6 +133,42 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
         host.request_pairing_v2(pairing_id=pending2["pairing_id"],
                                  device_id="other", public_key=public_text)
 
+
+def test_host_service_can_cancel_one_v2_pairing_from_local_control_plane(tmp_path):
+    import base64
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    host = CompanionHostService(tmp_path / "registry-v2-cancel.json")
+    host.enable()
+    tx = host.begin_pairing_v2(
+        host_identity="tls-fingerprint", workspace_id="ws",
+        cwd="/safe/work", scopes={"status"})
+    private = Ed25519PrivateKey.generate()
+    public = private.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw)
+    public_text = base64.urlsafe_b64encode(public).rstrip(b"=").decode("ascii")
+    host.request_pairing_v2(
+        pairing_id=tx["pairing_id"], device_id="android-v2",
+        public_key=public_text)
+
+    assert len(host.pending_pairings_v2()) == 1
+    assert host.cancel_pairing_v2(tx["pairing_id"]) is True
+    assert host.cancel_pairing_v2(tx["pairing_id"]) is False
+    assert host.pending_pairings_v2() == []
+    assert host.decide_pairing_v2(tx["pairing_id"], approved=True) is False
+    with pytest.raises(ValueError, match="unavailable"):
+        host.redeem_pairing_v2(
+            pairing_id=tx["pairing_id"], device_id="android-v2",
+            challenge_id="A" * 22, signature="A" * 86)
+
+
+def test_host_service_v2_cancel_is_safe_before_pairing_initialization(tmp_path):
+    host = CompanionHostService(tmp_path / "registry-v2-empty.json")
+    assert host.cancel_pairing_v2("invalid") is False
+
+
 def test_disable_serializes_with_concurrent_pairing_creation(tmp_path, monkeypatch):
     import threading
 
