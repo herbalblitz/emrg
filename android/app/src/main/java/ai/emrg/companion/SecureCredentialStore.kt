@@ -28,7 +28,7 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
     @Synchronized
     override fun put(alias: String, credential: String) {
         requireValidAlias(alias)
-        require(credential.isNotBlank()) { "Credential must not be blank" }
+        require(isValidCredential(credential)) { "Credential is invalid" }
 
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey(alias))
@@ -82,6 +82,7 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(AES_KEY_BITS)
+                .setRandomizedEncryptionRequired(true)
                 .build(),
         )
         return generator.generateKey()
@@ -109,6 +110,12 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
 
         internal fun isValidCredentialAlias(alias: String): Boolean =
             alias.matches(Regex("[A-Za-z0-9._-]{1,64}"))
+
+        internal fun isValidCredential(credential: String): Boolean =
+            credential.isNotBlank() &&
+                credential.toByteArray(StandardCharsets.UTF_8).size in 1..MAX_CREDENTIAL_BYTES
+
+        private const val MAX_CREDENTIAL_BYTES = 512
 
         private fun requireValidAlias(alias: String) {
             require(isValidCredentialAlias(alias)) { "Credential alias is invalid" }
