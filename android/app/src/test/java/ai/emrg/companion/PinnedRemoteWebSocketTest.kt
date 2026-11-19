@@ -151,3 +151,8 @@ class PinnedRemoteWebSocketTest {
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "auth_ok"))
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "auth_rejected"))
     }
+
+    @Test fun missingFrameTypeIsRejectedInEveryAuthenticationState() {
+        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, null))
+        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, null))
+    }
