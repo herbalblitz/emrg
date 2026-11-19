@@ -29,6 +29,7 @@ class SecureCredentialStoreTest {
         assertFalse(AndroidKeystoreCredentialStore.isValidCredential("   "))
         assertFalse(AndroidKeystoreCredentialStore.isValidCredential("x".repeat(513)))
         assertFalse(AndroidKeystoreCredentialStore.isValidCredential("é".repeat(257)))
+        assertFalse(AndroidKeystoreCredentialStore.isValidCredential("\uD800"))
     }
 
     @Test
