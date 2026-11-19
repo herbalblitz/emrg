@@ -257,3 +257,6 @@ These JVM tests do not substitute for physical-device Android Keystore validatio
 - Android credential validation now uses a reporting UTF-8 encoder rather than replacement-based string conversion. Malformed UTF-16 input (including unpaired surrogates) is rejected before the 512-byte bound is evaluated or persistence is attempted.
 - Regression coverage includes an unpaired high surrogate. This prevents Java/Kotlin replacement encoding from silently changing credential bytes before storage.
 - Android CI #207 failed during Gradle dependency resolution because Maven Central returned HTTP 429 for multiple artifacts; APK assembly did not reach Kotlin compilation. CI #210 is still running for the prior full credential-boundary changes; the newest malformed-Unicode commits are queued in #212.
+
+
+- The encrypted credential store also decodes decrypted bytes with a reporting UTF-8 decoder and re-applies the credential validity/512-byte checks on read. Malformed or out-of-contract stored plaintext now fails closed instead of being silently replacement-decoded.
