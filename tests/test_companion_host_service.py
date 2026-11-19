@@ -175,3 +175,54 @@ def test_disable_serializes_with_concurrent_pairing_creation(tmp_path, monkeypat
     assert len(created) == 1
     assert host.enabled is False
     assert host.pending_pairings() == []
+
+def test_revoke_serializes_with_concurrent_authentication(tmp_path, monkeypatch):
+    import threading
+
+    host = CompanionHostService(tmp_path / "registry-revoke-race.json")
+    host.enable()
+    request = host.begin_pairing(workspace_id="ws", cwd="/w", scopes={"status"})
+    assert host.decide_pairing(request["pairing_id"], approved=True)
+    token = host.redeem_pairing(
+        pairing_id=request["pairing_id"],
+        pairing_secret=request["pairing_secret"],
+        device_id="phone")
+
+    entered = threading.Event()
+    release = threading.Event()
+    revoked = []
+    auth_results = []
+    original_revoke = host.registry.revoke
+
+    def blocked_revoke(device_id):
+        entered.set()
+        assert release.wait(timeout=3)
+        return original_revoke(device_id)
+
+    monkeypatch.setattr(host.registry, "revoke", blocked_revoke)
+    revoker = threading.Thread(target=lambda: revoked.append(host.revoke_device("phone")))
+    revoker.start()
+    assert entered.wait(timeout=3)
+
+    auth_done = threading.Event()
+
+    def authenticate():
+        try:
+            auth_results.append(host.authenticate(_auth_frame("phone", token)))
+        except CompanionAuthenticationError:
+            auth_results.append("rejected")
+        finally:
+            auth_done.set()
+
+    authenticator = threading.Thread(target=authenticate)
+    authenticator.start()
+    assert not auth_done.wait(timeout=0.05)
+    release.set()
+    revoker.join(timeout=3)
+    authenticator.join(timeout=3)
+
+    assert not revoker.is_alive()
+    assert not authenticator.is_alive()
+    assert revoked == [True]
+    assert auth_results == ["rejected"]
+
