@@ -181,3 +181,54 @@ def test_wss_session_lists_only_credential_bound_workspace(tmp_path, monkeypatch
             "sessions": [{"session_id": "session-1", "title": "Approved workspace"}],
         }
     asyncio.run(run())
+
+
+
+def test_wss_rechecks_device_revocation_before_each_request(tmp_path):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        credential = host.registry.issue(
+            device_id="phone-revoked", workspace_id="ws-revoked",
+            cwd=str(tmp_path), scopes={"status"})
+        listener = _listener(tmp_path, host)
+        auth = {"type": "auth", "protocol": "1.0", "device_id": "phone-revoked",
+                "credential": credential, "client_nonce": "nonce-revoked-12345"}
+        status = {"type": "status", "request_id": "must-not-run"}
+
+        class Socket:
+            def __init__(self):
+                self.calls = 0
+                self.sent = []
+                self.closed = []
+            async def recv(self):
+                self.calls += 1
+                if self.calls == 1:
+                    return json.dumps(auth)
+                host.revoke("phone-revoked")
+                return json.dumps(status)
+            async def send(self, data):
+                self.sent.append(json.loads(data))
+            async def close(self, **kwargs):
+                self.closed.append(kwargs)
+
+        ws = Socket()
+        await listener._session(ws)
+        assert [frame["type"] for frame in ws.sent] == ["auth.ok"]
+        assert ws.closed == [{"code": 1008, "reason": "Device authorization changed"}]
+    asyncio.run(run())
+
+
+def test_wss_rejects_existing_identity_after_credential_rotation(tmp_path):
+    host = CompanionHostService(tmp_path / "registry.json")
+    host.enable()
+    identity = {
+        "device_id": "phone-rotate", "workspace_id": "ws-rotate",
+        "cwd": str(tmp_path), "scopes": frozenset({"status"}),
+    }
+    host.registry.issue(device_id="phone-rotate", workspace_id="ws-rotate",
+                        cwd=str(tmp_path), scopes={"status"})
+    assert host.is_identity_current(identity)
+    host.registry.issue(device_id="phone-rotate", workspace_id="ws-rotate",
+                        cwd=str(tmp_path), scopes={"sessions.list"})
+    assert not host.is_identity_current(identity)
