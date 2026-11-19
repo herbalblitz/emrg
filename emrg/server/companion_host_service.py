@@ -95,6 +95,10 @@ class CompanionHostService:
                                    pairing_secret=pairing_secret,
                                    device_id=device_id)
 
+    def is_identity_current(self, identity: dict[str, Any]) -> bool:
+        """Return whether an authenticated device remains approved and unchanged."""
+        return self._enabled and self.registry.is_current(identity)
+
     def authenticate(self, first_frame: str | bytes) -> dict[str, Any]:
         if not self._enabled:
             raise CompanionAuthenticationError("authentication rejected")
