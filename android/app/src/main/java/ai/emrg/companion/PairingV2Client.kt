@@ -58,12 +58,12 @@ internal class PairingV2Client(
 
     @Synchronized
     fun createRedeemFrame(pairingId: String, challengeId: String, encodedChallenge: String): JSONObject {
+        val publicKey = publicKeyBytes
+            ?: throw IllegalStateException("Pairing request must be created before redeem")
         requireCanonicalBase64Url(pairingId, 32, "pairing id")
         requireCanonicalBase64Url(challengeId, 16, "challenge id")
         require(activePairingId == pairingId) { "Pairing request does not match this transaction" }
         val rawChallenge = decodeCanonicalBase64Url(encodedChallenge, 1, MAX_CHALLENGE_BYTES)
-        val publicKey = publicKeyBytes
-            ?: throw IllegalStateException("Pairing request must be created before redeem")
         val challenge = try {
             val decoder = StandardCharsets.UTF_8.newDecoder()
                 .onMalformedInput(CodingErrorAction.REPORT)
@@ -155,7 +155,7 @@ internal class PairingV2Client(
         return decoded
     }
 
-    private fun isP256(actual: ECParameterSpec): Boolean {
+    internal fun isP256(actual: ECParameterSpec): Boolean {
         val expected = try {
             AlgorithmParameters.getInstance("EC").apply {
                 init(ECGenParameterSpec("secp256r1"))
