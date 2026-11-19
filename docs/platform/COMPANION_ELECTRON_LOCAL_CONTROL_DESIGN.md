@@ -1,6 +1,6 @@
 # Companion Electron Local-Control Design
 
-Status: local-control facade implemented and unit-tested; daemon/Electron transport and UI wiring remain incomplete.
+Status: daemon local-control routing and fixed Electron Main/Preload IPC are implemented and CI-covered; listener lifecycle, host approval UI, TLS identity provisioning, and end-to-end pairing remain incomplete.
 Date: 2026-11-19
 
 ## 1. Purpose and boundary
@@ -14,18 +14,21 @@ This design does not authorize remote chat, tool execution, filesystem access, a
 - `emrg/gui/main.js` registers explicit `ipcMain.handle("emrg:…")` handlers inside `registerIpc()`; the main BrowserWindow uses `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, and the fixed `preload.js`.
 - Navigation is restricted to the packaged renderer document; external navigation is denied or opened in the system browser.
 - `emrg/gui/preload.js` exposes a fixed `emrg` API through `contextBridge.exposeInMainWorld`. It does not expose raw `ipcRenderer`.
-- Neither Electron file currently has Companion management handlers or preload methods.
+- Electron Main and Preload now have three fixed Companion IPC methods (status, pending list, approve/reject), with primary-window/top-frame/local-file URL checks in Main. The React renderer has not yet consumed these methods.
 - `CompanionHostService` and `CompanionWssListener` are Python-side components. The WSS listener is standalone and must be explicitly started; it is not daemon-managed.
-- `CompanionLocalControl` (`emrg/server/companion_local_control.py`) now provides a narrow in-process allow-list for `status`, `pairing.pending.list`, `pairing.decide`, and `pairing.cancel`. It validates exact payload keys, bounds the pending projection, and returns no credential or raw key material. Its unit tests cover the projection and malformed requests. It is not yet instantiated by the daemon or exposed through Electron IPC.
+- `EmrgServer` owns one `CompanionHostService` at `~/.emrg/companion/credentials.json` and a `CompanionLocalControl` facade. The host remains disabled by default; construction does not enable a listener or open a socket.
+- The authenticated desktop-daemon protocol routes only the fixed `companion_local_control` message into the facade. The facade allows `status`, `pairing.pending.list`, `pairing.decide`, and `pairing.cancel`; exact payload schemas and the non-secret pending projection are unit-tested.
+- Electron Main exposes three fixed handlers for status, pending-list, and approve/reject. They validate that the caller is the primary BrowserWindow's top-level local `file://` renderer. Preload exposes only the corresponding named methods; no generic IPC or arbitrary daemon command is exposed.
+- These bridges do not yet make pairing operational: the daemon does not provision the TLS identity, start/stop `CompanionWssListener`, enable the host, create a QR descriptor, or render an approval UI.
 - The desktop daemon's local IPC authentication material is not a mobile companion credential and must never be returned to the renderer, QR code, Android client, or Companion registry.
 
 ## 3. Required command boundary
 
-Add a dedicated daemon-side Companion controller/facade. It must accept only the following semantic operations through the existing authenticated local desktop-daemon channel:
+The daemon-side controller/facade now accepts only the implemented subset below through the existing authenticated local desktop-daemon channel. The remaining operations are future work:
 
 | Operation | Required behavior |
 | --- | --- |
-| status | Return enabled/running state, bind endpoint, active connection count, and non-secret TLS fingerprint |
+| status | Implemented: return host enabled state and bounded pending count. Listener state, bind endpoint, active connection count, and TLS fingerprint remain future work |
 | identity.ensure | Provision or validate the persistent TLS identity; never silently replace a corrupt/missing identity |
 | pairing.begin | Create one short-lived host transaction and return a credential-free v2 QR descriptor |
 | pairing.pending.list | Return bounded pending requests with device label, device ID, public-key fingerprint, workspace, scopes, approval state, and expiry. The current host service projection exposes only the SHA-256 public-key fingerprint, never raw public key, client nonce, challenge bytes, signature, or issued credential |
@@ -103,7 +106,7 @@ The UI must clearly distinguish:
 ### Electron
 - only the primary top-level renderer can invoke Companion handlers;
 - preview WebContents, subframes, external origins, destroyed windows, and malformed payloads are rejected;
-- preload exposes only the named methods and no generic IPC primitive;
+- preload exposes only the three implemented named methods and no generic IPC primitive; positive/negative IPC sender-origin tests are still required;
 - approval UI displays and approves the exact immutable device-key fingerprint/workspace/scopes;
 - no secret material appears in logs, renderer events, or error messages.
 
