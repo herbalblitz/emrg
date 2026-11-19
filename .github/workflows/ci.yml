@@ -7,7 +7,7 @@ on:
     branches: [feat/cross-platform, main]
 
 env:
-  EMRG_VERSION: 0.3.55
+  EMRG_VERSION: 0.3.59
 
 jobs:
   lint-and-python-tests:
@@ -27,7 +27,7 @@ jobs:
         run: uv sync --extra gateway --frozen
       - name: Lint the gateway (unchanged core must stay 0-diff)
         run: |
-          git diff --quiet upstream-v0.3.55-1682b8c -- emrg/ ':!emrg/gateway' \
+          git diff --quiet upstream-v0.3.59-e891078 -- emrg/ ':!emrg/gateway' \
             && echo "core emrg/ unchanged" \
             || { echo "ERROR: emrg/ outside emrg/gateway/ changed"; exit 1; }
       - name: Run gateway tests

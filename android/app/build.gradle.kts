@@ -20,8 +20,8 @@ android {
         applicationId = "com.emrg.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 355
-        versionName = "0.3.55"
+        versionCode = 359
+        versionName = "0.3.59"
         buildConfigField("String", "GATEWAY_API_VERSION", "\"1.0\"")
         buildConfigField("String", "APP_BUILD", "\"android\"")
     }

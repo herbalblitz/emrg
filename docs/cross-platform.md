@@ -1,4 +1,4 @@
-# EMRG 0.3.55 — cross-platform ecosystem
+# EMRG 0.3.59 — cross-platform ecosystem
 
 Native Android APK/AAB plus Windows x64 EXE, preserving 100% of the original
 engine and functionality. The desktop (Electron GUI + Python backend + TUI +
@@ -7,13 +7,13 @@ gateway.
 
 ## Version
 
-`EMRG-0.3.55` everywhere: `pyproject.toml`, the gateway contract `API_VERSION =
-"1.0"`, and `android/app/build.gradle.kts` (`versionName = "0.3.55"`,
-`versionCode = 355`).
+`EMRG-0.3.59` everywhere: `pyproject.toml`, the gateway contract `API_VERSION =
+"1.0"`, and `android/app/build.gradle.kts` (`versionName = "0.3.59"`,
+`versionCode = 359`).
 
 ## Architecture decision (confirmed)
 
-* **Base code:** upstream `argszero/emrg` commit `1682b8c` (version 0.3.55).
+* **Base code:** upstream `argszero/emrg` commit `e891078` (version 0.3.59).
   The `herbalblitz/emrg` fork is an untouched v0.3.37 snapshot, 96 commits
   behind; results are pushed to the fork when access is provided.
 * **Android:** remote-first via a new host gateway. No embedded Python, no
@@ -112,9 +112,9 @@ All slash commands preserved: `/resume`, `/sessions`, `/clear`, `/compact`,
 
 ## Release artifacts
 
-Named `EMRG-0.3.55-windows-x64.exe`,
-`EMRG-0.3.55-android-debug.apk`,
-`EMRG-0.3.55-android-release.apk`, `.aab`, and `SHA256SUMS.txt`.
+Named `EMRG-0.3.59-windows-x64.exe`,
+`EMRG-0.3.59-android-debug.apk`,
+`EMRG-0.3.59-android-release.apk`, `.aab`, and `SHA256SUMS.txt`.
 
 Builds require GitHub Actions with:
 * `EMRG_KEYSTORE_FILE` / `EMRG_KEYSTORE_PASSWORD` / `EMRG_KEY_ALIAS` /

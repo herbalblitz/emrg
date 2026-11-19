@@ -22,7 +22,7 @@ from emrg.gateway.server import GatewayServer
 
 
 class FakeLink:
-    engine_version = "0.3.55"
+    engine_version = "0.3.59"
 
     def __init__(self) -> None:
         self.sent: list[dict] = []
@@ -169,7 +169,7 @@ def test_an_authenticated_session_pings_reads_files_and_blocks_shutdown(tmp_path
                 hello = await _recv(ws)
                 attached = await _recv(ws)
                 assert hello["type"] == "gw_hello_ok"
-                assert hello["engine_version"] == "0.3.55"
+                assert hello["engine_version"] == "0.3.59"
                 assert "terminal" in hello["capabilities"]
                 assert attached["type"] == "gw_attached"
 
