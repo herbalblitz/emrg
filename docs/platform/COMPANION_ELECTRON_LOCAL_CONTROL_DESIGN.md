@@ -1,6 +1,6 @@
 # Companion Electron Local-Control Design
 
-Status: implementation contract; not wired into Electron or daemon.
+Status: local-control facade implemented and unit-tested; daemon/Electron transport and UI wiring remain incomplete.
 Date: 2026-11-19
 
 ## 1. Purpose and boundary
@@ -16,6 +16,7 @@ This design does not authorize remote chat, tool execution, filesystem access, a
 - `emrg/gui/preload.js` exposes a fixed `emrg` API through `contextBridge.exposeInMainWorld`. It does not expose raw `ipcRenderer`.
 - Neither Electron file currently has Companion management handlers or preload methods.
 - `CompanionHostService` and `CompanionWssListener` are Python-side components. The WSS listener is standalone and must be explicitly started; it is not daemon-managed.
+- `CompanionLocalControl` (`emrg/server/companion_local_control.py`) now provides a narrow in-process allow-list for `status`, `pairing.pending.list`, `pairing.decide`, and `pairing.cancel`. It validates exact payload keys, bounds the pending projection, and returns no credential or raw key material. Its unit tests cover the projection and malformed requests. It is not yet instantiated by the daemon or exposed through Electron IPC.
 - The desktop daemon's local IPC authentication material is not a mobile companion credential and must never be returned to the renderer, QR code, Android client, or Companion registry.
 
 ## 3. Required command boundary
