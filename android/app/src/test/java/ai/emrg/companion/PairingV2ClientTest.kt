@@ -7,7 +7,10 @@ import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.MessageDigest
 import java.security.Signature
+import java.security.AlgorithmParameters
 import java.security.spec.ECGenParameterSpec
+import java.security.spec.ECParameterSpec
+import java.math.BigInteger
 import java.util.Base64
 
 class PairingV2ClientTest {
@@ -199,20 +202,19 @@ class PairingV2ClientTest {
 
 
     @Test
-    fun refusesOther256BitEllipticCurve() {
-        val otherCurve = KeyPairGenerator.getInstance("EC").apply {
-            initialize(ECGenParameterSpec("secp256k1"))
-        }.generateKeyPair()
-        val invalidKeys = object : CompanionDeviceKeyManager {
-            override fun createOrLoad(alias: String): String = Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(otherCurve.public.encoded)
-            override fun sign(alias: String, challenge: ByteArray): String = b64(70)
-            override fun delete(alias: String) = Unit
-        }
-        val client = PairingV2Client(invalidKeys, "android-device-1", "emrg-host-1")
-        assertThrows(IllegalArgumentException::class.java) {
-            client.createRequestFrame(b64(32))
-        }
+    fun refusesModified256BitEllipticCurveParameters() {
+        val p256 = AlgorithmParameters.getInstance("EC").apply {
+            init(ECGenParameterSpec("secp256r1"))
+        }.getParameterSpec(ECParameterSpec::class.java)
+        val altered = ECParameterSpec(
+            p256.curve,
+            p256.generator,
+            p256.order.add(BigInteger.ONE),
+            p256.cofactor,
+        )
+        val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
+        assertEquals(false, client.isP256(altered))
+        assertEquals(true, client.isP256(p256))
     }
 
     @Test
