@@ -42,7 +42,11 @@ internal data class PairingState(
 )
 
 internal sealed interface PairingAction {
-    data class PairingQrReceived(val endpoint: String, val fingerprintSha256: String) : PairingAction
+    data class PairingQrReceived(
+        val endpoint: String,
+        val fingerprintSha256: String,
+        val pairingId: String? = null,
+    ) : PairingAction
     data class HostIdentityConfirmed(val fingerprintSha256: String) : PairingAction
     data object HostApproved : PairingAction
     data class CredentialIssued(val host: PairedHost) : PairingAction
