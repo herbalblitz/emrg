@@ -57,7 +57,7 @@ class PairingV2ClientTest {
         "\",\"client_nonce\":\"" + activeClientNonce +
         "\",\"device_id\":\"" + deviceId +
         "\",\"expires_at\":" + expiresAt +
-        ",\"host_identity\":\"host-identity\",\"nonce\":\"" + b64(32) +
+        ",\"host_identity\":\"" + hostFingerprint + "\",\"nonce\":\"" + b64(32) +
         "\",\"pairing_id\":\"" + pairingId +
         "\",\"protocol\":\"2.0\",\"public_key_sha256\":\"" + publicKeyDigest +
         "\",\"scopes\":[\"status\"],\"workspace_id\":\"workspace-1\"}")
@@ -333,3 +333,28 @@ class PairingV2ClientTest {
     }
 
 }
+
+
+    @Test
+    fun refusesChallengeSignedForDifferentQrPinnedHostIdentity() {
+        val keys = FakeDeviceKeys()
+        val otherFingerprint = (33..64).joinToString(":") { "%02X".format(it) }
+        val client = PairingV2Client(
+            keys, "android-device-1", "emrg-host-1",
+            nowEpochSeconds = { 1_700_000_000L },
+            expectedHostIdentity = otherFingerprint,
+        )
+        val pairingId = b64(32)
+        val challengeId = b64(16)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
+        val rawChallenge = challenge(
+            pairingId, challengeId, "android-device-1",
+            keys.publicKeyDigest(), 1_700_000_100L,
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            client.createRedeemFrame(
+                pairingId, challengeId,
+                Base64.getUrlEncoder().withoutPadding().encodeToString(rawChallenge),
+            )
+        }
+    }
