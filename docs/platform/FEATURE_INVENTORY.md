@@ -115,7 +115,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Transport-independent Ed25519 device-key-bound pairing transaction with host-local approval, signed challenge fields, one-time redemption, bounded lifetime and host-service lifecycle hooks.
 - [x] Unit tests cover approval gating, device/key proof binding, wrong-device and wrong-signature rejection, duplicate request/approval, expiry, cancellation and credential scope issuance.
 - [x] Added `tests/test_companion_pairing_v2.py` to the companion-security workflow's explicit pytest invocation; CI run [#111](https://github.com/herbalblitz/emrg/actions/runs/44447348538) passed with the initial five v2 tests, then CI run [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797) passed with all seven tests, including concurrent one-time redemption and the 32-entry pending-cap/cancel-all regression.
-- [ ] WSS request/redeem adapter, trusted local approval UI, Android private-key proof/credential persistence integration and end-to-end pairing remain unimplemented.
+- [x] Android WSS request/redeem flow, device-key proof, coordinator validation, and encrypted credential persistence are integrated in the Android pairing path. The host trusted-local approval UI and cross-platform end-to-end validation remain open.
 
 
 ## Android encrypted credential envelope
@@ -140,7 +140,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] One-shot Android WSS exchange primitive uses the QR-pinned TLS leaf certificate before sending the Pairing v2 request or redeem frame.
 - [x] Response envelope is size-bounded and correlated to pairing ID, expected response type, and device ID for credential issuance.
 - [x] JVM regression tests and Android CI #267 passed on commit `2fbdf7d0d92c` (APK assembly, unit tests, lint, artifact upload).
-- [ ] Production integration with `PairingV2Client`, `SecurePairingCoordinator`, host approval/redeem lifecycle, and QR UI remains open; no end-to-end pairing is claimed.
+- [x] Production Android-side integration with `PairingV2Client`, `SecurePairingCoordinator`, host challenge/redeem lifecycle, and QR UI is present in source. This does not establish a completed end-to-end pairing.
 - [ ] Physical-device Android Keystore validation and full Android-to-Windows host integration remain open.
 
 ## Pairing v2 Android integration status (2026-11-19)
@@ -150,7 +150,7 @@ Implemented in source:
 - `PairingV2SessionController` validates that QR/session metadata (WSS endpoint, TLS fingerprint, pairing ID, device ID, and scopes) exactly matches the transport that created the signed request.
 - Host-local approval remains the only approval authority. A generic unavailable response leaves Android in `AWAITING_HOST_APPROVAL`; retry reuses the exact signed redeem frame.
 - A credential is reported as paired only after a valid host credential response is accepted by the coordinator and secure credential storage succeeds.
-- Enabled scopes remain read-only (`status`, `sessions.list`). `chat.send` is intentionally not enabled.
+- The current QR panel requests only the read-only `status` scope. `chat.send` is intentionally not enabled.
 
 Not yet complete:
 - QR scanner/panel is not wired to the controller.
