@@ -13,6 +13,7 @@ import re
 import secrets
 import threading
 import time
+import unicodedata
 from dataclasses import dataclass
 from typing import Callable
 
@@ -40,7 +41,11 @@ def _text(value: object, limit: int, error: str) -> str:
         size = len(value.encode("utf-8"))
     except UnicodeEncodeError:
         raise PairingV2Error(error) from None
-    if size > limit:
+    if size > limit or any(
+        unicodedata.category(char) in {"Cc", "Cf"} for char in value
+    ):
+        # Control and formatting characters can spoof local approval displays
+        # (for example, embedded newlines or bidirectional text overrides).
         raise PairingV2Error(error)
     return value
 
