@@ -124,8 +124,15 @@ def validate_client_frame(
             raise CompanionProtocolError("workspace denied")
         prompt = _required_string(frame, "prompt", max_bytes=MAX_PROMPT_BYTES)
         session_id = frame.get("session_id")
-        if session_id is not None and (not isinstance(session_id, str) or len(session_id.encode("utf-8")) > 128):
-            raise CompanionProtocolError("invalid frame")
+        if session_id is not None:
+            if not isinstance(session_id, str) or not session_id:
+                raise CompanionProtocolError("invalid frame")
+            try:
+                session_id_bytes = session_id.encode("utf-8")
+            except UnicodeEncodeError:
+                raise CompanionProtocolError("invalid frame") from None
+            if len(session_id_bytes) > 128:
+                raise CompanionProtocolError("invalid frame")
         # Return normalized data. The host must supply cwd from its pairing record;
         # never trust a remote cwd/tools/sandbox override.
         return {"type": kind, "request_id": frame["request_id"],
