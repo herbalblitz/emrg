@@ -1,7 +1,8 @@
 """Dedicated opt-in WSS transport for EMRG Companion.
 
-The first transport increment intentionally supports authentication and status only.
-It does not dispatch chat, session, tool, filesystem, or pairing-management actions.
+Currently implemented remote operations are authenticated status and bounded,
+read-only session listing. Chat, tool execution, filesystem access, and
+pairing-management actions are deliberately not dispatched.
 """
 from __future__ import annotations
 
