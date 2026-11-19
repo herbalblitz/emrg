@@ -225,3 +225,9 @@ The opt-in Companion WSS listener currently supports:
 For `sessions.list`, the host resolves the filesystem path exclusively from the authenticated device credential registry record. The client cannot supply or override `cwd`; a request for a different workspace is rejected before dispatch. The response is correlated as `sessions.result` and includes the approved workspace ID and session metadata. This is read-only metadata access; it does not resume sessions, read transcripts, or execute tasks.
 
 Chat dispatch, cancellation, tool approvals, filesystem operations, pairing UI/QR rendering, Android live transport and end-to-end tests remain unimplemented. Do not treat the current WSS subset as a general remote daemon API.
+
+
+## Active Companion authorization revalidation (2026-11-19)
+
+- Before dispatching each authenticated WSS request, the host checks that the device remains present, non-revoked, and bound to the same workspace, cwd and scopes as at authentication.
+- Revoking a device or rotating/replacing its credential invalidates already-open WSS sessions on their next request. Registry read/validation errors fail closed. This is request-boundary enforcement; it does not interrupt an idle socket until it next sends a request (or the listener is otherwise stopped).
