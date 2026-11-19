@@ -205,7 +205,7 @@ def test_wss_rechecks_device_revocation_before_each_request(tmp_path):
                 self.calls += 1
                 if self.calls == 1:
                     return json.dumps(auth)
-                host.revoke("phone-revoked")
+                host.revoke_device("phone-revoked")
                 return json.dumps(status)
             async def send(self, data):
                 self.sent.append(json.loads(data))
