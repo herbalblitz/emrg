@@ -43,6 +43,34 @@ class PairingV2WssExchangeTest {
     }
 
     @Test
+    fun acceptsOnlyExactGenericErrorEnvelopeForPairingRequests() {
+        val request = JSONObject()
+            .put("type", "pairing.request")
+            .put("protocol", "2.0")
+            .put("pairing_id", pairingId)
+        val error = JSONObject()
+            .put("type", "pairing.error")
+            .put("protocol", "2.0")
+            .put("pairing_id", pairingId)
+            .put("code", "pairing_unavailable")
+
+        assertTrue(PairingV2WssExchange.isExpectedResponse(request, error))
+        assertFalse(PairingV2WssExchange.isExpectedResponse(
+            request, JSONObject(error.toString()).put("detail", "internal state")))
+        assertFalse(PairingV2WssExchange.isExpectedResponse(
+            request, JSONObject(error.toString()).put("code", 7)))
+        assertFalse(PairingV2WssExchange.isExpectedResponse(
+            request, JSONObject(error.toString()).put("pairing_id", "other-transaction")))
+
+        val redeem = JSONObject()
+            .put("type", "pairing.redeem")
+            .put("protocol", "2.0")
+            .put("pairing_id", pairingId)
+            .put("device_id", "android-device")
+        assertTrue(PairingV2WssExchange.isExpectedResponse(redeem, error))
+    }
+
+    @Test
     fun redeemResponseMustBeForTheSameDeviceAndTransaction() {
         val request = JSONObject()
             .put("type", "pairing.redeem")
