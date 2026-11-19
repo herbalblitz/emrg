@@ -100,12 +100,12 @@ def test_pairing_v2_request_and_redeem_frames_have_strict_shapes():
     from emrg.server.companion_protocol import validate_pairing_v2_frame
     enc = lambda size: base64.urlsafe_b64encode(bytes(size)).rstrip(b"=").decode()
     request = {"type": "pairing.request", "protocol": "2.0",
-               "pairing_id": enc(32), "device_id": "android-1",
-               "public_key": enc(32)}
+               "pairing_id": enc(32), "device_id": "android-1", "key_algorithm": "P-256",
+               "public_key": enc(91)}
     assert validate_pairing_v2_frame(json.dumps(request)) == request
     redeem = {"type": "pairing.redeem", "protocol": "2.0",
               "pairing_id": enc(32), "device_id": "android-1",
-              "challenge_id": enc(16), "signature": enc(64)}
+              "challenge_id": enc(16), "signature": enc(70)}
     assert validate_pairing_v2_frame(json.dumps(redeem)) == redeem
 
 
@@ -122,7 +122,7 @@ def test_pairing_v2_request_rejects_malformed_or_unknown_fields(mutate):
     frame = {"type": "pairing.request", "protocol": "2.0",
              "pairing_id": base64.urlsafe_b64encode(bytes(32)).rstrip(b"=").decode(),
              "device_id": "android-1",
-             "public_key": base64.urlsafe_b64encode(bytes(32)).rstrip(b"=").decode()}
+             "key_algorithm": "P-256", "public_key": base64.urlsafe_b64encode(bytes(91)).rstrip(b"=").decode()}
     frame.update(mutate)
     with pytest.raises(CompanionProtocolError):
         validate_pairing_v2_frame(json.dumps(frame))
@@ -165,7 +165,7 @@ def test_pairing_v2_rejects_noncanonical_device_ids(device_id):
     enc = lambda size: base64.urlsafe_b64encode(bytes(size)).rstrip(b"=").decode()
     frame = {"type": "pairing.request", "protocol": "2.0",
              "pairing_id": enc(32), "device_id": device_id,
-             "public_key": enc(32)}
+             "key_algorithm": "P-256", "public_key": enc(91)}
     with pytest.raises(CompanionProtocolError):
         validate_pairing_v2_frame(json.dumps(frame))
 
@@ -177,5 +177,5 @@ def test_pairing_v2_accepts_supported_device_id_characters(device_id):
     enc = lambda size: base64.urlsafe_b64encode(bytes(size)).rstrip(b"=").decode()
     frame = {"type": "pairing.request", "protocol": "2.0",
              "pairing_id": enc(32), "device_id": device_id,
-             "public_key": enc(32)}
+             "key_algorithm": "P-256", "public_key": enc(91)}
     assert validate_pairing_v2_frame(json.dumps(frame))["device_id"] == device_id
