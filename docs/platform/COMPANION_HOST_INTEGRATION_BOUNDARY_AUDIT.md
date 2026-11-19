@@ -130,7 +130,7 @@ The earlier sections above were written incrementally and some statements became
 | Dedicated WSS transport | Standalone opt-in listener implemented | Daemon lifecycle/config integration; v2 pairing network route |
 | Remote operations | Authenticated status and bounded read-only session listing | Chat and approval/sandbox integration |
 | Electron UI | Existing secure preload bridge; no Companion controls | Main-process adapter, allowlisted IPC, renderer approval/device screens |
-| Android | QR parser, secure credential storage and pinned WSS primitive | Device-key lifecycle, v2 handshake, live transport integration and physical-device verification |
+| Android | QR parser, secure credential storage, pinned WSS primitive, non-exportable Android Keystore P-256 key manager, and transport-neutral Pairing v2 request/redeem helper with strict challenge validation | Coordinator/live v2 transport integration, credential issuance-to-storage end-to-end flow, and physical-device/Keystore security-level verification |
 
 The standalone WSS listener must not be described as absent, but it must also not be described as a complete Companion service. No live Android-to-host pairing or remote chat claim is supported by the current code.
 
@@ -147,3 +147,12 @@ Added [`COMPANION_ELECTRON_LOCAL_CONTROL_DESIGN.md`](COMPANION_ELECTRON_LOCAL_CO
 ### Daemon lifecycle and desktop IPC source audit (2026-11-19)
 
 Added [COMPANION_DAEMON_LIFECYCLE_AND_IPC_AUDIT.md](COMPANION_DAEMON_LIFECYCLE_AND_IPC_AUDIT.md) after inspecting the actual daemon WebSocket authentication/dispatch path, Electron daemon client, and daemon shutdown sequence. It confirms that the desktop daemon channel is broad same-user IPC, not a Companion-only management API, and records the required separate controller/lifecycle ownership and security gates. No daemon or Electron runtime integration is claimed by this audit.
+
+
+### Android Pairing v2 protocol-helper verification (2026-11-19)
+
+- `AndroidKeystoreDeviceKeyManager` now verifies the exact secp256r1 curve parameters (curve, generator, order, and cofactor), rejects exportable private keys, and has no software-key fallback.
+- `PairingV2Client` constructs v2 request/redeem frames, binds redeem to the latest request transaction, validates canonical Base64URL, strict UTF-8, challenge/device/key binding, allowed scopes, and the 180-second expiry window, and signs the exact challenge bytes.
+- The JVM test fake uses software P-256 only for protocol tests; it is not a production key path. Hardware-backed Keystore behavior still requires physical-device validation.
+- Android Companion CI #238, attempt 2, passed on commit `52ef7f67b9a755f13fea50bdafa6c4fd2f214d05`: debug APK assembly, unit tests, lint, and APK artifact upload all succeeded. The first attempt failed before compilation because the runner could not resolve external Gradle/Maven artifacts; the retry completed successfully.
+- This verification does not establish a live host-to-phone pairing flow: the WSS listener still lacks the v2 pairing route and the Android coordinator/live transport integration remains open.
