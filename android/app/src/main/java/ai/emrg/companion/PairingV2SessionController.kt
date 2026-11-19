@@ -120,11 +120,21 @@ internal class PairingV2SessionController(
                     credentialAlias = credentialAlias,
                     scopes = scopes,
                 )
-                // Only a valid credential response proves the host approved and issued.
-                if (coordinator.state.phase == PairingPhase.AWAITING_HOST_APPROVAL) {
-                    coordinator.dispatch(PairingAction.HostApproved)
+                // Serialize duplicate/overlapping responses. A second valid response for
+                // the same transaction must not turn an already-paired state into FAILED.
+                val state = synchronized(this@PairingV2SessionController) {
+                    val current = coordinator.state
+                    if (current.phase == PairingPhase.PAIRED) {
+                        if (current.pairedHost == host) current
+                        else current.copy(phase = PairingPhase.FAILED, errorCode = "PAIRING_TRANSACTION_MISMATCH")
+                    } else {
+                        // Only a valid credential response proves the host approved and issued.
+                        if (current.phase == PairingPhase.AWAITING_HOST_APPROVAL) {
+                            coordinator.dispatch(PairingAction.HostApproved)
+                        }
+                        coordinator.dispatch(PairingAction.CredentialIssued(host), credential)
+                    }
                 }
-                val state = coordinator.dispatch(PairingAction.CredentialIssued(host), credential)
                 if (state.phase == PairingPhase.PAIRED && state.pairedHost != null) {
                     listener.onPaired(state.pairedHost)
                 } else {
