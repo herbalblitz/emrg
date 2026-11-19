@@ -236,6 +236,30 @@ def test_wss_rejects_existing_identity_after_credential_rotation(tmp_path):
 
 
 
+def test_legacy_registry_entry_remains_valid_and_rotation_is_detected(tmp_path):
+    import json
+
+    host = CompanionHostService(tmp_path / "registry.json")
+    host.enable()
+    credential = host.registry.issue(
+        device_id="legacy-phone", workspace_id="legacy-ws",
+        cwd=str(tmp_path), scopes={"status"})
+    registry_path = tmp_path / "registry.json"
+    data = json.loads(registry_path.read_text(encoding="utf-8"))
+    data["devices"]["legacy-phone"].pop("generation")
+    registry_path.write_text(json.dumps(data), encoding="utf-8")
+
+    identity = host.authenticate(json.dumps({
+        "type": "auth", "protocol": "1.0", "device_id": "legacy-phone",
+        "credential": credential, "client_nonce": "nonce-legacy-123456",
+    }))
+    assert host.is_identity_current(identity)
+
+    host.registry.issue(device_id="legacy-phone", workspace_id="legacy-ws",
+                        cwd=str(tmp_path), scopes={"status"})
+    assert not host.is_identity_current(identity)
+
+
 def test_active_identity_check_fails_closed_when_registry_unavailable(tmp_path, monkeypatch):
     host = CompanionHostService(tmp_path / "registry.json")
     host.enable()
