@@ -174,3 +174,5 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Active connections revalidate revocation and credential generation on each request; remote `chat.send` remains explicitly unimplemented and is never dispatched.
 - [ ] Trusted local pairing/QR UI, Android live WSS integration, chat/task lifecycle, cancellation, tool approvals and end-to-end tests remain open.
 - [x] Cross-platform CI verified startup-race and metadata-bound regression tests: Ubuntu **150 passed**; Windows **146 passed, 4 skipped** in run `44438215551`.
+
+- [x] Follow-up WSS lifecycle regression CI run `44438531074` passed on both platforms after adding explicit-stop-during-bind and concurrent-start tests: Ubuntu **152 passed**; Windows **148 passed, 4 skipped**.
