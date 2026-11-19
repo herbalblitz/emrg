@@ -138,9 +138,16 @@ class CompanionWssListener:
         """Schedule connection closure promptly when local policy is disabled."""
         if enabled or self._loop is None or not self._loop.is_running():
             return
+        def shutdown_if_still_disabled() -> None:
+            # Host transitions notify outside the host lock. A rapid
+            # disable->enable can therefore queue this callback after the host
+            # is already enabled again; ignore that stale notification.
+            if not self._host.enabled:
+                asyncio.create_task(
+                    self._shutdown(code=1008, reason="Companion disabled"))
+
         try:
-            self._loop.call_soon_threadsafe(
-                lambda: asyncio.create_task(self._shutdown(code=1008, reason="Companion disabled")))
+            self._loop.call_soon_threadsafe(shutdown_if_still_disabled)
         except RuntimeError:
             pass
 
