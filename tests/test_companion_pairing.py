@@ -74,6 +74,29 @@ def test_pairing_scope_validation(tmp_path):
         pairing.begin(workspace_id="ws", cwd="/w", scopes={"admin"})
 
 
+@pytest.mark.parametrize("workspace_id,cwd,scopes", [
+    ("w" * 129, "/w", {"status"}),
+    ("ws", "/w" * 2049, {"status"}),
+    ("\\ud800", "/w", {"status"}),
+    ("ws", "/w", "status"),
+    ("ws", "/w", {1}),
+])
+def test_pairing_rejects_unbounded_or_malformed_inputs(tmp_path, workspace_id, cwd, scopes):
+    pairing = make_pairing(tmp_path)
+    with pytest.raises(PairingError, match="invalid pairing request"):
+        pairing.begin(workspace_id=workspace_id, cwd=cwd, scopes=scopes)
+
+
+def test_pairing_redeem_rejects_malformed_identity_text(tmp_path):
+    pairing = make_pairing(tmp_path)
+    with pytest.raises(PairingError, match="invalid device"):
+        pairing.redeem(pairing_id="id", pairing_secret="secret", device_id="\\ud800")
+    with pytest.raises(PairingError, match="pairing secret invalid"):
+        pairing.redeem(pairing_id="id", pairing_secret="s" * 513, device_id="phone")
+    with pytest.raises(PairingError, match="pairing unavailable"):
+        pairing.redeem(pairing_id="i" * 129, pairing_secret="secret", device_id="phone")
+
+
 def test_pending_pairings_are_bounded_and_expiry_frees_capacity(tmp_path):
     clock = FakeClock()
     pairing = make_pairing(tmp_path, clock)
