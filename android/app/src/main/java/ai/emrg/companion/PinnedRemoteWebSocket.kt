@@ -126,6 +126,15 @@ internal class PinnedRemoteWebSocket(
                     webSocket.close(1007, "invalid frame")
                     return
                 }
+                if (!isAllowedFrameInAuthState(authenticated, frame.type)) {
+                    terminalState = RemoteSocketState.AUTH_REJECTED
+                    listener.onState(
+                        RemoteSocketState.AUTH_REJECTED,
+                        "Host sent a frame outside the authentication state",
+                    )
+                    webSocket.close(1008, "unexpected authentication state")
+                    return
+                }
                 when (frame.type) {
                     "auth_ok" -> {
                         val expectedHost = pairedHost
@@ -144,6 +153,7 @@ internal class PinnedRemoteWebSocket(
                         terminalState = RemoteSocketState.AUTH_REJECTED
                         listener.onState(RemoteSocketState.AUTH_REJECTED, "Host rejected pairing credential")
                         webSocket.close(1008, "auth rejected")
+                        return
                     }
                 }
                 listener.onFrame(frame)
@@ -193,6 +203,11 @@ internal class PinnedRemoteWebSocket(
     }
 
     companion object {
+        internal fun isAllowedFrameInAuthState(authenticated: Boolean, frameType: String): Boolean {
+            val authFrames = setOf("auth_ok", "auth_error", "auth_rejected")
+            return if (authenticated) frameType !in authFrames else frameType in authFrames
+        }
+
         internal fun isValidAuthSuccess(frame: ProtocolFrame, host: PairedHost): Boolean {
             if (frame.type != "auth_ok" || frame.raw.optString("protocol") != "1.0") return false
             val returnedWorkspace = frame.raw.optString("workspace_id").takeIf { it.isNotBlank() }
