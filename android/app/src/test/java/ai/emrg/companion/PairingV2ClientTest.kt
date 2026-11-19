@@ -139,6 +139,27 @@ class PairingV2ClientTest {
     }
 
     @Test
+    fun startingNewRequestInvalidatesPreviousPairingTransaction() {
+        val keys = FakeDeviceKeys()
+        val client = PairingV2Client(keys, "android-device-1", "emrg-host-1") { 1_700_000_000L }
+        val oldPairingId = b64(32)
+        val newPairingId = b64(32, seed = 4)
+        val challengeId = b64(16)
+        client.createRequestFrame(oldPairingId)
+        client.createRequestFrame(newPairingId)
+        val raw = challenge(
+            oldPairingId, challengeId, "android-device-1",
+            keys.publicKeyDigest(), 1_700_000_100L,
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            client.createRedeemFrame(
+                oldPairingId, challengeId,
+                Base64.getUrlEncoder().withoutPadding().encodeToString(raw),
+            )
+        }
+    }
+
+    @Test
     fun refusesRedeemBeforeCreatingDeviceRequest() {
         val client = PairingV2Client(FakeDeviceKeys(), "android-device-1", "emrg-host-1")
         assertThrows(IllegalStateException::class.java) {
