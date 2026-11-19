@@ -99,3 +99,15 @@ class PairingDescriptorParserTest {
         assertEquals(null, descriptor.pairingId)
     }
 
+    @Test fun rejectsDuplicateTopLevelFields() {
+        val json = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":"$fingerprint","expires_at":1100,"version":1}"""
+        assertEquals("DUPLICATE_FIELD", (PairingDescriptorParser.parse(json, 1000) as PairingDescriptorResult.Invalid).reason)
+    }
+
+    @Test fun rejectsNonStringEndpointAndFingerprint() {
+        val endpoint = """{"version":1,"endpoint":7,"fingerprint_sha256":"$fingerprint","expires_at":1100}"""
+        val fingerprintValue = """{"version":1,"endpoint":"wss://host.example","fingerprint_sha256":7,"expires_at":1100}"""
+        assertEquals("INVALID_FIELD_TYPE", (PairingDescriptorParser.parse(endpoint, 1000) as PairingDescriptorResult.Invalid).reason)
+        assertEquals("INVALID_FIELD_TYPE", (PairingDescriptorParser.parse(fingerprintValue, 1000) as PairingDescriptorResult.Invalid).reason)
+    }
+
