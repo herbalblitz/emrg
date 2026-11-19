@@ -215,3 +215,24 @@ process restart, and key invalidation. If the required operation is unavailable,
 pairing must fail closed with a user-safe unsupported-device result until a
 protocol-approved alternative is designed and documented. This gate does not
 change the existing host Ed25519 wire contract.
+
+
+### Android credential-envelope hardening (2026-11-19)
+
+The Android encrypted credential store now validates its persisted AES-GCM envelope
+before invoking the Keystore cipher:
+
+- The persisted representation remains the existing `standard-Base64(IV).standard-Base64(ciphertext)`
+  format, preserving compatibility with credentials written by the previous
+  `Base64.NO_WRAP` implementation.
+- The IV must decode to exactly 12 bytes; ciphertext must contain at least the
+  16-byte GCM authentication tag.
+- Both Base64 components must be canonical padded standard Base64. Whitespace,
+  alternate padding, extra separators, truncated values, and malformed dimensions
+  fail closed before decryption.
+- The codec is platform-independent so malformed-envelope behavior can be covered
+  by JVM unit tests without invoking Android Keystore.
+
+This hardening does not alter credential encryption, key aliases, AAD binding,
+credential contents, or the host protocol. Android CI must pass before treating
+the change as validated; device/Keystore integration remains a separate test gate.
