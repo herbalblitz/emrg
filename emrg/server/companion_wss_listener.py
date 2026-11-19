@@ -140,6 +140,11 @@ class CompanionWssListener:
         while self._host.enabled and not self._closing:
             frame_data = await asyncio.wait_for(
                 websocket.recv(), timeout=self._config.idle_timeout_seconds)
+            # Re-check local device policy for every request. Revocation, credential
+            # rotation, or workspace/scope changes terminate already-open sockets.
+            if not self._host.is_identity_current(identity):
+                await websocket.close(code=1008, reason="Device authorization changed")
+                return
             frame = validate_client_frame(
                 frame_data, authenticated=True,
                 scopes=frozenset(identity["scopes"]),
