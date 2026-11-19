@@ -293,4 +293,17 @@ def test_remote_session_metadata_is_allowlisted_bounded_and_capped():
         "message_count": 3, "created_at": "2026-01-01",
     }
     assert all("cwd" not in item and "history" not in item for item in safe)
+    invalid_counts = _remote_session_metadata([
+        {"session_id": "bool", "message_count": True},
+        {"session_id": "negative", "message_count": -1},
+        {"session_id": "string", "message_count": "3"},
+        {"session_id": "valid-zero", "message_count": 0},
+    ])
+    assert invalid_counts == [
+        {"session_id": "bool"},
+        {"session_id": "negative"},
+        {"session_id": "string"},
+        {"session_id": "valid-zero", "message_count": 0},
+    ]
+    assert _remote_session_metadata([None, "not-a-record"]) == []
     assert _remote_session_metadata("not-a-list") == []
