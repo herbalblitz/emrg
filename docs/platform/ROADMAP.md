@@ -231,3 +231,10 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - Windows: 153 tests passed, 4 skipped.
 - This validates the standalone Ed25519 pairing v2 core and host-service lifecycle adapter methods, including device-key binding, host approval, invalid signature/device rejection, expiry, cancellation, and disable cleanup.
 - This does not validate a live WSS pairing endpoint or Android integration; those remain intentionally unimplemented.
+
+
+### Pairing v2 signed-expiry verification (2026-11-19)
+
+- The signed Ed25519 challenge now includes a wall-clock `expires_at` value, as well as host identity, device ID, key fingerprint, workspace, and exact scopes. Transaction enforcement still uses a monotonic host clock to avoid wall-clock changes extending the local TTL.
+- Companion security CI #104 passed on code commit `8550af1b`: Ubuntu 157 passed; Windows 153 passed, 4 skipped.
+- Companion security CI #105 passed on test commit `7d2aad8d`: Ubuntu 157 passed; Windows 153 passed, 4 skipped. The added regression test checks that host identity and expiry are included in the signed challenge.
