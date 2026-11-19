@@ -34,9 +34,9 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] Device-local private SharedPreferences snapshot persists chat history/draft across app restarts; malformed snapshot falls back to fresh preview state (CI passed).
 - [x] Safe chat error fallback preserves coroutine cancellation (tests added; CI passed)
 - [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for streaming integration run `44239121243` (`bc1d3bf2`); markdown renderer CI pending
-- [x] WSS client primitive with system TLS + pinned host certificate fingerprint, auth-envelope send, protocol/workspace-bound auth-success validation, chat-only scoped frame construction and connection generation guards; host listener is still absent.
+- [x] WSS client primitive with system TLS + pinned host certificate fingerprint, auth-envelope send, protocol/workspace-bound auth-success validation, chat-only scoped frame construction and connection generation guards; dedicated opt-in host WSS listener is now implemented with authentication and status-only dispatch.
 - [x] Credential-safe QR descriptor parsing: WSS-only, strict allowlist, mandatory <=180-second expiry; endpoint query/user-info/fragment and invalid ports rejected.
-- [ ] Host identity provisioning/persistence, trusted host approval UI, host WSS listener, live pairing/revoke and end-to-end transport remain unimplemented.
+- [ ] Trusted host approval UI, pairing/revoke UI, Android live transport integration and end-to-end transport remain unimplemented. Host identity provisioning and the dedicated WSS listener now have host-side implementations; cross-platform runtime integration remains open.
 - [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
 - [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI passed in run `44239121243`); no real daemon transport yet.
 - [x] Offline UI integration for response streaming, partial text display and Stop/cancel action (no live transport; CI passed in run `44239121243`).
@@ -93,7 +93,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Generate Android-compatible, credential-free v1 pairing descriptor with WSS endpoint and SHA-256 pin.
 - [x] Reject endpoint host outside certificate SAN and invalid/insecure endpoint forms.
 - [x] Enforce QR expiry at no more than 180 seconds.
-- [ ] Integrate descriptor into host approval UI and QR rendering; no live WSS listener yet.
+- [ ] Integrate descriptor into host approval UI and QR rendering; WSS listener currently exposes authentication and status only, with chat/session dispatch not yet connected.
 
 
 ## Companion listener safety primitives
