@@ -338,3 +338,11 @@ The QR panel is now wired to the v2 controller, superseding earlier notes that t
 - Added a JVM regression test that invokes duplicate valid credential callbacks concurrently and verifies the paired state and stored credential remain intact.
 - Android CI run [#322](https://github.com/herbalblitz/emrg/actions/runs/44515550203) passed on commit `aaf367260fa3bc7ea10acce7e473f02326a4eff3`. The concurrent-callback test is a new follow-up change and requires its own CI run.
 - Still open: physical Android Keystore validation, trusted-local Windows approval UI, real Android ↔ Windows pairing E2E, authenticated status/session-list UI, and Windows install/lifecycle smoke tests.
+
+
+### Pairing v2 local approval listing regression coverage (2026-11-19)
+
+- Added host-service assertions that the trusted-local pending approval projection contains only its bounded display/decision fields and a SHA-256 public-key fingerprint; raw public key, client nonce, challenge bytes, and issued credential are not exposed.
+- Verified redeemed transactions disappear from the pending approval queue.
+- Companion security CI [#182](https://github.com/herbalblitz/emrg/actions/runs/44518718627) passed on code commit `cb7486fcacacb85565a290da47673c9da248efd7`: Ubuntu **210 passed**; Windows **206 passed, 4 skipped**.
+- This is host-side projection/security test coverage, not an Electron approval UI or Android ↔ Windows end-to-end test.
