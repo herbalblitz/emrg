@@ -56,7 +56,18 @@ internal class AndroidKeystoreCredentialStore(context: Context) : CredentialStor
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, getKey(alias), GCMParameterSpec(GCM_TAG_BITS, iv))
         cipher.updateAAD(alias.toByteArray(StandardCharsets.UTF_8))
-        return String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8)
+        val plaintext = cipher.doFinal(ciphertext)
+        val credential = try {
+            StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(plaintext))
+                .toString()
+        } catch (_: CharacterCodingException) {
+            throw IllegalStateException("Stored credential text is invalid")
+        }
+        check(isValidCredential(credential)) { "Stored credential is invalid" }
+        return credential
     }
 
     @Synchronized
