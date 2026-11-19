@@ -112,7 +112,7 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
     public_text = base64.urlsafe_b64encode(public).rstrip(b"=").decode("ascii")
     challenge = host.request_pairing_v2(
         pairing_id=tx["pairing_id"], device_id="android-v2",
-        public_key=public_text)
+        public_key=public_text, requested_scopes=["status"], client_nonce=base64.urlsafe_b64encode(b"n" * 32).rstrip(b"=").decode("ascii"))
     pending = host.pending_pairings_v2()
     assert pending[0]["device_id"] == "android-v2"
     assert pending[0]["public_key_sha256"]
@@ -132,7 +132,7 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
     assert host.pending_pairings_v2() == []
     with pytest.raises(ValueError, match="disabled"):
         host.request_pairing_v2(pairing_id=pending2["pairing_id"],
-                                 device_id="other", public_key=public_text)
+                                 device_id="other", public_key=public_text, requested_scopes=["status"], client_nonce=base64.urlsafe_b64encode(b"n" * 32).rstrip(b"=").decode("ascii"))
 
 
 def test_host_service_can_cancel_one_v2_pairing_from_local_control_plane(tmp_path):
@@ -153,7 +153,7 @@ def test_host_service_can_cancel_one_v2_pairing_from_local_control_plane(tmp_pat
     public_text = base64.urlsafe_b64encode(public).rstrip(b"=").decode("ascii")
     host.request_pairing_v2(
         pairing_id=tx["pairing_id"], device_id="android-v2",
-        public_key=public_text)
+        public_key=public_text, requested_scopes=["status"], client_nonce=base64.urlsafe_b64encode(b"n" * 32).rstrip(b"=").decode("ascii"))
 
     assert len(host.pending_pairings_v2()) == 1
     assert host.cancel_pairing_v2(tx["pairing_id"]) is True
@@ -284,7 +284,7 @@ def test_host_service_cancel_serializes_with_v2_redemption(tmp_path):
     public_text = base64.urlsafe_b64encode(public).rstrip(b"=").decode("ascii")
     challenge = host.request_pairing_v2(
         pairing_id=tx["pairing_id"], device_id="android-v2",
-        public_key=public_text)
+        public_key=public_text, requested_scopes=["status"], client_nonce=base64.urlsafe_b64encode(b"n" * 32).rstrip(b"=").decode("ascii"))
     assert host.decide_pairing_v2(tx["pairing_id"], approved=True)
     signature = base64.urlsafe_b64encode(
         private.sign(base64.urlsafe_b64decode(
