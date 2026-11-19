@@ -387,3 +387,8 @@ pairing requests fail closed with a generic unavailable response. This
 preserves replay protection under memory pressure instead of reopening a
 replay window by evicting an unexpired nonce. A focused host test verifies
 that a full cache rejects a fresh request without removing any recorded nonce.
+
+
+### Android signed host-identity binding (2026-11-19)
+
+Before signing a Pairing v2 challenge, Android now compares the challenge's host_identity value with the SHA-256 certificate fingerprint supplied by the QR descriptor. Comparison accepts colon-separated or compact hexadecimal representations but requires exactly 32 fingerprint bytes. A mismatch or malformed identity is rejected before proof-of-possession signing. This is an additional application-layer binding; it does not replace the TLS certificate pin check performed by the transport. Regression coverage verifies that a challenge naming a different pinned host is rejected.
