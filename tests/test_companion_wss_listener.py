@@ -399,7 +399,7 @@ def test_wss_rejects_sessions_list_without_scope_before_dispatch(tmp_path, monke
                 self.closed.append(kwargs)
 
         ws = Socket()
-        await listener._session(ws)
+        await listener._handle(ws)
         assert [frame["type"] for frame in ws.sent] == ["auth.ok"]
         assert ws.closed == [{"code": 1008, "reason": "Protocol rejected"}]
         assert calls == []
