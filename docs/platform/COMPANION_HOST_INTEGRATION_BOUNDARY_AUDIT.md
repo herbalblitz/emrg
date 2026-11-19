@@ -156,3 +156,17 @@ Added [COMPANION_DAEMON_LIFECYCLE_AND_IPC_AUDIT.md](COMPANION_DAEMON_LIFECYCLE_A
 - The JVM test fake uses software P-256 only for protocol tests; it is not a production key path. Hardware-backed Keystore behavior still requires physical-device validation.
 - Android Companion CI #238, attempt 2, passed on commit `52ef7f67b9a755f13fea50bdafa6c4fd2f214d05`: debug APK assembly, unit tests, lint, and APK artifact upload all succeeded. The first attempt failed before compilation because the runner could not resolve external Gradle/Maven artifacts; the retry completed successfully.
 - This verification does not establish a live host-to-phone pairing flow: the WSS listener still lacks the v2 pairing route and the Android coordinator/live transport integration remains open.
+
+
+## Pairing v2 WSS route implementation increment (2026-11-19)
+
+The standalone WSS listener now accepts the strict, one-frame Pairing v2 request and redeem envelopes on its dedicated TLS endpoint, separately from the v1 authenticated companion session:
+
+- `pairing.request` validates the v2 frame and delegates P-256 key validation/challenge creation to `CompanionHostService`.
+- `pairing.redeem` delegates exact transaction, device, challenge, signature, approval, and one-time credential issuance checks to the host pairing core.
+- The only approval/rejection operation remains the host-local `decide_pairing_v2` API; no remote approval frame is accepted.
+- Pairing failures return one generic unavailable response, avoiding disclosure of transaction/approval/proof state.
+- Unauthenticated pairing attempts are rate-limited per peer (10 per 60 seconds) with a bounded 1,024-peer limiter table.
+- The route is available only through the separately configured TLS WSS listener. Android must verify the out-of-band host identity pin before sending either frame; this server-side route does not itself establish the QR trust ceremony.
+
+Regression tests exercise challenge creation, host-local approval, signature-bound redemption, credential authentication, replay rejection, redemption-before-approval rejection, and per-peer rate limiting. This is host-side transport integration only: daemon lifecycle/configuration, trusted Electron approval UI, Android coordinator/live WSS integration, physical-device validation, cross-process limiter coordination, and production TLS identity presentation remain open. Do not describe the Android-to-host pairing flow as end-to-end complete.
