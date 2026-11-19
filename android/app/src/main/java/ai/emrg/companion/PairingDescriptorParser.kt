@@ -1,6 +1,5 @@
 package ai.emrg.companion
 
-import android.util.Base64
 import org.json.JSONObject
 
 /** Versioned QR descriptor parser. It carries host identity metadata only, never credentials. */
@@ -63,9 +62,9 @@ internal object PairingDescriptorParser {
     private fun isCanonicalPairingId(value: String): Boolean {
         if (!value.matches(Regex("[A-Za-z0-9_-]{43}"))) return false
         return try {
-            val decoded = Base64.decode(value, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+            val decoded = java.util.Base64.getUrlDecoder().decode(value)
             decoded.size == 32 &&
-                Base64.encodeToString(decoded, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP) == value
+                java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(decoded) == value
         } catch (_: IllegalArgumentException) {
             false
         }
