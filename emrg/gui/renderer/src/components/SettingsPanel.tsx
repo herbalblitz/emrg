@@ -4,6 +4,7 @@ import { dialogReducer, initialDialogState, type ConfirmRequest } from "../lib/d
 import { ConfirmDialog } from "./ConfirmDialog";
 import { GithubDeviceDialog } from "./GithubDeviceDialog";
 import { AtpLoginDialog } from "./AtpLoginDialog";
+import { CompanionPanel } from "./CompanionPanel";
 
 /**
  * SettingsPanel — Batch 5 slice 6：设置面板接线（vanilla dialogs.js showSettings/
@@ -17,7 +18,7 @@ import { AtpLoginDialog } from "./AtpLoginDialog";
  *   默认模型 + [[llm.models]] 增删改设默认（vanilla renderModelList/saveModelForm 对等）。
  * - 主题三选（vanilla applyTheme 对等：data-theme attr）；语言选择（i18n setLocale）。
  */
-export type SettingsTab = "model" | "github" | "appearance" | "language" | "about" | "templates";
+export type SettingsTab = "model" | "github" | "appearance" | "language" | "about" | "templates" | "companion";
 
 export interface SettingsPanelProps {
   /** 版本号（Shell appState.currentVersion 注入） */
@@ -154,6 +155,7 @@ const TABS: { id: SettingsTab; labelKey: string }[] = [
   { id: "language", labelKey: "settings.groupLanguage" },
   { id: "about", labelKey: "settings.aboutTitle" },
   { id: "templates", labelKey: "settings.taskTemplates" },
+  { id: "companion", labelKey: "Companion" },
 ];
 
 export function SettingsPanel({ version = "", evolutionCount = null }: SettingsPanelProps) {
@@ -1070,6 +1072,8 @@ export function SettingsPanel({ version = "", evolutionCount = null }: SettingsP
             </div>
           </div>
         )}
+
+        {tab === "companion" && <CompanionPanel />}
 
         {/* ── 自定义类型（task templates，vanilla renderTemplateList 对等） ── */}
         {tab === "templates" && (
