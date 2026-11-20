@@ -28,7 +28,7 @@ The daemon-side controller/facade now accepts only the implemented subset below 
 
 | Operation | Required behavior |
 | --- | --- |
-| status | Implemented: return host enabled state and bounded pending count. Detailed listener state and active connection count remain future work |
+| status | Implemented: return host enabled state and bounded pending count. Listener running state, endpoint, active connection count, and TLS fingerprint are included from the daemon-owned runtime |
 | listener.start | Implemented: exact bind IP/port and existing workspace directory; provisions TLS identity, starts WSS, creates status-only Pairing v2 transaction and credential-free v2 QR descriptor |
 | listener.stop | Implemented: disable host policy and close WSS listener/clients |
 | identity.ensure | Provision or validate the persistent TLS identity; never silently replace a corrupt/missing identity |
