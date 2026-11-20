@@ -6,6 +6,7 @@ import logging
 import pytest
 
 from emrg.server.companion_chat import (
+    CompanionDaemonError,
     CompanionStreamHub,
     answer_approval,
     cancel_turn,
@@ -291,7 +292,7 @@ def test_hub_rejects_same_session_id_from_different_workspaces(tmp_path):
         await hub.subscribe(first, session_id="collision",
                             scopes=frozenset({"chat.send"}), device_id="phone-a",
                             cwd=str(workspace_a))
-        with pytest.raises(Exception, match="another workspace"):
+        with pytest.raises(CompanionDaemonError, match="another workspace"):
             await hub.subscribe(second, session_id="collision",
                                 scopes=frozenset({"chat.send"}), device_id="phone-b",
                                 cwd=str(workspace_b))
