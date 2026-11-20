@@ -50,6 +50,7 @@ internal fun SecurePairingPanel() {
     var activeHandle by remember { mutableStateOf<PairingV2ExchangeHandle?>(null) }
     var remoteSocket by remember { mutableStateOf<PinnedRemoteWebSocket?>(null) }
     var remoteStateText by remember { mutableStateOf("Not connected") }
+    var remoteConnectionState by remember { mutableStateOf(RemoteSocketState.CLOSED) }
     var statusResultText by remember { mutableStateOf<String?>(null) }
     var sessionsResultText by remember { mutableStateOf<String?>(null) }
     var statusRequestId by remember { mutableStateOf<String?>(null) }
@@ -76,6 +77,7 @@ internal fun SecurePairingPanel() {
         remoteSocket?.close()
         remoteSocket = null
         remoteStateText = "Not connected"
+        remoteConnectionState = RemoteSocketState.CLOSED
         statusResultText = null
         sessionsResultText = null
         statusRequestId = null
@@ -149,6 +151,7 @@ internal fun SecurePairingPanel() {
         statusResultText = null
         sessionsResultText = null
         remoteStateText = RemoteSocketState.CONNECTING.name
+        remoteConnectionState = RemoteSocketState.CONNECTING
 
         val socket = PinnedRemoteWebSocket(
             credentialStore = AndroidKeystoreCredentialStore(context),
@@ -158,6 +161,7 @@ internal fun SecurePairingPanel() {
                         if (callbackTransactionGeneration != transactionGeneration ||
                             callbackRemoteGeneration != remoteConnectionGeneration
                         ) return@post
+                        remoteConnectionState = state
                         remoteStateText = safeMessage ?: state.name
                         if (state == RemoteSocketState.AUTHENTICATED) {
                             val current = remoteSocket
@@ -201,6 +205,7 @@ internal fun SecurePairingPanel() {
             socket.connect(host)
             statusText = "Pairing saved. Establishing pinned, authenticated read-only connection…"
         } catch (_: Exception) {
+            remoteConnectionState = RemoteSocketState.FAILED
             remoteStateText = "Connection could not be started"
             statusText = "Pairing is saved, but the live host connection could not be started."
         }
@@ -378,7 +383,7 @@ internal fun SecurePairingPanel() {
                         Text(sessionsResultText!!, style = MaterialTheme.typography.bodySmall)
                     }
                     Button(
-                        enabled = remoteStateText == RemoteSocketState.AUTHENTICATED.name,
+                        enabled = remoteConnectionState == RemoteSocketState.AUTHENTICATED,
                         onClick = {
                             statusRequestId = UUID.randomUUID().toString()
                             sessionsRequestId = UUID.randomUUID().toString()
@@ -390,10 +395,10 @@ internal fun SecurePairingPanel() {
                         },
                     ) { Text("Refresh host status and sessions") }
                     Button(
-                        enabled = remoteStateText != RemoteSocketState.CONNECTING.name &&
-                            remoteStateText != RemoteSocketState.TLS_IDENTITY_VERIFIED.name &&
-                            remoteStateText != RemoteSocketState.AUTHENTICATING.name &&
-                            remoteStateText != RemoteSocketState.AUTHENTICATED.name,
+                        enabled = remoteConnectionState != RemoteSocketState.CONNECTING &&
+                            remoteConnectionState != RemoteSocketState.TLS_IDENTITY_VERIFIED &&
+                            remoteConnectionState != RemoteSocketState.AUTHENTICATING &&
+                            remoteConnectionState != RemoteSocketState.AUTHENTICATED,
                         onClick = {
                             state.pairedHost?.let(::connectRemoteHost)
                         },
@@ -405,6 +410,7 @@ internal fun SecurePairingPanel() {
                             remoteConnectionGeneration += 1
                             remoteSocket?.close()
                             remoteSocket = null
+                            remoteConnectionState = RemoteSocketState.CLOSED
                             remoteStateText = "Disconnected"
                         },
                     ) { Text("Disconnect") }
