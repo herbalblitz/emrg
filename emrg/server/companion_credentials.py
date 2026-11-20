@@ -16,6 +16,8 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from emrg.tools.base import non_regular_kind
+
 REGISTRY_VERSION = 1
 TOKEN_BYTES = 32
 
@@ -59,10 +61,22 @@ class CredentialRegistry:
         self._lock = threading.RLock()
 
     def _read(self) -> dict[str, Any]:
+        # An open is not a read: on a FIFO it blocks until a peer appears,
+        # and this read runs on the daemon's event loop, so the block is
+        # the whole daemon. Ask the kind first; absence keeps its existing
+        # answer (an empty registry).
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
+            kind = non_regular_kind(self.path)
         except FileNotFoundError:
             return {"version": REGISTRY_VERSION, "devices": {}}
+        except OSError:
+            raise CredentialRegistryError("credential registry unavailable") from None
+        if kind is not None:
+            raise CredentialRegistryError(
+                f"credential registry is {kind}, not a regular file"
+            )
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             raise CredentialRegistryError("credential registry unavailable") from None
         if (not isinstance(data, dict) or data.get("version") != REGISTRY_VERSION

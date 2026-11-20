@@ -1,5 +1,7 @@
 # Companion Host Integration Boundary Audit
 
+Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-doc-count.py --measure`.
+
 Branch: feat/android-windows-platform-audit
 
 Status: host-side pairing/auth composition, TLS identity provisioning, and a standalone opt-in WSS listener exist. The listener is not yet wired into daemon lifecycle/configuration, trusted local pairing UI is absent, and Android v2 pairing/auth is not end-to-end integrated.
@@ -112,8 +114,8 @@ This audit deliberately does not add renderer controls without a functioning, ac
 
 ### Latest race-hardening verification
 
-- Companion security CI #135 passed on Ubuntu and Windows for the pairing-core cancel-versus-redeem race test.
-- Companion security CI #136 passed on Ubuntu and Windows for the host-service cancel-versus-redeem race test (commit `4fb8fc02`).
+- Companion security CI #135: passed on Ubuntu and Windows for the pairing-core cancel-versus-redeem race test.
+- Companion security CI #136: passed on Ubuntu and Windows for the host-service cancel-versus-redeem race test (commit `4fb8fc02`).
 - The tests establish one terminal winner: successful cancellation yields no credential; successful redemption yields one registered credential and cancellation returns false.
 - These tests validate host-side primitives only. They do not validate Electron IPC, a live WSS listener, Android Keystore, or end-to-end pairing.
 
@@ -182,4 +184,4 @@ Regression tests exercise challenge creation, host-local approval, signature-bou
 
 ### Pairing v2 WSS integration status correction (2026-11-19)
 
-The earlier audit statement that the listener did not expose Pairing v2 over WSS was superseded by the host-side route implementation documented above. CI #158 passed on commit `85f6af746220c80e97f36b859b41f5b3c01767e6` on the companion security workflow. This validates the host-side WSS tests on Ubuntu and Windows; it does not close daemon lifecycle/configuration, trusted Electron approval UI, Android live transport/coordinator, or physical-device Keystore gates.
+The earlier audit statement that the listener did not expose Pairing v2 over WSS was superseded by the host-side route implementation documented above. CI #158: passed on commit `85f6af746220c80e97f36b859b41f5b3c01767e6` on the companion security workflow. This validates the host-side WSS tests on Ubuntu and Windows; it does not close daemon lifecycle/configuration, trusted Electron approval UI, Android live transport/coordinator, or physical-device Keystore gates.

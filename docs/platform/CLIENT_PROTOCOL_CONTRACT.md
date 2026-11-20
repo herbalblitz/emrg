@@ -1,5 +1,7 @@
 # Client protocol contract: current desktop baseline
 
+Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-doc-count.py --measure`.
+
 Audit scope: reviewed 2026-11-18 on `feat/android-windows-platform-audit`.
 Observed behavior only; this is not a remote-access implementation.
 
@@ -167,7 +169,7 @@ These are requirements for a future implementation, not evidence of an existing 
 
 - The protocol stream reducer now carries a connection epoch and rejects frames tagged with a stale epoch.
 - The chat bridge explicitly ignores epoch-change actions for chat projection; request frames are projected only when correlated and accepted by the reducer.
-- Tests verify stale/current epoch frames and bridge isolation. CI run #127 passed APK assembly, JVM tests, lint and artifact upload.
+- Tests verify stale/current epoch frames and bridge isolation. CI run #127: passed APK assembly, JVM tests, lint and artifact upload.
 - Android UI now displays the reconnection model's phase and fail-closed explanation, including disconnected, connecting, authenticating, reconciling, ready, unknown state, retry, auth failure and host identity mismatch.
 - The status panel is model-backed but remains offline. It explicitly states that live transport is not implemented and does not expose a connect action or falsely claim connectivity.
 - Presentation tests added; CI verification for this newest panel commit is pending.

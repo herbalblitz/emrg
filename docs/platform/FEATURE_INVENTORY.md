@@ -1,5 +1,7 @@
 # EMRG Feature Inventory
 
+Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-doc-count.py --measure`.
+
 Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 
 ## Core runtime
@@ -126,7 +128,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 
 ## Pairing v2 host transaction core
 
-- [x] Host trusted-local pending v2 approval listing is bounded to display/decision metadata and SHA-256 public-key fingerprint; tests assert raw public key, client nonce, challenge bytes, and issued credential are not exposed, and redeemed transactions leave the pending queue. Companion security CI #182 passed on Ubuntu (210) and Windows (206 passed, 4 skipped).
+- [x] Host trusted-local pending v2 approval listing is bounded to display/decision metadata and SHA-256 public-key fingerprint; tests assert raw public key, client nonce, challenge bytes, and issued credential are not exposed, and redeemed transactions leave the pending queue. Companion security CI #182: passed on Ubuntu and Windows.
 
 - [x] Transport-independent Ed25519 device-key-bound pairing transaction with host-local approval, signed challenge fields, one-time redemption, bounded lifetime and host-service lifecycle hooks.
 - [x] Unit tests cover approval gating, device/key proof binding, wrong-device and wrong-signature rejection, duplicate request/approval, expiry, cancellation and credential scope issuance.
@@ -138,7 +140,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 
 - [x] Replaced permissive envelope parsing with strict canonical standard-Base64 validation; exact separator count, 12-byte IV and minimum 16-byte AES-GCM ciphertext are enforced.
 - [x] Added platform-independent JVM regression tests for canonical round-trip, malformed separators/whitespace, invalid lengths and noncanonical Base64.
-- [x] Android Companion CI #206 passed: APK assembly, unit tests, lint and artifact upload.
+- [x] Android Companion CI #206: passed APK assembly, unit tests, lint and artifact upload.
 - [ ] Validate actual Android Keystore encryption/decryption and key deletion on supported physical Android devices; JVM CI does not exercise the platform Keystore provider.
 
 
@@ -155,7 +157,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 
 - [x] One-shot Android WSS exchange primitive uses the QR-pinned TLS leaf certificate before sending the Pairing v2 request or redeem frame.
 - [x] Response envelope is size-bounded and correlated to pairing ID, expected response type, and device ID for credential issuance.
-- [x] JVM regression tests and Android CI #267 passed on commit `2fbdf7d0d92c` (APK assembly, unit tests, lint, artifact upload).
+- [x] JVM regression tests and Android CI #267: passed on commit `2fbdf7d0d92c` (APK assembly, unit tests, lint, artifact upload).
 - [x] Production Android-side integration with `PairingV2Client`, `SecurePairingCoordinator`, host challenge/redeem lifecycle, and QR UI is present in source. This does not establish a completed end-to-end pairing.
 - [ ] Physical-device Android Keystore validation and full Android-to-Windows host integration remain open.
 

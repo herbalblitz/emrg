@@ -1,5 +1,7 @@
 # Companion Pairing v2 — Design and Security Gates
 
+Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-doc-count.py --measure`.
+
 Status: host WSS request/redeem adapter prototype exists; Android coordinator is not wired. Pairing remains a gated prototype, not a production-ready end-to-end feature.
 
 Date: 2026-11-19
@@ -264,7 +266,7 @@ These JVM tests do not substitute for physical-device Android Keystore validatio
 
 - Android credential validation now uses a reporting UTF-8 encoder rather than replacement-based string conversion. Malformed UTF-16 input (including unpaired surrogates) is rejected before the 512-byte bound is evaluated or persistence is attempted.
 - Regression coverage includes an unpaired high surrogate. This prevents Java/Kotlin replacement encoding from silently changing credential bytes before storage.
-- Android CI #207 failed during Gradle dependency resolution because Maven Central returned HTTP 429 for multiple artifacts; APK assembly did not reach Kotlin compilation. Android CI #210 passed APK assembly, JVM unit tests, lint, and artifact upload for the 512-byte credential-boundary changes. Android CI #213 was queued for the malformed-Unicode and strict-decode changes; its final result must be checked independently.
+- Android CI #207 failed during Gradle dependency resolution because Maven Central returned HTTP 429 for multiple artifacts; APK assembly did not reach Kotlin compilation. Android CI #210: passed APK assembly, JVM unit tests, lint, and artifact upload for the 512-byte credential-boundary changes. Android CI #213 was queued for the malformed-Unicode and strict-decode changes; its final result must be checked independently.
 
 
 - The encrypted credential store also decodes decrypted bytes with a reporting UTF-8 decoder and re-applies the credential validity/512-byte checks on read. Malformed or out-of-contract stored plaintext now fails closed instead of being silently replacement-decoded.

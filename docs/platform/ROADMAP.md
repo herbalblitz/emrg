@@ -1,5 +1,7 @@
 # Android + Windows Implementation Roadmap
 
+Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-doc-count.py --measure`.
+
 Target: preserve all original EMRG features while delivering robust Android and Windows experiences.
 
 ## Principles
@@ -96,8 +98,8 @@ Accessible UI; documented protocol; success/loading/empty/offline/error/cancel s
 - [ ] Windows clean-machine install/upgrade/reconnect/uninstall smoke.
 
 ## CI evidence
-- Run #95, commit `22b056f1`: disposal during in-progress WSS startup closes the late-bound server, unregisters the host callback, and prevents restart; Ubuntu **154 passed**, Windows **150 passed, 4 skipped**.
-- Run #94, commit `9ffb1bdb`: WSS listener disposal/callback-unregistration regression test passed on Ubuntu and Windows; Ubuntu **153 passed**, Windows **149 passed, 4 skipped**. This validates host-side companion security tests only, not Android live transport.
+- Run #95, commit `22b056f1`: disposal during in-progress WSS startup closes the late-bound server, unregisters the host callback, and prevents restart; passed on Ubuntu and Windows.
+- Run #94, commit `9ffb1bdb`: WSS listener disposal/callback-unregistration regression test passed on Ubuntu and Windows. This validates host-side companion security tests only, not Android live transport.
 - Run #129, commit `d7c6f71b9d996ff09b4795de13109893cbb73361`: connection status panel integration, APK assembly, JVM tests, lint and artifact upload passed.
 - Run #122, commit `9c9922f43ce325f3292ee82674be91a18f6e18e9`: Android debug APK assembly, JVM unit tests, lint and APK artifact upload all succeeded. It validates scanner startup error UI plus parser/reducer tests; it is not an Android instrumentation or live daemon pairing test.
 - Run #121, commit `02b3145927568a41ec58c6c28fdfb2fd5746dcf0`: same pipeline passed for scanner call-site opt-in fix.
@@ -175,14 +177,14 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Host disable and explicit stop close clients; disable/stop during asynchronous bind closes the late server rather than resurrecting the listener, and concurrent start calls cannot create duplicate servers.
 - [x] Active connections revalidate revocation and credential generation on each request; remote `chat.send` remains explicitly unimplemented and is never dispatched.
 - [ ] Trusted local pairing/QR UI, Android live WSS integration, chat/task lifecycle, cancellation, tool approvals and end-to-end tests remain open.
-- [x] Cross-platform CI verified startup-race and metadata-bound regression tests: Ubuntu **150 passed**; Windows **146 passed, 4 skipped** in run `44438215551`.
+- [x] Cross-platform CI verified startup-race and metadata-bound regression tests: passed on Ubuntu and Windows in run `44438215551`.
 
-- [x] Follow-up WSS lifecycle regression CI run `44438531074` passed on both platforms after adding explicit-stop-during-bind and concurrent-start tests: Ubuntu **152 passed**; Windows **148 passed, 4 skipped**.
+- [x] Follow-up WSS lifecycle regression CI run `44438531074`: passed on both platforms after adding explicit-stop-during-bind and concurrent-start tests.
 
 
 ### Android Companion authentication gate verification (2026-11-19)
 - [x] Android WSS client rejects application frames before host authentication, rejects repeated authentication-control frames after authentication, and rejects missing/null frame types in either state.
-- [x] Android Companion CI run #191 passed on commit `fdd5d1bb`: debug APK assembly, JVM unit tests, lint and debug APK artifact upload.
+- [x] Android Companion CI run #191: passed on commit `fdd5d1bb` — debug APK assembly, JVM unit tests, lint and debug APK artifact upload.
 - [x] Recorded the client-side security gate and its limitations in `CLIENT_PROTOCOL_CONTRACT.md` (documentation commit `85732af9`).
 - [ ] Still required before usable remote Companion: real host-approved pairing/credential issuance flow, Android pairing coordinator + encrypted credential-store integration, live WSS connection/UI lifecycle, host protocol compatibility/negotiation, daemon chat/task bridge, cancellation and tool-approval lifecycle, and end-to-end tests. The current demo chat remains offline and must not be presented as connected.
 
@@ -198,7 +200,7 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 
 - Added [COMPANION_PAIRING_V2_DESIGN.md](COMPANION_PAIRING_V2_DESIGN.md), defining the proposed QR v2 transaction reference, host-local approval, device-key proof of possession, one-time redemption, strict WSS message boundaries, state machine, and security test matrix.
 - The design deliberately keeps reusable credentials and private keys out of QR data. Pairing remains disabled end-to-end until host transaction, local approval UI, WSS exchange, Android Keystore integration, and cross-platform tests are implemented.
-- CI Android Companion #192 passed on `a85ea4c3`; it predates this documentation-only commit.
+- CI Android Companion #192: passed on `a85ea4c3`; it predates this documentation-only commit.
 
 
 ## Pairing transaction hardening (2026-11-19)
@@ -211,8 +213,6 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 ### Pairing transaction CI result (2026-11-19)
 
 - Companion security CI #97 passed on commit `50fec84a` on both Ubuntu and Windows.
-- Ubuntu: 156 tests passed.
-- Windows: 152 tests passed, 4 skipped.
 - The run includes the 256-bit pairing ID change and concurrent redemption regression test. The test asserts that eight simultaneous redemption attempts against one approved transaction yield exactly one credential.
 - The run was triggered by the test commit and therefore validates the pairing implementation and tests at `50fec84a`; the following documentation-only commit does not change executable code.
 
@@ -226,9 +226,7 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 
 ### Pairing v2 cross-platform host CI (2026-11-19)
 
-- Companion security CI #103 passed on commit `afb7407d` on Ubuntu and Windows.
-- Ubuntu: 157 tests passed.
-- Windows: 153 tests passed, 4 skipped.
+- Companion security CI #103: passed on commit `afb7407d` on Ubuntu and Windows.
 - This validates the standalone Ed25519 pairing v2 core and host-service lifecycle adapter methods, including device-key binding, host approval, invalid signature/device rejection, expiry, cancellation, and disable cleanup.
 - This does not validate a live WSS pairing endpoint or Android integration; those remain intentionally unimplemented.
 
@@ -236,14 +234,14 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 ### Pairing v2 signed-expiry verification (2026-11-19)
 
 - The signed Ed25519 challenge now includes a wall-clock `expires_at` value, as well as host identity, device ID, key fingerprint, workspace, and exact scopes. Transaction enforcement still uses a monotonic host clock to avoid wall-clock changes extending the local TTL.
-- Companion security CI #104 passed on code commit `8550af1b`: Ubuntu 157 passed; Windows 153 passed, 4 skipped.
-- Companion security CI #105 passed on test commit `7d2aad8d`: Ubuntu 157 passed; Windows 153 passed, 4 skipped. The added regression test checks that host identity and expiry are included in the signed challenge.
+- Companion security CI #104: passed on code commit `8550af1b` on Ubuntu and Windows.
+- Companion security CI #105: passed on test commit `7d2aad8d` on Ubuntu and Windows. The added regression test checks that host identity and expiry are included in the signed challenge.
 
 
 ### Pairing v2 CI coverage correction (2026-11-19)
 
 - The companion-security workflow's path filter already matched `tests/test_companion_pairing_v2.py`, but its explicit pytest command omitted that file. Added the v2 test module to the Ubuntu/Windows invocation.
-- Companion security CI run [#111](https://github.com/herbalblitz/emrg/actions/runs/44447348538) passed on both platforms after the workflow correction: Ubuntu **170 passed**; Windows **166 passed, 4 skipped**. Logs show all five `test_companion_pairing_v2.py` tests passed on both runners.
+- Companion security CI run [#111](https://github.com/herbalblitz/emrg/actions/runs/44447348538): passed on both platforms after the workflow correction. Logs show all five `test_companion_pairing_v2.py` tests passed on both runners.
 - This verifies the host-side companion test suite and v2 transaction unit tests only; it does not validate a live WSS pairing endpoint or Android v2 integration.
 - Pairing v2 remains a transport-independent host primitive. No live WSS pairing endpoint or Android v2 integration is claimed.
 
@@ -251,7 +249,7 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 ### Pairing v2 concurrency and capacity regression coverage (2026-11-19)
 
 - Commit `e2efde59` added tests proving concurrent redemption issues exactly one credential and the pending-transaction cap remains 32 with `cancel_all()` clearing the queue.
-- Companion security CI [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797) passed on that test commit: Ubuntu **172 passed**; Windows **168 passed, 4 skipped**. Both new tests and all seven tests in `test_companion_pairing_v2.py` passed on both platforms.
+- Companion security CI [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797): passed on that test commit. Both new tests and all seven tests in `test_companion_pairing_v2.py` passed on both platforms.
 - This remains host-side unit-test evidence; the v2 pairing flow is not yet wired to a live WSS endpoint or Android client.
 
 
@@ -259,7 +257,7 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 
 - Added a concurrent redemption test: eight simultaneous attempts against one approved v2 transaction must produce exactly one credential, which is then verified against the expected device, workspace and scopes.
 - Added pending-transaction capacity coverage: the 33rd pending request is rejected at the 32-transaction limit; cancel_all() clears the pending set and capacity becomes available again.
-- Companion security CI [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797) passed on commit `e2efde59653c`: Ubuntu **172 passed**; Windows **168 passed, 4 skipped**.
+- Companion security CI [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797): passed on commit `e2efde59653c`.
 - These results validate host-side pairing v2 transaction and protocol tests on both platforms. They do not validate live WSS pairing, trusted host UI, Android Keystore integration, or end-to-end pairing; those remain open.
 
 
@@ -286,7 +284,7 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 
 - The dedicated opt-in WSS listener now accepts strict one-frame Pairing v2 `pairing.request` and `pairing.redeem` messages, separate from the authenticated v1 session protocol. The host remains the only approval authority; network peers cannot approve or inspect transaction state.
 - The route returns a generic unavailable response for failed redemption and applies a bounded per-peer unauthenticated-attempt limiter.
-- Companion security CI #158 passed on commit `85f6af746220c80e97f36b859b41f5b3c01767e6`. This validates host-side WSS security tests on Ubuntu and Windows.
+- Companion security CI #158: passed on commit `85f6af746220c80e97f36b859b41f5b3c01767e6`. This validates host-side WSS security tests on Ubuntu and Windows.
 - Remaining gates: daemon lifecycle/configuration integration, trusted Electron local approval UI, Android live pinned-WSS coordinator and retry flow, physical-device Keystore verification, and end-to-end pairing. No Android-to-host pairing completion is claimed.
 
 
@@ -294,7 +292,7 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 
 - [x] Add a one-frame pinned-WSS exchange primitive for Pairing v2 request/redeem messages. The TLS leaf SHA-256 pin is checked before application data is sent; responses are bounded to 16 KiB and bound to the pairing transaction, response type, and device ID where applicable.
 - [x] Add JVM tests for strict challenge/credential envelopes, transaction mismatch, unexpected response types, and device binding.
-- [x] Android Companion CI #267 passed on commit `2fbdf7d0d92c`: debug APK assembly, unit tests, lint, and artifact upload succeeded.
+- [x] Android Companion CI #267: passed on commit `2fbdf7d0d92c` — debug APK assembly, unit tests, lint, and artifact upload succeeded.
 - [ ] Wire the exchange to `PairingV2Client`, `SecurePairingCoordinator`, host-approval wait/redeem flow, and the QR UI. This increment is a transport primitive, not end-to-end pairing.
 - [ ] Verify Android Keystore behavior on physical devices and complete cross-platform end-to-end pairing tests.
 
@@ -344,5 +342,5 @@ The QR panel is now wired to the v2 controller, superseding earlier notes that t
 
 - Added host-service assertions that the trusted-local pending approval projection contains only its bounded display/decision fields and a SHA-256 public-key fingerprint; raw public key, client nonce, challenge bytes, and issued credential are not exposed.
 - Verified redeemed transactions disappear from the pending approval queue.
-- Companion security CI [#182](https://github.com/herbalblitz/emrg/actions/runs/44518718627) passed on code commit `cb7486fcacacb85565a290da47673c9da248efd7`: Ubuntu **210 passed**; Windows **206 passed, 4 skipped**.
+- Companion security CI [#182](https://github.com/herbalblitz/emrg/actions/runs/44518718627): passed on code commit `cb7486fcacacb85565a290da47673c9da248efd7`.
 - This is host-side projection/security test coverage, not an Electron approval UI or Android ↔ Windows end-to-end test.

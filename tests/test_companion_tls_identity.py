@@ -145,7 +145,9 @@ def test_multiprocess_identity_provisioning_uses_one_persistent_pin(tmp_path):
     )
     def run_once():
         return subprocess.run([sys.executable, "-c", script, str(directory)],
-                             check=True, capture_output=True, text=True, timeout=30).stdout.strip()
+                             check=True, capture_output=True, text=True,
+                             encoding="utf-8", errors="replace",
+                             timeout=30).stdout.strip()
     with ThreadPoolExecutor(max_workers=2) as pool:
         pins = list(pool.map(lambda _: run_once(), range(2)))
     assert pins[0] == pins[1]

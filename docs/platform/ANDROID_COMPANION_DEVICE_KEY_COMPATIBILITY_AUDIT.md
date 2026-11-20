@@ -1,5 +1,7 @@
 # Android Companion Device-Key Compatibility Audit
 
+Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-doc-count.py --measure`.
+
 Status: P-256 Android Keystore key-manager and transport-neutral Pairing v2 client foundations added; physical-device validation and live integration remain blocked.
 
 Date: 2026-11-19
@@ -30,7 +32,7 @@ The Android app may keep `minSdk = 26` for its existing UI, QR parsing, credenti
 
 - Host Pairing v2 transaction verification now accepts only P-256 EC keys encoded as DER SubjectPublicKeyInfo and verifies ECDSA/SHA-256 DER signatures.
 - The strict unauthenticated pairing-frame validator requires `key_algorithm: P-256`, bounded canonical Base64URL public keys, and bounded canonical Base64URL signatures. v1 authentication remains a separate parser.
-- Host pairing transaction and protocol tests have been migrated to P-256; GitHub Actions run #149 passed on Ubuntu and Windows (202 passed on Ubuntu and 198 passed with 4 skipped on Windows).
+- Host pairing transaction and protocol tests have been migrated to P-256; GitHub Actions run #149: passed on Ubuntu and Windows.
 - Added `AndroidKeystoreDeviceKeyManager` to create/load P-256 EC identities in Android Keystore, return only the encoded public key, sign challenges with `SHA256withECDSA`, and refuse exportable private keys. It compares the full curve, generator, order, and cofactor against `secp256r1` rather than relying only on a 256-bit field-size check. It has no software-key fallback.
 - Added a transport-neutral `PairingV2Client` that builds P-256 request/redeem frames, validates transaction/device/key-digest/expiry/nonce/scope bindings in the exact host challenge, and signs the exact UTF-8 challenge bytes. JVM tests use an injected fake signer; they do not claim Android Keystore hardware coverage.
 - The manager/client are not yet wired into the Android pairing coordinator, pinned WSS transport, or a host WSS pairing route. Device security-level reporting, API 26 physical-device testing, process-restart testing, and end-to-end Python/Android signature interoperability remain open.

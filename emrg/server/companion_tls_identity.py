@@ -25,6 +25,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
 from emrg.server.companion_tls import CompanionTlsError, TLS_MINIMUM_VERSION
+from emrg.tools.base import non_regular_kind
 
 CERT_FILENAME = "companion-host-cert.pem"
 KEY_FILENAME = "companion-host-key.pem"
@@ -45,6 +46,15 @@ def _identity_file_lock(directory: Path):
     lock_path = directory / ".companion-identity.lock"
     if lock_path.is_symlink():
         raise CompanionTlsError("TLS identity lock must not be a symlink")
+    # An open is not a read: on a FIFO it blocks until a peer appears. Ask
+    # the kind first; the lock is created by this open, so absence is not
+    # a refusal.
+    try:
+        kind = non_regular_kind(lock_path)
+    except FileNotFoundError:
+        kind = None
+    if kind is not None:
+        raise CompanionTlsError(f"TLS identity lock is {kind}, not a regular file")
     try:
         stream = lock_path.open("a+b")
         if os.name == "posix":
@@ -248,6 +258,11 @@ def _load_and_validate(directory: Path, hosts: tuple[str, ...]) -> HostTlsIdenti
     if cert_path.is_symlink() or key_path.is_symlink():
         raise CompanionTlsError("TLS identity files must not be symlinks")
     try:
+        # An open is not a read: ask each file's kind before opening it,
+        # so a FIFO planted at either path cannot block the daemon.
+        for subject in (cert_path, key_path):
+            if non_regular_kind(subject) is not None:
+                raise CompanionTlsError("stored TLS identity is invalid")
         certificate_pem = cert_path.read_bytes()
         protected_key = key_path.read_bytes()
         private_key_pem = _unprotect_key(protected_key)
@@ -343,7 +358,10 @@ def _create_identity_server_context(directory: Path) -> ssl.SSLContext:
     """Load the provisioned identity; temporary plaintext key is deleted immediately."""
     directory = Path(directory)
     try:
-        certificate = x509.load_pem_x509_certificate((directory / CERT_FILENAME).read_bytes())
+        cert_path = directory / CERT_FILENAME
+        if non_regular_kind(cert_path) is not None:
+            raise CompanionTlsError("stored TLS identity is invalid")
+        certificate = x509.load_pem_x509_certificate(cert_path.read_bytes())
         san_hosts = _san_extension(certificate)
     except Exception:
         raise CompanionTlsError("stored TLS identity is invalid") from None
@@ -360,6 +378,13 @@ def _create_identity_server_context(directory: Path) -> ssl.SSLContext:
             raise CompanionTlsError("host TLS identity could not be loaded") from None
         return context
     try:
+        # The key is the daemon's own file: ask its kind before opening
+        # it, so a FIFO planted there cannot block the event loop. The
+        # plaintext copy below goes to a TemporaryDirectory this call
+        # just created empty, so nothing can pre-exist at that path.
+        kind = non_regular_kind(key_path)
+        if kind is not None:
+            raise OSError(f"{key_path} is {kind}, not a regular file")
         private_key = _unprotect_key(key_path.read_bytes())
         with tempfile.TemporaryDirectory(prefix="emrg-companion-tls-") as temporary:
             ephemeral_key = Path(temporary) / "identity-key.pem"
