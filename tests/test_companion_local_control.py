@@ -51,7 +51,7 @@ def test_local_control_lists_only_bounded_non_secret_projection(tmp_path):
     assert item["scopes"] == ["status"]
     assert set(item) == {
         "pairing_id", "device_id", "public_key_sha256", "workspace_id",
-        "cwd", "scopes", "approved", "expires_in",
+        "cwd", "scopes", "approved", "approved_scopes", "expires_in",
     }
     assert not ({"public_key", "client_nonce", "challenge", "signature",
                  "credential_token", "pairing_secret"} & set(item))
@@ -151,3 +151,51 @@ def test_local_control_rejects_invalid_qr_descriptor(tmp_path, descriptor):
     control = CompanionLocalControl(CompanionHostService(tmp_path / "registry.json"))
     with pytest.raises(CompanionLocalControlError):
         control.dispatch("pairing.qr", {"descriptor": descriptor})
+
+# ── Batch 0: subset approval on pairing.decide ─────────────────────────
+
+def test_local_control_decide_approves_subset(tmp_path):
+    host = CompanionHostService(tmp_path / "registry.json")
+    host.enable()
+    pairing_id = _pending(host)
+    control = CompanionLocalControl(host)
+    # _pending requests only ["status"]; approve a subset of a wider
+    # request by re-requesting is not possible here, so approve the
+    # requested scope itself and confirm the projection carries it.
+    result = control.dispatch("pairing.decide", {
+        "pairing_id": pairing_id, "approved": True, "scopes": ["status"],
+    })
+    assert result == {"decided": True}
+    item = control.dispatch("pairing.pending.list")["items"][0]
+    assert item["approved"] is True
+    assert item["approved_scopes"] == ["status"]
+
+
+def test_local_control_decide_rejects_subset_outside_request(tmp_path):
+    host = CompanionHostService(tmp_path / "registry.json")
+    host.enable()
+    pairing_id = _pending(host)
+    control = CompanionLocalControl(host)
+    # "chat.send" was never requested by this device.
+    result = control.dispatch("pairing.decide", {
+        "pairing_id": pairing_id, "approved": True,
+        "scopes": ["status", "chat.send"],
+    })
+    assert result == {"decided": False}
+    assert control.dispatch("pairing.pending.list")["items"][0]["approved"] is None
+
+
+@pytest.mark.parametrize("payload", [
+    {"pairing_id": "A" * 43, "approved": True, "scopes": []},
+    {"pairing_id": "A" * 43, "approved": True, "scopes": ["nope"]},
+    {"pairing_id": "A" * 43, "approved": True, "scopes": "status"},
+    {"pairing_id": "A" * 43, "approved": False, "scopes": ["status"]},
+    {"pairing_id": "A" * 43, "approved": True, "scopes": ["status", "status"]},
+    {"pairing_id": "A" * 43, "approved": True, "extra": 1},
+])
+def test_local_control_decide_rejects_malformed_subset(payload, tmp_path):
+    host = CompanionHostService(tmp_path / "registry.json")
+    host.enable()
+    control = CompanionLocalControl(host)
+    with pytest.raises(CompanionLocalControlError):
+        control.dispatch("pairing.decide", payload)

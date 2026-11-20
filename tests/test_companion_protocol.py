@@ -44,9 +44,19 @@ def test_session_list_is_scope_and_workspace_bound():
     with pytest.raises(CompanionProtocolError): validate_client_frame(frame,authenticated=True,scopes=frozenset({"sessions.list"}),workspace_id="other")
 
 def test_chat_send_normalizes_allowed_fields():
-    frame={"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hello","session_id":None}
+    frame={"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hello","session_id":"s-1"}
     result=validate_client_frame(json.dumps(frame),authenticated=True,scopes=frozenset({"chat.send"}),workspace_id="w")
-    assert result=={"type":"chat.send","request_id":"r","workspace_id":"w","session_id":None,"prompt":"hello"}
+    assert result=={"type":"chat.send","request_id":"r","workspace_id":"w","session_id":"s-1","prompt":"hello"}
+
+def test_chat_send_requires_session_id():
+    # The client always carries a session id (active local id or route
+    # remote id); a turn without one has nowhere to stream to.
+    for session_id in (None, "", 42):
+        frame={"type":"chat.send","request_id":"r","workspace_id":"w",
+               "prompt":"hello","session_id":session_id}
+        with pytest.raises(CompanionProtocolError):
+            validate_client_frame(json.dumps(frame),authenticated=True,
+                                  scopes=frozenset({"chat.send"}),workspace_id="w")
 
 @pytest.mark.parametrize("session_id", ["", "x" * 129, "\ud800", 42, []])
 def test_chat_rejects_invalid_session_identifiers(session_id):
@@ -59,12 +69,12 @@ def test_chat_rejects_invalid_session_identifiers(session_id):
 
 @pytest.mark.parametrize("field,value", [("cwd","C:/other"),("tools",["pwsh"]),("sandbox","danger-full-access"),("provider","remote")])
 def test_chat_rejects_privilege_or_unrecognized_fields(field,value):
-    frame={"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hello","session_id":None,field:value}
+    frame={"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hello","session_id":"s-1",field:value}
     with pytest.raises(CompanionProtocolError):
         validate_client_frame(json.dumps(frame),authenticated=True,scopes=frozenset({"chat.send"}),workspace_id="w")
 
 def test_chat_denies_missing_scope_or_wrong_workspace():
-    frame='{"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hi"}'
+    frame='{"type":"chat.send","request_id":"r","workspace_id":"w","prompt":"hi","session_id":"s-1"}'
     with pytest.raises(CompanionProtocolError): validate_client_frame(frame,authenticated=True,workspace_id="w")
     with pytest.raises(CompanionProtocolError): validate_client_frame(frame,authenticated=True,scopes=frozenset({"chat.send"}),workspace_id="wrong")
 
@@ -202,3 +212,166 @@ def test_protocol_rejects_non_utf8_encoded_byte_frames(encoding):
     }
     with pytest.raises(CompanionProtocolError):
         validate_pairing_v2_frame(json.dumps(pairing_request).encode(encoding))
+
+# ── Batch 0 + Batch A: 20-scope registry and new frame shapes ──────────
+
+def test_scope_registry_has_exactly_twenty_scopes():
+    from emrg.server.companion_scopes import (
+        ALLOWED_SCOPES, MAX_SCOPES, SCOPE_OPERATIONS, scope_for_frame)
+    assert len(ALLOWED_SCOPES) == 20
+    assert MAX_SCOPES == 20
+    assert set(SCOPE_OPERATIONS) == ALLOWED_SCOPES
+    assert scope_for_frame("sessions.rename") == "sessions.manage"
+    assert scope_for_frame("chat.approve") == "chat.send"
+    assert scope_for_frame("tools.monitor") is None  # no request frame
+    assert scope_for_frame("nope") is None
+
+
+def test_pairing_v2_accepts_up_to_twenty_scopes_and_rejects_unknown():
+    from emrg.server.companion_protocol import validate_pairing_v2_frame
+    from emrg.server.companion_scopes import ALLOWED_SCOPES
+    import base64
+    enc = lambda size: base64.urlsafe_b64encode(bytes(size)).rstrip(b"=").decode()
+    base = {"type": "pairing.request", "protocol": "2.0",
+            "pairing_id": enc(32), "device_id": "android-1",
+            "key_algorithm": "P-256", "public_key": enc(91),
+            "requested_scopes": sorted(ALLOWED_SCOPES), "client_nonce": enc(32)}
+    assert validate_pairing_v2_frame(json.dumps(base))["requested_scopes"] == sorted(ALLOWED_SCOPES)
+    for bad in (["status"] * 21, ["status", "nope"], ["status", "status"],
+                sorted(ALLOWED_SCOPES) + ["status"]):
+        with pytest.raises(CompanionProtocolError):
+            validate_pairing_v2_frame(json.dumps({**base, "requested_scopes": bad}))
+
+
+def _authed(frame, scope):
+    return validate_client_frame(
+        json.dumps(frame), authenticated=True,
+        scopes=frozenset({scope}), workspace_id="w")
+
+
+def test_sessions_manage_frames_are_scope_and_workspace_bound():
+    good = {"type": "sessions.rename", "request_id": "r", "workspace_id": "w",
+            "session_id": "s-1", "title": "New"}
+    assert _authed(good, "sessions.manage")["title"] == "New"
+    with pytest.raises(CompanionProtocolError):
+        _authed(good, "sessions.list")
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame(json.dumps(good), authenticated=True,
+                              scopes=frozenset({"sessions.manage"}),
+                              workspace_id="other")
+    for kind, extra in (
+            ("sessions.resume", {}), ("sessions.delete", {}),
+            ("sessions.clear", {}), ("sessions.compact", {}),
+            ("sessions.resolve_cwd", {})):
+        frame = {"type": kind, "request_id": "r", "workspace_id": "w",
+                 "session_id": "s-1", **extra}
+        assert _authed(frame, "sessions.manage")["type"] == kind
+    # rewind needs a record index; history defaults its limit server-side.
+    assert _authed({"type": "sessions.rewind", "request_id": "r",
+                    "workspace_id": "w", "session_id": "s-1", "record_index": 3},
+                   "sessions.manage")["record_index"] == 3
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "sessions.rewind", "request_id": "r",
+                 "workspace_id": "w", "session_id": "s-1", "record_index": -1},
+                "sessions.manage")
+    history = _authed({"type": "sessions.history", "request_id": "r",
+                       "workspace_id": "w", "session_id": "s-1"},
+                      "sessions.manage")
+    assert "limit" not in history  # defaulted server-side at dispatch
+    assert _authed({"type": "sessions.history", "request_id": "r",
+                    "workspace_id": "w", "session_id": "s-1", "limit": 50},
+                   "sessions.manage")["limit"] == 50
+
+
+def test_chat_cancel_and_approve_shapes():
+    # chat.cancel: session_id optional (cancels every subscribed turn).
+    assert _authed({"type": "chat.cancel", "request_id": "r",
+                    "workspace_id": "w"}, "chat.send")["type"] == "chat.cancel"
+    assert _authed({"type": "chat.cancel", "request_id": "r",
+                    "workspace_id": "w", "session_id": "s-1"},
+                   "chat.send")["session_id"] == "s-1"
+    # chat.approve: approval_request_id + approved; session_id optional.
+    frame = {"type": "chat.approve", "request_id": "r", "workspace_id": "w",
+             "approval_request_id": "appr-1", "approved": True,
+             "session_id": "s-1"}
+    assert _authed(frame, "chat.send")["approval_request_id"] == "appr-1"
+    with pytest.raises(CompanionProtocolError):
+        _authed({**frame, "approved": "yes"}, "chat.send")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "chat.approve", "request_id": "r",
+                 "workspace_id": "w", "approved": True}, "chat.send")
+
+
+def test_files_and_sandbox_frames_are_scope_bound():
+    assert _authed({"type": "files.list", "request_id": "r",
+                    "workspace_id": "w", "path": "src"}, "files.read")["path"] == "src"
+    assert _authed({"type": "files.read", "request_id": "r",
+                    "workspace_id": "w", "path": "a.txt", "start_line": 2,
+                    "line_limit": 10}, "files.read")["line_limit"] == 10
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "files.list", "request_id": "r",
+                 "workspace_id": "w", "path": "src"}, "files.write")
+    assert _authed({"type": "sandbox.set", "request_id": "r",
+                    "workspace_id": "w", "session_id": "s-1",
+                    "mode": "read-only"}, "sandbox.manage")["mode"] == "read-only"
+    assert _authed({"type": "sandbox.roots", "request_id": "r",
+                    "workspace_id": "w", "session_id": "s-1", "op": "list"},
+                   "sandbox.manage")["op"] == "list"
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "sandbox.roots", "request_id": "r",
+                 "workspace_id": "w", "session_id": "s-1", "op": "add"},
+                "sandbox.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "sandbox.roots", "request_id": "r",
+                 "workspace_id": "w", "session_id": "s-1", "op": "widen"},
+                "sandbox.manage")
+
+
+def test_terminal_and_files_write_frames_are_scope_bound():
+    exec_frame = {"type": "terminal.exec", "request_id": "r",
+                  "workspace_id": "w", "command": "ls"}
+    assert _authed(exec_frame, "terminal.exec")["command"] == "ls"
+    with pytest.raises(CompanionProtocolError):
+        _authed({**exec_frame, "cwd": "/etc"}, "terminal.exec")
+    assert _authed({"type": "terminal.exec_cancel", "request_id": "r",
+                    "workspace_id": "w", "exec_id": "abc"}, "terminal.exec")
+    assert _authed({"type": "files.write", "request_id": "r",
+                    "workspace_id": "w", "path": "a.txt", "content": "hi"},
+                   "files.write")["content"] == "hi"
+    assert _authed({"type": "files.delete", "request_id": "r",
+                    "workspace_id": "w", "path": "a.txt"}, "files.write")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "files.write", "request_id": "r",
+                 "workspace_id": "w", "path": "a.txt", "content": "hi"},
+                "files.read")
+
+
+@pytest.mark.parametrize("kind,scope,extra", [
+    ("hosts.list", "hosts.list", {}),
+    ("memory.list", "memory.read", {}),
+    ("memory.read", "memory.read", {"memory_id": "m-1"}),
+    ("models.list", "models.manage", {}),
+    ("models.set", "models.manage", {"model": "x"}),
+    ("rant.list", "rant.submit", {}),
+    ("rant.submit", "rant.submit", {"message": "hi"}),
+    ("evolution.summary", "evolution.read", {}),
+    ("tasks.list", "tasks.manage", {}),
+    ("tasks.trigger", "tasks.manage", {"name": "t"}),
+    ("tasks.create", "tasks.manage", {"task": {}}),
+    ("tasks.templates", "tasks.manage", {}),
+    ("skills.list", "skills.manage", {}),
+    ("skills.available", "skills.manage", {}),
+    ("skills.install", "skills.manage", {"name": "s"}),
+    ("logs.tail", "logs.read", {}),
+    ("audit.tail", "audit.read", {}),
+    ("devices.list", "devices.manage", {}),
+    ("devices.revoke", "devices.manage", {"device_id": "d-1"}),
+    ("settings.get", "settings.manage", {}),
+    ("settings.set", "settings.manage", {"patch": {}}),
+])
+def test_batch_b_c_frames_validate_but_are_not_dispatched_yet(kind, scope, extra):
+    # Frozen contract: shapes + scopes agreed now; dispatch lands later.
+    frame = {"type": kind, "request_id": "r", "workspace_id": "w", **extra}
+    assert _authed(frame, scope)["type"] == kind
+    with pytest.raises(CompanionProtocolError):
+        _authed(frame, "status")

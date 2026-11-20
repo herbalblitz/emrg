@@ -16,9 +16,14 @@ from typing import Any
 from emrg.server.companion_host_service import CompanionHostService
 from emrg.server.companion_listener_policy import CompanionListenerConfig
 from emrg.server.companion_pairing_descriptor import create_pairing_descriptor
+from emrg.server.companion_scopes import ALLOWED_SCOPES, MAX_SCOPES
 from emrg.server.companion_tls import CompanionTlsError
 from emrg.server.companion_tls_identity import provision_host_identity
 from emrg.server.companion_wss_listener import CompanionWssListener
+
+#: Safe default grant when the host picks no scopes: the 3 original scopes.
+DEFAULT_GRANT_SCOPES: frozenset[str] = frozenset(
+    {"status", "sessions.list", "chat.send"})
 
 
 class CompanionRuntimeError(ValueError):
@@ -28,11 +33,24 @@ class CompanionRuntimeError(ValueError):
 class CompanionRuntime:
     """Own one opt-in listener and its persistent host TLS identity."""
 
-    def __init__(self, host: CompanionHostService, identity_directory: Path):
+    def __init__(self, host: CompanionHostService, identity_directory: Path, *,
+                 daemon_accessor=None):
+        """Own one opt-in listener and its persistent host TLS identity.
+
+        ``daemon_accessor`` is an optional callable returning the running
+        daemon instance (or None). It is the narrow in-process accessor the
+        companion listener uses to dispatch daemon-native operations; the
+        daemon passes ``lambda: self`` when it constructs the runtime. When
+        it is None the listener answers daemon-backed frames with
+        ``daemon_unavailable`` instead of opening any socket to the daemon.
+        """
         if not isinstance(host, CompanionHostService):
             raise TypeError("host must be a CompanionHostService")
+        if daemon_accessor is not None and not callable(daemon_accessor):
+            raise TypeError("daemon_accessor must be callable")
         self._host = host
         self._identity_directory = Path(identity_directory)
+        self._daemon_accessor = daemon_accessor
         self._listener: CompanionWssListener | None = None
         self._endpoint: str | None = None
         self._fingerprint: str | None = None
@@ -58,8 +76,23 @@ class CompanionRuntime:
 
     async def _start_locked(self, payload: object) -> dict[str, Any]:
         """Start only from an exact, explicit local bind request."""
-        if not isinstance(payload, dict) or set(payload) != {"bind_address", "port", "cwd"}:
+        if not isinstance(payload, dict) or set(payload) not in (
+                {"bind_address", "port", "cwd"},
+                {"bind_address", "port", "cwd", "scopes"}):
             raise CompanionRuntimeError("invalid listener start request")
+        bind_address, port, cwd_value = (
+            payload["bind_address"], payload["port"], payload["cwd"]
+        )
+        # The host-chosen scope grant for new pairings. Omitted means the
+        # safe default (the 3 original scopes); an explicit set must be a
+        # non-empty subset of the 20 canonical scopes.
+        grant = payload.get("scopes", DEFAULT_GRANT_SCOPES)
+        if (not isinstance(grant, (list, tuple, set, frozenset))
+                or not 1 <= len(grant) <= MAX_SCOPES
+                or any(not isinstance(scope, str) or scope not in ALLOWED_SCOPES
+                       for scope in grant)
+                or len(set(grant)) != len(grant)):
+            raise CompanionRuntimeError("invalid listener scope grant")
         bind_address, port, cwd_value = (
             payload["bind_address"], payload["port"], payload["cwd"]
         )
@@ -83,6 +116,7 @@ class CompanionRuntime:
             raise CompanionRuntimeError("listener already running")
         listener = CompanionWssListener(
             self._host, config, identity_directory=self._identity_directory,
+            daemon_accessor=self._daemon_accessor,
         )
         self._host.enable()
         try:
@@ -92,7 +126,7 @@ class CompanionRuntime:
                 host_identity=identity.fingerprint_sha256,
                 workspace_id=workspace_id,
                 cwd=str(cwd),
-                scopes={"status", "sessions.list"},
+                scopes=set(grant),
             )
             descriptor = create_pairing_descriptor(
                 identity, endpoint, pairing_id=transaction["pairing_id"],

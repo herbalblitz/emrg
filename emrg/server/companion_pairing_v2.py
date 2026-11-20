@@ -22,6 +22,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from emrg.server.companion_credentials import CredentialRegistry
+from emrg.server.companion_scopes import ALLOWED_SCOPES, MAX_SCOPES
 
 PAIRING_V2_TTL_SECONDS = 180
 PAIRING_V2_ID_BYTES = 32
@@ -109,6 +110,10 @@ class _PendingV2:
     challenge_id: str | None = None
     approved: bool | None = None
     requested_scopes: frozenset[str] | None = None
+    # Host-approved subset of requested_scopes (None = approve-all). Set by
+    # approve(scopes=...) before redeem; the credential is issued for this
+    # subset, never for more than the device requested.
+    approved_scopes: frozenset[str] | None = None
     client_nonce: str | None = None
     # Keep the issued bearer token only in bounded, short-lived transaction memory.
     credential_token: str | None = field(default=None, repr=False)
@@ -133,8 +138,7 @@ class PairingV2Transactions:
     def begin(self, *, workspace_id: str, cwd: str, scopes: set[str]) -> dict[str, str | int]:
         _text(workspace_id, 128, "invalid pairing request")
         _text(cwd, 4096, "invalid pairing request")
-        allowed = {"status", "sessions.list", "chat.send"}
-        if not isinstance(scopes, (set, frozenset)) or not scopes or not scopes <= allowed:
+        if not isinstance(scopes, (set, frozenset)) or not scopes or not scopes <= ALLOWED_SCOPES:
             raise PairingV2Error("invalid pairing request")
         now = self._clock()
         pairing_id = _encode(secrets.token_bytes(PAIRING_V2_ID_BYTES))
@@ -151,12 +155,12 @@ class PairingV2Transactions:
                 requested_scopes: list[str] | tuple[str, ...], client_nonce: str) -> dict[str, str]:
         _pairing_id(pairing_id)
         _device_id(device_id)
-        if (not isinstance(requested_scopes, (list, tuple)) or not 1 <= len(requested_scopes) <= 3
+        if (not isinstance(requested_scopes, (list, tuple)) or not 1 <= len(requested_scopes) <= MAX_SCOPES
                 or any(not isinstance(scope, str) for scope in requested_scopes)
                 or len(set(requested_scopes)) != len(requested_scopes)):
             raise PairingV2Error("invalid requested scopes")
         requested = frozenset(requested_scopes)
-        if not requested <= {"status", "sessions.list", "chat.send"}:
+        if not requested <= ALLOWED_SCOPES:
             raise PairingV2Error("invalid requested scopes")
         _decode_bounded(client_nonce, 64, "invalid client nonce")
         if len(_decode_bounded(client_nonce, 64, "invalid client nonce")) < 16:
@@ -245,22 +249,53 @@ class PairingV2Transactions:
                     "cwd": item.cwd,
                     "scopes": sorted(item.requested_scopes or item.scopes),
                     "approved": item.approved,
+                    # The host-approved subset, once decided; None beforehand.
+                    # The device learns the granted set from auth.ok at connect.
+                    "approved_scopes": (
+                        sorted(item.approved_scopes)
+                        if item.approved_scopes is not None else None
+                    ),
                     "expires_in": max(0, int(PAIRING_V2_TTL_SECONDS - (now - item.created_at))),
                 })
             return result
 
-    def approve(self, pairing_id: str, *, approved: bool) -> bool:
+    def approve(self, pairing_id: str, *, approved: bool,
+                scopes: list[str] | tuple[str, ...] | set[str] | frozenset[str] | None = None) -> bool:
+        """Approve (or reject) a pending pairing, optionally for a subset.
+
+        ``scopes`` narrows the grant: it must be a non-empty subset of what
+        the device requested. Omitted means approve-all-or-reject, as before.
+        A subset is a host-side reduction only — the signed challenge payload
+        still carries the requested scopes (that is what the device signed),
+        and the credential is issued for the subset at redeem.
+        """
         try:
             _pairing_id(pairing_id)
         except PairingV2Error:
             return False
         if not isinstance(approved, bool):
             return False
+        subset: frozenset[str] | None = None
+        if scopes is not None:
+            if (not isinstance(scopes, (list, tuple, set, frozenset))
+                    or not 1 <= len(scopes) <= MAX_SCOPES
+                    or any(not isinstance(scope, str) or scope not in ALLOWED_SCOPES
+                           for scope in scopes)
+                    or len(set(scopes)) != len(scopes)):
+                return False
+            subset = frozenset(scopes)
         with self._lock:
             self._purge(self._clock())
             item = self._pending.get(pairing_id)
             if item is None or item.device_id is None or item.public_key is None or item.approved is not None:
                 return False
+            if subset is not None:
+                if not approved:
+                    return False
+                requested = item.requested_scopes or item.scopes
+                if not subset <= requested:
+                    return False
+                item.approved_scopes = subset
             item.approved = approved
             if not approved:
                 del self._pending[pairing_id]
@@ -299,12 +334,18 @@ class PairingV2Transactions:
             if item.credential_token is not None:
                 return item.credential_token
 
+            # The credential carries the host-approved subset when the host
+            # narrowed the grant; otherwise the requested scopes. The signed
+            # challenge payload above still names the requested scopes — the
+            # subset is a host reduction, not a device claim.
+            granted = set(
+                item.approved_scopes or item.requested_scopes or item.scopes)
             # Keep the transaction lock across issuance so concurrent retries
             # cannot create multiple credentials. If issuance raises, the
             # approved transaction remains retryable with the same proof.
             token = self._registry.issue(
                 device_id=device_id, workspace_id=item.workspace_id,
-                cwd=item.cwd, scopes=set(item.requested_scopes or item.scopes))
+                cwd=item.cwd, scopes=granted)
             item.credential_token = token
             return token
 

@@ -379,3 +379,59 @@ def test_pairing_v2_nonce_cache_pressure_fails_closed_without_eviction(tmp_path)
         )
     assert set(pairing._seen_client_nonces) == original
     assert pairing.pending_requests() == []
+
+# ── Batch 0: 20-scope cap + subset approval ─────────────────────────────
+
+def test_pairing_v2_cap_is_twenty_and_unknown_scopes_rejected(tmp_path):
+    from emrg.server.companion_scopes import ALLOWED_SCOPES
+    pairing, _, _, _, public = _setup(tmp_path)
+    all_scopes = sorted(ALLOWED_SCOPES)
+    tx = pairing.begin(workspace_id="workspace", cwd="/safe/work",
+                       scopes=set(all_scopes))
+    assert tx["pairing_id"]
+    device = pairing.request(
+        pairing_id=tx["pairing_id"], device_id="android-device",
+        public_key=public, requested_scopes=all_scopes,
+        client_nonce=_b64(b"n" * 32))
+    assert device["challenge_id"]
+    with pytest.raises(PairingV2Error):
+        pairing.begin(workspace_id="workspace", cwd="/safe/work",
+                      scopes={"status", "nope"})
+    with pytest.raises(PairingV2Error):
+        pairing.request(
+            pairing_id=tx["pairing_id"], device_id="android-2",
+            public_key=public, requested_scopes=["status", "nope"],
+            client_nonce=_b64(b"m" * 32))
+
+
+def test_pairing_v2_subset_approval_issues_narrower_credential(tmp_path):
+    pairing, registry, _, private, public = _setup(tmp_path)
+    tx, request = _request(pairing, public)
+    # Host approves only "status" out of the requested {"status",
+    # "sessions.list"}; the signed challenge still names the request.
+    assert pairing.approve(tx["pairing_id"], approved=True, scopes=["status"])
+    pending = pairing.pending_requests()[0]
+    assert pending["approved"] is True
+    assert pending["approved_scopes"] == ["status"]
+    sig = _signature(private, request)
+    token = pairing.redeem(pairing_id=tx["pairing_id"], device_id="android-device",
+                           challenge_id=request["challenge_id"], signature=sig)
+    identity = registry.verify(device_id="android-device", credential=token)
+    assert identity["scopes"] == frozenset({"status"})
+
+
+def test_pairing_v2_subset_approval_rejects_widening_and_empty(tmp_path):
+    pairing, _, _, _, public = _setup(tmp_path)
+    tx, _ = _request(pairing, public)
+    # "chat.send" was never requested: a subset may only narrow.
+    assert pairing.approve(tx["pairing_id"], approved=True,
+                           scopes=["status", "chat.send"]) is False
+    assert pairing.approve(tx["pairing_id"], approved=True, scopes=[]) is False
+    assert pairing.approve(tx["pairing_id"], approved=True,
+                           scopes=["nope"]) is False
+    # A subset with approved=False is meaningless.
+    assert pairing.approve(tx["pairing_id"], approved=False,
+                           scopes=["status"]) is False
+    # Approve-all-or-reject is unchanged when scopes are omitted.
+    assert pairing.approve(tx["pairing_id"], approved=True) is True
+    assert pairing.pending_requests()[0]["approved_scopes"] is None

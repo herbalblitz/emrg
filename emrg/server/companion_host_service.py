@@ -149,12 +149,13 @@ class CompanionHostService:
                 return []
             return self._pairings_v2.pending_requests()
 
-    def decide_pairing_v2(self, pairing_id: str, *, approved: bool) -> bool:
+    def decide_pairing_v2(self, pairing_id: str, *, approved: bool,
+                          scopes: list[str] | tuple[str, ...] | set[str] | frozenset[str] | None = None) -> bool:
         with self._lifecycle_lock:
             self._require_enabled()
             if self._pairings_v2 is None:
                 return False
-            return self._pairings_v2.approve(pairing_id, approved=approved)
+            return self._pairings_v2.approve(pairing_id, approved=approved, scopes=scopes)
 
     def cancel_pairing_v2(self, pairing_id: str) -> bool:
         """Cancel one v2 transaction from the trusted local host UI."""

@@ -14,13 +14,14 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from emrg.server.companion_host_service import CompanionHostService
+from emrg.server.companion_scopes import ALLOWED_SCOPES, MAX_SCOPES
 
 
 _PAIRING_ID = re.compile(r"^[A-Za-z0-9_-]{43}$")
 _PENDING_LIMIT = 32
 _PENDING_FIELDS = frozenset({
     "pairing_id", "device_id", "public_key_sha256", "workspace_id",
-    "cwd", "scopes", "approved", "expires_in",
+    "cwd", "scopes", "approved", "approved_scopes", "expires_in",
 })
 
 
@@ -117,6 +118,11 @@ class CompanionLocalControl:
             for row in rows[:_PENDING_LIMIT]:
                 if not isinstance(row, dict) or set(row) != _PENDING_FIELDS:
                     raise CompanionLocalControlError("invalid pending approval state")
+                approved_scopes = row["approved_scopes"]
+                if approved_scopes is not None and (
+                        not isinstance(approved_scopes, list)
+                        or any(not isinstance(scope, str) for scope in approved_scopes)):
+                    raise CompanionLocalControlError("invalid pending approval state")
                 safe_rows.append({
                     "pairing_id": self._pairing_id(row["pairing_id"]),
                     "device_id": row["device_id"],
@@ -125,17 +131,37 @@ class CompanionLocalControl:
                     "cwd": row["cwd"],
                     "scopes": list(row["scopes"]),
                     "approved": row["approved"],
+                    "approved_scopes": (
+                        list(approved_scopes) if approved_scopes is not None else None
+                    ),
                     "expires_in": row["expires_in"],
                 })
             return {"items": safe_rows}
 
         if operation == "pairing.decide":
-            data = self._object(payload, {"pairing_id", "approved"})
-            pairing_id = self._pairing_id(data["pairing_id"])
-            if not isinstance(data["approved"], bool):
+            # Exact shape: {"pairing_id", "approved"} for approve-all-or-
+            # reject, or the same plus "scopes" to approve a subset of the
+            # requested scopes. "scopes" with approved=false is rejected:
+            # a rejection grants nothing, so there is no subset to name.
+            if not isinstance(payload, dict) or set(payload) not in (
+                    {"pairing_id", "approved"}, {"pairing_id", "approved", "scopes"}):
+                raise CompanionLocalControlError("invalid local control request")
+            pairing_id = self._pairing_id(payload["pairing_id"])
+            if not isinstance(payload["approved"], bool):
                 raise CompanionLocalControlError("invalid approval decision")
+            scopes = payload.get("scopes")
+            if scopes is not None:
+                if (not isinstance(scopes, list)
+                        or not 1 <= len(scopes) <= MAX_SCOPES
+                        or any(not isinstance(scope, str) or scope not in ALLOWED_SCOPES
+                               for scope in scopes)
+                        or len(set(scopes)) != len(scopes)):
+                    raise CompanionLocalControlError("invalid approval scopes")
+                if not payload["approved"]:
+                    raise CompanionLocalControlError("invalid approval scopes")
             try:
-                changed = self._host.decide_pairing_v2(pairing_id, approved=data["approved"])
+                changed = self._host.decide_pairing_v2(
+                    pairing_id, approved=payload["approved"], scopes=scopes)
             except ValueError:
                 raise CompanionLocalControlError("pairing unavailable") from None
             return {"decided": bool(changed)}

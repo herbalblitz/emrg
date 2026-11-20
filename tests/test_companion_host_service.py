@@ -122,7 +122,7 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
     # inside the host transaction and are never exposed by this listing.
     assert set(pending[0]) == {
         "pairing_id", "device_id", "public_key_sha256", "workspace_id",
-        "cwd", "scopes", "approved", "expires_in",
+        "cwd", "scopes", "approved", "approved_scopes", "expires_in",
     }
     assert "public_key" not in pending[0]
     assert "client_nonce" not in pending[0]

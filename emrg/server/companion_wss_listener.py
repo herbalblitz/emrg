@@ -1,8 +1,16 @@
 """Dedicated opt-in WSS transport for EMRG Companion.
 
-Currently implemented remote operations are authenticated status and bounded,
-read-only session listing. Chat, tool execution, filesystem access, and
-pairing-management actions are deliberately not dispatched.
+Authenticated operations: status, session listing, session management,
+chat (with per-session stream fan-out), file reads, sandbox management,
+terminal execution and file writes/deletes. Batch B/C frames
+(hosts/memory/models/rant/evolution/tasks/skills/logs/audit/devices/
+settings) are validated against the frozen wire contract but not yet
+dispatched — the listener answers ``not_implemented`` until their batches
+land. Host-lifecycle operations (``shutdown``, ``init_auto_evolve``) are
+never reachable from a remote companion.
+
+Daemon-native operations run in-process through the daemon object supplied
+via ``daemon_accessor``; the listener never opens a socket to the daemon.
 """
 from __future__ import annotations
 
@@ -16,6 +24,25 @@ from typing import Any
 from websockets.asyncio.server import serve
 from websockets.exceptions import ConnectionClosed
 
+from emrg.server.companion_chat import (
+    CompanionDaemonError,
+    CompanionStreamHub,
+    answer_approval,
+    call_daemon_message,
+    cancel_turn,
+    start_task,
+)
+from emrg.server.companion_exec import (
+    CompanionExecConfig,
+    CompanionExecError,
+    ExecManager,
+)
+from emrg.server.companion_files import (
+    CompanionFileError,
+    delete as companion_delete_file,
+    resolve_under_root,
+    write as companion_write_file,
+)
 from emrg.server.companion_host_service import CompanionHostService
 from emrg.server.companion_pairing import PairingError
 from emrg.server.companion_pairing_v2 import PairingV2Error
@@ -35,6 +62,36 @@ _SESSION_TEXT_LIMITS = {"session_id": 128, "created_at": 64, "updated_at": 64, "
 _PAIRING_RATE_WINDOW_SECONDS = 60.0
 _PAIRING_RATE_MAX_ATTEMPTS = 10
 _PAIRING_RATE_MAX_PEERS = 1024
+
+# Companion frame -> (daemon message type, expected daemon reply type).
+_SESSION_DAEMON_OPS: dict[str, tuple[str, str]] = {
+    "sessions.resume": ("resume_session", "resume_result"),
+    "sessions.rename": ("rename_session", "rename_result"),
+    "sessions.delete": ("delete_session", "session_deleted"),
+    "sessions.clear": ("clear_session", "clear_result"),
+    "sessions.compact": ("compact", "compact_result"),
+    "sessions.rewind": ("rewind_session", "rewind_result"),
+    "sessions.history": ("list_history", "history_list"),
+    "sessions.resolve_cwd": ("resolve_session_cwd", "session_cwd_result"),
+}
+
+#: Session operations that mutate state (audit-logged; reads are not).
+_SESSION_MUTATING_OPS: frozenset[str] = frozenset({
+    "sessions.resume", "sessions.rename", "sessions.delete",
+    "sessions.clear", "sessions.compact", "sessions.rewind",
+})
+
+#: Default history page when the client leaves ``limit`` unset (the daemon
+#: answers the whole history for limit=None, which would blow the 256 KiB
+#: frame cap on a long session).
+DEFAULT_HISTORY_LIMIT = 100
+
+
+def _error(request_id: str | None, code: str, detail: str | None = None) -> dict[str, Any]:
+    frame: dict[str, Any] = {"type": "error", "request_id": request_id, "code": code}
+    if detail:
+        frame["error"] = detail[:200]
+    return frame
 
 
 def _safe_remote_text(value: str, limit: int) -> bool:
@@ -78,24 +135,38 @@ class CompanionWssListener:
 
     def __init__(self, host_service: CompanionHostService,
                  config: CompanionListenerConfig, cert_file=None, key_file=None, *,
-                 identity_directory=None):
+                 identity_directory=None, daemon_accessor=None,
+                 exec_config: CompanionExecConfig | None = None):
         """Create a listener with a protected identity directory or explicit PEM paths.
 
         Production integrations should pass identity_directory so Windows DPAPI
         keys are unwrapped only for the in-memory TLS context. The explicit
         certificate/key pair remains available for isolated tests and existing
         callers; mixing the two forms is rejected.
+
+        ``daemon_accessor`` is an optional callable returning the running
+        daemon instance (or None) — the narrow in-process accessor for
+        daemon-native operations. Without it, daemon-backed frames answer
+        ``daemon_unavailable``; the listener never opens a socket to the
+        daemon. ``exec_config`` is the host-side terminal/file policy
+        (danger opt-ins); the default denies danger for every device.
         """
         if identity_directory is not None:
             if cert_file is not None or key_file is not None:
                 raise ValueError("choose identity_directory or cert_file/key_file")
         elif cert_file is None or key_file is None:
             raise ValueError("TLS identity directory or both certificate/key paths required")
+        if daemon_accessor is not None and not callable(daemon_accessor):
+            raise TypeError("daemon_accessor must be callable")
         self._host = host_service
         self._config = config
         self._cert_file = cert_file
         self._key_file = key_file
         self._identity_directory = identity_directory
+        self._daemon_accessor = daemon_accessor
+        self._exec_config = exec_config or CompanionExecConfig()
+        self._exec_manager = ExecManager()
+        self._hub = CompanionStreamHub()
         self._server = None
         self._starting = False
         self._semaphore = asyncio.Semaphore(config.max_connections)
@@ -322,37 +393,315 @@ class CompanionWssListener:
             "workspace_id": identity["workspace_id"],
             "scopes": sorted(identity["scopes"]),
         }))
-        while self._host.enabled and not self._closing:
-            frame_data = await asyncio.wait_for(
-                websocket.recv(), timeout=self._config.idle_timeout_seconds)
-            # Re-check local device policy for every request. Revocation, credential
-            # rotation, or workspace/scope changes terminate already-open sockets.
-            if not self._host.is_identity_current(identity):
-                await websocket.close(code=1008, reason="Device authorization changed")
-                return
-            frame = validate_client_frame(
-                frame_data, authenticated=True,
-                scopes=frozenset(identity["scopes"]),
-                workspace_id=identity["workspace_id"])
-            # Only explicitly implemented, read-only operations are dispatched.
-            # Chat and all mutating/privileged operations remain unavailable.
-            if frame["type"] == "status":
-                response: dict[str, Any] = {
-                    "type": "status.result", "request_id": frame["request_id"],
+        try:
+            while self._host.enabled and not self._closing:
+                frame_data = await asyncio.wait_for(
+                    websocket.recv(), timeout=self._config.idle_timeout_seconds)
+                # Re-check local device policy for every request. Revocation, credential
+                # rotation, or workspace/scope changes terminate already-open sockets.
+                if not self._host.is_identity_current(identity):
+                    await websocket.close(code=1008, reason="Device authorization changed")
+                    return
+                frame = validate_client_frame(
+                    frame_data, authenticated=True,
+                    scopes=frozenset(identity["scopes"]),
+                    workspace_id=identity["workspace_id"])
+                response = await self._dispatch(frame, identity, websocket)
+                if response is not None:
+                    await websocket.send(_encode_wss_text_frame(response))
+        finally:
+            await self._hub.unsubscribe(websocket, daemon=self._daemon())
+        await websocket.close(code=1001, reason="Companion disabled")
+
+    def _daemon(self) -> Any | None:
+        """Return the running daemon instance, or None when unwired."""
+        if self._daemon_accessor is None:
+            return None
+        try:
+            return self._daemon_accessor()
+        except Exception:  # noqa: BLE001 — a broken accessor fails closed
+            return None
+
+    @staticmethod
+    def _relativize(root: Path, absolute: str) -> str:
+        """Render an absolute host path as workspace-relative for the client.
+
+        Absolute host paths are never sent to a remote device; the client
+        works in workspace-relative paths and the server re-joins them.
+        """
+        try:
+            relative = Path(absolute).relative_to(root)
+        except (ValueError, TypeError):
+            return "."
+        return relative.as_posix() or "."
+
+    def _resolve_workspace_path(self, root: Path, client_path: str) -> Path:
+        """Resolve a client path inside the bound workspace (refuses escapes)."""
+        return resolve_under_root(root, client_path)
+
+    def _daemon_result(self, frame: dict[str, Any], reply: dict[str, Any]) -> dict[str, Any]:
+        """Translate one daemon reply frame into a ``<type>.result`` frame."""
+        if isinstance(reply.get("error"), str):
+            return _error(frame.get("request_id"), "daemon_error", reply["error"])
+        result = {key: value for key, value in reply.items() if key != "type"}
+        return {
+            "type": f"{frame['type']}.result",
+            "request_id": frame["request_id"],
+            "workspace_id": frame["workspace_id"],
+            **result,
+        }
+
+    async def _dispatch(self, frame: dict[str, Any], identity: dict[str, Any],
+                        websocket: Any) -> dict[str, Any] | None:
+        """Dispatch one validated frame. Never raises for a bad request."""
+        kind = frame["type"]
+        request_id = frame.get("request_id")
+        try:
+            if kind == "status":
+                return {
+                    "type": "status.result", "request_id": request_id,
                     "listener": "wss", "enabled": self._host.enabled,
                 }
-            elif frame["type"] == "sessions.list":
+            if kind == "sessions.list":
                 # The workspace path is taken only from the approved device
                 # credential record. Never accept a remote cwd/path override.
                 sessions = await asyncio.to_thread(
                     Session.list_sessions, Path(identity["cwd"]))
                 sessions = _remote_session_metadata(sessions)
-                response = {
-                    "type": "sessions.result", "request_id": frame["request_id"],
+                return {
+                    "type": "sessions.result", "request_id": request_id,
                     "workspace_id": identity["workspace_id"], "sessions": sessions,
                 }
-            else:
-                response = {"type": "error", "request_id": frame.get("request_id"),
-                           "code": "not_implemented"}
-            await websocket.send(_encode_wss_text_frame(response))
-        await websocket.close(code=1001, reason="Companion disabled")
+            if kind in _SESSION_DAEMON_OPS:
+                return await self._dispatch_session_op(frame, identity)
+            if kind in ("chat.send", "chat.cancel", "chat.approve"):
+                return await self._dispatch_chat(frame, identity, websocket)
+            if kind in ("files.list", "files.read"):
+                return await self._dispatch_files_read(frame, identity)
+            if kind in ("sandbox.set", "sandbox.roots"):
+                return await self._dispatch_sandbox(frame, identity)
+            if kind in ("terminal.exec", "terminal.exec_cancel"):
+                return await self._dispatch_exec(frame, identity)
+            if kind in ("files.write", "files.delete"):
+                return await self._dispatch_files_write(frame, identity)
+            # Validated Batch B/C frames: the frozen contract names them, but
+            # their server dispatch lands in later batches.
+            return _error(request_id, "not_implemented")
+        except (CompanionDaemonError, CompanionExecError, CompanionFileError) as exc:
+            code = getattr(exc, "code", "daemon_error")
+            return _error(request_id, code, str(exc))
+        except Exception:  # noqa: BLE001 — one bad frame must not kill the socket
+            _LOG.warning("companion dispatch failed: operation=%r", kind)
+            return _error(request_id, "internal_error")
+
+    async def _dispatch_session_op(self, frame: dict[str, Any],
+                                   identity: dict[str, Any]) -> dict[str, Any]:
+        daemon = self._daemon()
+        if daemon is None:
+            return _error(frame.get("request_id"), "daemon_unavailable")
+        daemon_type, reply_type = _SESSION_DAEMON_OPS[frame["type"]]
+        message: dict[str, Any] = {
+            "type": daemon_type,
+            "session_id": frame["session_id"],
+            "cwd": identity["cwd"],
+        }
+        if frame["type"] == "sessions.rename":
+            message["title"] = frame.get("title", "")
+        elif frame["type"] == "sessions.rewind":
+            message["record_index"] = frame["record_index"]
+        elif frame["type"] == "sessions.history":
+            for name in ("include_records", "limit", "offset", "before_index"):
+                if name in frame:
+                    message[name] = frame[name]
+            # The client leaves limit unset; default it server-side so a
+            # long session cannot blow the frame cap with a full replay.
+            message.setdefault("limit", DEFAULT_HISTORY_LIMIT)
+        elif frame["type"] == "sessions.resolve_cwd":
+            pass  # daemon echoes the identity cwd as the candidate
+        if frame["type"] in _SESSION_MUTATING_OPS:
+            _LOG.info("companion session allowed: operation=%r session=%r device=%r",
+                      frame["type"], frame["session_id"], identity["device_id"])
+        replies = await call_daemon_message(
+            daemon, message, session_id=frame["session_id"], cwd=identity["cwd"])
+        reply = next((item for item in replies if item.get("type") == reply_type),
+                     replies[0] if replies else None)
+        if reply is None:
+            return _error(frame.get("request_id"), "daemon_error", "no reply from daemon")
+        return self._daemon_result(frame, reply)
+
+    async def _dispatch_chat(self, frame: dict[str, Any], identity: dict[str, Any],
+                             websocket: Any) -> dict[str, Any]:
+        daemon = self._daemon()
+        if daemon is None:
+            return _error(frame.get("request_id"), "daemon_unavailable")
+        device_id = identity["device_id"]
+        if frame["type"] == "chat.cancel":
+            # No session_id: cancel every turn this connection is subscribed
+            # to (the client cancels "the active turn" without naming it).
+            targets = ([frame["session_id"]] if frame.get("session_id")
+                       else self._hub.sessions_for(websocket))
+            stopped = False
+            for session_id in targets:
+                stopped = await cancel_turn(
+                    daemon, session_id=session_id, device_id=device_id) or stopped
+            return {"type": "chat.cancel.result", "request_id": frame.get("request_id"),
+                    "workspace_id": identity["workspace_id"],
+                    "session_id": frame.get("session_id"), "stopped": stopped}
+        if frame["type"] == "chat.approve":
+            answered = answer_approval(
+                daemon, approval_request_id=frame["approval_request_id"],
+                approved=frame["approved"], device_id=device_id)
+            return {"type": "chat.approve.result", "request_id": frame.get("request_id"),
+                    "workspace_id": identity["workspace_id"],
+                    "approval_request_id": frame["approval_request_id"],
+                    "answered": answered}
+        # chat.send: subscribe BEFORE starting the turn so task_queued and
+        # the turn's stream frames reach this connection.
+        session_id = frame.get("session_id")
+        if not session_id:
+            return _error(frame.get("request_id"), "session_required",
+                          "chat.send requires session_id")
+        await self._hub.subscribe(
+            websocket, session_id=session_id,
+            scopes=frozenset(identity["scopes"]), device_id=device_id,
+            daemon=daemon, cwd=identity["cwd"])
+        outcome = await start_task(
+            daemon, session_id=session_id, cwd=identity["cwd"],
+            prompt=frame["prompt"], request_id=frame.get("request_id"),
+            device_id=device_id)
+        return {"type": "chat.send.result", "request_id": frame.get("request_id"),
+                "workspace_id": identity["workspace_id"],
+                "session_id": session_id, **outcome}
+
+    async def _dispatch_files_read(self, frame: dict[str, Any],
+                                   identity: dict[str, Any]) -> dict[str, Any]:
+        daemon = self._daemon()
+        if daemon is None:
+            return _error(frame.get("request_id"), "daemon_unavailable")
+        root = Path(identity["cwd"]).resolve()
+        try:
+            target = self._resolve_workspace_path(root, frame["path"])
+        except CompanionFileError as exc:
+            return _error(frame.get("request_id"), exc.code, str(exc))
+        if frame["type"] == "files.list":
+            replies = await call_daemon_message(
+                daemon, {"type": "list_files", "path": str(target)})
+            reply = next((item for item in replies if item.get("type") == "files_list"),
+                         replies[0] if replies else None)
+            if reply is None:
+                return _error(frame.get("request_id"), "daemon_error", "no reply from daemon")
+            result = self._daemon_result(frame, reply)
+            if isinstance(result.get("path"), str):
+                result["path"] = self._relativize(root, result["path"])
+            entries = result.get("entries")
+            if isinstance(entries, list):
+                for entry in entries:
+                    if isinstance(entry, dict) and isinstance(entry.get("path"), str):
+                        entry["path"] = self._relativize(root, entry["path"])
+            return result
+        message: dict[str, Any] = {"type": "read_file", "path": str(target)}
+        for name in ("start_line", "line_limit"):
+            if name in frame:
+                message[name] = frame[name]
+        replies = await call_daemon_message(daemon, message)
+        reply = next((item for item in replies if item.get("type") == "file_content"),
+                     replies[0] if replies else None)
+        if reply is None:
+            return _error(frame.get("request_id"), "daemon_error", "no reply from daemon")
+        result = self._daemon_result(frame, reply)
+        if isinstance(result.get("path"), str):
+            result["path"] = self._relativize(root, result["path"])
+        return result
+
+    async def _dispatch_sandbox(self, frame: dict[str, Any],
+                                identity: dict[str, Any]) -> dict[str, Any]:
+        daemon = self._daemon()
+        if daemon is None:
+            return _error(frame.get("request_id"), "daemon_unavailable")
+        if frame["type"] == "sandbox.set":
+            _LOG.info("companion sandbox allowed: operation=%r session=%r device=%r",
+                      "sandbox.set", frame["session_id"], identity["device_id"])
+            replies = await call_daemon_message(daemon, {
+                "type": "set_sandbox", "session_id": frame["session_id"],
+                "cwd": identity["cwd"], "mode": frame["mode"],
+            }, session_id=frame["session_id"], cwd=identity["cwd"])
+            reply = next((item for item in replies if item.get("type") == "sandbox_set"),
+                         replies[0] if replies else None)
+            if reply is None:
+                return _error(frame.get("request_id"), "daemon_error", "no reply from daemon")
+            return self._daemon_result(frame, reply)
+        # sandbox.roots: add/remove paths are validated inside the bound
+        # workspace before the daemon ever sees them; list needs no path.
+        path = ""
+        if frame["op"] in ("add", "remove"):
+            root = Path(identity["cwd"]).resolve()
+            try:
+                path = str(self._resolve_workspace_path(root, frame["path"]))
+            except CompanionFileError as exc:
+                return _error(frame.get("request_id"), exc.code, str(exc))
+            _LOG.info("companion sandbox allowed: operation=%r session=%r device=%r",
+                      "sandbox.roots", frame["session_id"], identity["device_id"])
+        replies = await call_daemon_message(daemon, {
+            "type": "set_sandbox_roots", "session_id": frame["session_id"],
+            "cwd": identity["cwd"], "op": frame["op"], "path": path,
+            "kind": frame.get("kind"),
+        }, session_id=frame["session_id"], cwd=identity["cwd"])
+        reply = next((item for item in replies if item.get("type") == "sandbox_roots"),
+                     replies[0] if replies else None)
+        if reply is None:
+            return _error(frame.get("request_id"), "daemon_error", "no reply from daemon")
+        return self._daemon_result(frame, reply)
+
+    async def _dispatch_exec(self, frame: dict[str, Any],
+                             identity: dict[str, Any]) -> dict[str, Any]:
+        device_id = identity["device_id"]
+        if frame["type"] == "terminal.exec_cancel":
+            cancelled = await self._exec_manager.cancel(device_id, frame["exec_id"])
+            return {"type": "terminal.exec_cancel.result",
+                    "request_id": frame.get("request_id"),
+                    "workspace_id": identity["workspace_id"],
+                    "exec_id": frame["exec_id"], "cancelled": cancelled}
+        result = await self._exec_manager.run_exec(
+            device_id=device_id,
+            command=frame["command"],
+            cwd=identity["cwd"],
+            session_id=frame.get("session_id"),
+            timeout=frame.get("timeout"),
+            requested_mode=frame.get("mode"),
+            confirm_danger=bool(frame.get("confirm_danger", False)),
+            confirm_risky=bool(frame.get("confirm_risky", False)),
+            config=self._exec_config,
+        )
+        return {"type": "terminal.exec.result", "request_id": frame.get("request_id"),
+                "workspace_id": identity["workspace_id"],
+                "exec_id": result.exec_id, "cwd": result.cwd, "mode": result.mode,
+                "stdout": result.stdout, "stderr": result.stderr,
+                "exit_code": result.exit_code, "signal": result.signal,
+                "timed_out": result.timed_out, "sandbox": result.sandbox,
+                "duration_ms": result.duration_ms,
+                "stdout_truncated": result.stdout_truncated,
+                "stderr_truncated": result.stderr_truncated}
+
+    async def _dispatch_files_write(self, frame: dict[str, Any],
+                                    identity: dict[str, Any]) -> dict[str, Any]:
+        device_id = identity["device_id"]
+        if frame["type"] == "files.delete":
+            outcome = companion_delete_file(
+                frame["path"], root=identity["cwd"],
+                session_id=frame.get("session_id"), config=self._exec_config,
+                mode=frame.get("mode"), confirm_danger=bool(frame.get("confirm_danger", False)),
+                device_id=device_id)
+            return {"type": "files.delete.result", "request_id": frame.get("request_id"),
+                    "workspace_id": identity["workspace_id"], **outcome}
+        outcome = companion_write_file(
+            frame["path"], frame["content"], root=identity["cwd"],
+            session_id=frame.get("session_id"), config=self._exec_config,
+            expected_sha256=frame.get("expected_sha256"),
+            create_parents=bool(frame.get("create_parents", False)),
+            mode=frame.get("mode"), confirm_danger=bool(frame.get("confirm_danger", False)),
+            device_id=device_id)
+        return {"type": "files.write.result", "request_id": frame.get("request_id"),
+                "workspace_id": identity["workspace_id"],
+                "path": outcome.path, "bytes_written": outcome.bytes_written,
+                "sha256": outcome.sha256, "created": outcome.created,
+                "mode": outcome.mode, "line_count": outcome.line_count}

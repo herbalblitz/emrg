@@ -314,7 +314,7 @@ def test_remote_session_metadata_is_allowlisted_bounded_and_capped():
 
 
 
-def test_wss_chat_send_is_explicitly_not_dispatched_even_with_scope(tmp_path, monkeypatch):
+def test_wss_chat_send_without_daemon_accessor_is_unavailable(tmp_path, monkeypatch):
     async def run():
         host = CompanionHostService(tmp_path / "registry.json")
         host.enable()
@@ -324,7 +324,8 @@ def test_wss_chat_send_is_explicitly_not_dispatched_even_with_scope(tmp_path, mo
         listener = _listener(tmp_path, host)
         dispatch_attempts = []
 
-        # Guard against accidentally wiring chat execution into this transport.
+        # No daemon accessor is wired in this listener: chat must fail
+        # closed instead of reaching for a daemon through any socket.
         monkeypatch.setattr(
             host, "send_chat",
             lambda **kwargs: dispatch_attempts.append(kwargs),
@@ -357,7 +358,7 @@ def test_wss_chat_send_is_explicitly_not_dispatched_even_with_scope(tmp_path, mo
             await listener._session(ws)
 
         assert ws.sent[1] == {
-            "type": "error", "request_id": "chat-1", "code": "not_implemented"
+            "type": "error", "request_id": "chat-1", "code": "daemon_unavailable"
         }
         assert dispatch_attempts == []
 
