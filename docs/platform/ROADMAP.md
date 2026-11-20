@@ -127,6 +127,7 @@ Protocol parsing/reducer commits: `e95de48`, `c151b46`, `01c0b59`; fixture/tests
 - [x] Compose local pairing approval, safe pending-pairing metadata, credential issuance/authentication, device listing and revocation in `CompanionHostService`; unit tests added. **Service is transport-independent and exposes no listener; trusted-local UI boundary remains caller responsibility.**
 - [ ] Integrate credential registry with host approval, TLS listener, active-connection revocation and approved-workspace enforcement.
 - [ ] Integrate secure transport with Android connection/reconciliation UI and test against a real host implementation.
+- [x] Wire the paired Android panel to the pinned authenticated WSS client; after `auth.ok`, request bounded host status and read-only session metadata, show results, support refresh/disconnect, and close the socket on panel disposal. Android CI is pending; no physical-device or end-to-end host pairing test is claimed.
 
 ### Companion hardening increment (2026-11-18)
 - [x] Host protocol parser rejects duplicate JSON keys and unknown client fields across auth/status/session/chat schemas; test cases committed.
