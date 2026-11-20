@@ -8,6 +8,7 @@ descriptor. Stopping disables host policy and closes the listener.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import ipaddress
 from pathlib import Path
 from typing import Any
@@ -47,17 +48,24 @@ class CompanionRuntime:
 
     async def _start_locked(self, payload: object) -> dict[str, Any]:
         """Start only from an exact, explicit local bind request."""
-        if not isinstance(payload, dict) or set(payload) != {"bind_address", "port"}:
+        if not isinstance(payload, dict) or set(payload) != {"bind_address", "port", "cwd"}:
             raise CompanionRuntimeError("invalid listener start request")
-        bind_address, port = payload["bind_address"], payload["port"]
+        bind_address, port, cwd_value = (
+            payload["bind_address"], payload["port"], payload["cwd"]
+        )
         if not isinstance(bind_address, str):
             raise CompanionRuntimeError("invalid listener bind address")
+        if not isinstance(cwd_value, str) or not cwd_value or len(cwd_value) > 4096:
+            raise CompanionRuntimeError("invalid workspace directory")
         try:
             address = ipaddress.ip_address(bind_address.strip())
             config = CompanionListenerConfig.build(str(address), port)
+            cwd = Path(cwd_value).resolve(strict=True)
+            if not cwd.is_dir():
+                raise ValueError("workspace is not a directory")
             identity = provision_host_identity(self._identity_directory, [str(address)])
-        except (ValueError, CompanionTlsError):
-            raise CompanionRuntimeError("invalid listener configuration or TLS identity") from None
+        except (OSError, RuntimeError, ValueError, CompanionTlsError):
+            raise CompanionRuntimeError("invalid listener, workspace, or TLS configuration") from None
 
         host_text = f"[{address}]" if address.version == 6 else str(address)
         endpoint = f"wss://{host_text}:{config.port}"
@@ -72,19 +80,32 @@ class CompanionRuntime:
             self._host, config, identity_directory=self._identity_directory,
         )
         self._host.enable()
+        self._host.enable()
         try:
             await listener.start()
+            workspace_id = hashlib.sha256(str(cwd).encode("utf-8")).hexdigest()[:32]
+            transaction = self._host.begin_pairing_v2(
+                host_identity=identity.fingerprint_sha256,
+                workspace_id=workspace_id,
+                cwd=str(cwd),
+                scopes={"status"},
+            )
+            descriptor = create_pairing_descriptor(
+                identity, endpoint, pairing_id=transaction["pairing_id"],
+            )
         except Exception:
             self._host.disable()
             await listener.close()
-            raise CompanionRuntimeError("listener could not be started") from None
+            raise CompanionRuntimeError("listener or pairing transaction could not be started") from None
         self._listener = listener
         self._endpoint = endpoint
         return {
             "running": True,
             "endpoint": endpoint,
             "fingerprint_sha256": identity.fingerprint_sha256,
+            "pairing_id": transaction["pairing_id"],
             "descriptor": descriptor,
+            "expires_in": transaction["expires_in"],
             "expires_at": int(identity.expires_at.timestamp()),
         }
 
