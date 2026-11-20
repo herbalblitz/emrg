@@ -109,6 +109,8 @@ internal fun reducePairingState(state: PairingState, action: PairingAction): Pai
                 action.host.deviceId.isBlank() ||
                 action.host.credentialAlias.isBlank() ||
                 action.host.scopes.isEmpty() ||
+                (PairingScope.LIST_SESSIONS in action.host.scopes &&
+                    action.host.approvedWorkspaceId?.matches(Regex("[A-Za-z0-9._:-]{1,128}")) != true) ||
                 (PairingScope.SEND_CHAT in action.host.scopes &&
                     (action.host.approvedWorkspaceId.isNullOrBlank() || action.host.approvedCwd.isNullOrBlank()))
             ) state.copy(phase = PairingPhase.FAILED, errorCode = "INVALID_DEVICE_CREDENTIAL")
