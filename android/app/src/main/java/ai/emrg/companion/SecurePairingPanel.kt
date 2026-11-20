@@ -85,8 +85,8 @@ internal fun SecurePairingPanel() {
             val credentialAlias = "host_" + MessageDigest.getInstance("SHA-256")
                 .digest((endpoint + "|" + fingerprint + "|" + id).toByteArray(Charsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }.take(48)
-            val scopes = setOf(PairingScope.READ_STATUS)
-            val protocolScopes = setOf("status")
+            val scopes = setOf(PairingScope.READ_STATUS, PairingScope.LIST_SESSIONS)
+            val protocolScopes = setOf("status", "sessions.list")
             val client = PairingV2Client(
                 keys = AndroidKeystoreDeviceKeyManager(),
                 deviceId = deviceId,
