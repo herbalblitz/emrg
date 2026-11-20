@@ -67,7 +67,7 @@ internal fun PairScreen(
                 prefillFingerprint = prefillFingerprint,
                 initialScopes = initialScopes,
                 preserveConnection = isRePair && pairedHost != null,
-            ) { _, _ -> }
+            )
             if (pairedHost != null) {
                 Button(onClick = {
                     // Back to the Hosts entry already on the stack when we

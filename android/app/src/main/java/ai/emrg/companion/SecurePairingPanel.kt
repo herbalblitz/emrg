@@ -84,8 +84,8 @@ internal fun SecurePairingPanel(
     // A re-pair may pass the host's currently granted scopes instead.
     var selectedScopes by remember {
         mutableStateOf(
-            initialScopes?.filter { it in PairingScope.REQUESTABLE }.toSet()
-                .takeIf { !it.isNullOrEmpty() } ?: PairingScope.DEFAULT_REQUESTED
+            initialScopes?.filter { it in PairingScope.REQUESTABLE }?.toSet()
+                ?.takeIf { it.isNotEmpty() } ?: PairingScope.DEFAULT_REQUESTED
         )
     }
     // Ignore callbacks queued by an older QR transaction after reset or rescan.
