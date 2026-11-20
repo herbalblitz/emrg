@@ -55,9 +55,23 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 #: way it did; `BACKSLASH * 2` cannot.
 BACKSLASH = chr(92)
 
+#: Binary files the sweep cannot read as text. A keystore or a jar is not a
+#: carrier a command is written in, and reading one as UTF-8 reports it as an
+#: offender for being unreadable rather than for carrying a doubled backslash.
+#: Suffixes, not paths, so a future binary in any directory is out of class
+#: the same way.
+BINARY_SUFFIXES = (".jar", ".keystore")
+
+
+def is_binary(name: str) -> bool:
+    """Is this path a binary file the sweep cannot read as text?"""
+    return name.endswith(BINARY_SUFFIXES)
+
+
 #: Directories holding third-party sources, by the boundary the repository already uses. Matched
 #: as a path *component* of the parent directories, so a file named `vendor.js` is still read.
 VENDORED_DIRS = ("vendor", "node_modules", "dist")
+
 
 #: How many tracked files the sweep must see before its verdict means anything. Far below the
 #: 481 measured on 2026-10-03, because the number should not need updating as files are added -
@@ -94,7 +108,7 @@ def tracked_files() -> list[str]:
     return [
         line
         for line in proc.stdout.splitlines()
-        if line.strip() and not is_vendored(line)
+        if line.strip() and not is_vendored(line) and not is_binary(line)
     ]
 
 
@@ -179,6 +193,19 @@ def test_the_vendored_bundles_are_out_of_class() -> None:
         "a file *named* vendor.py is this repository's own code and must stay in class"
     )
     assert is_vendored("tests/test_shell_continuations.py") is False
+
+
+def test_a_binary_file_is_out_of_class() -> None:
+    """A keystore or jar is not a carrier a command is written in.
+
+    Without the exclusion the sweep reports the file as an offender for being
+    unreadable, which is a reading of nothing — and every future binary would
+    red the guard the same way.
+    """
+    assert is_binary("android/debug.keystore") is True
+    assert is_binary("android/gradle/wrapper/gradle-wrapper.jar") is True
+    assert is_binary("android/app/build.gradle.kts") is False
+    assert is_binary("tests/test_shell_continuations.py") is False
 
 
 def test_no_tracked_file_ends_a_line_with_a_doubled_backslash() -> None:

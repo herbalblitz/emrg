@@ -23,6 +23,21 @@ android {
         versionCode = 1
         versionName = "0.1.0"
     }
+
+    signingConfigs {
+        // One shared debug key for every build, so CI APKs update the
+        // installed app instead of being refused for a signature
+        // mismatch. The keystore is the standard public Android debug
+        // key (alias androiddebugkey, password "android", the same one
+        // every SDK generates); it is not a secret and not the release
+        // key.
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
 }
 
 dependencies {

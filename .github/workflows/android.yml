@@ -35,6 +35,21 @@ jobs:
       - name: Assemble debug APK
         working-directory: android
         run: gradle --no-daemon assembleDebug
+      # The APK must be signed with the repo's shared debug keystore
+      # (see app/build.gradle.kts), or the phone refuses to install it
+      # over the previous build. Fail the job here — not on the phone —
+      # if the signature ever drifts again. The keytool grep matches
+      # "SHA256:" with its colon, so it cannot also match the
+      # "Signature algorithm name: SHA256withRSA" line.
+      - name: Verify APK signature matches the shared debug keystore
+        working-directory: android
+        run: |
+          key_cert=$(keytool -list -v -keystore debug.keystore -storepass android | grep "SHA256:" | awk '{print $2}' | tr -d ':' | tr 'A-Z' 'a-z')
+          echo "shared keystore: $key_cert"
+          apksigner_bin=$(command -v apksigner || ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)
+          apk_cert=$("$apksigner_bin" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | grep "SHA-256 digest:" | awk '{print $NF}')
+          echo "app-debug.apk: $apk_cert"
+          [ "$apk_cert" = "$key_cert" ] || { echo "signature mismatch in app-debug.apk"; exit 1; }
       - name: Unit tests
         working-directory: android
         run: gradle --no-daemon testDebugUnitTest
