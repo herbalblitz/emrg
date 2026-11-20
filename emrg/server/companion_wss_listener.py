@@ -43,6 +43,15 @@ def _safe_remote_text(value: str, limit: int) -> bool:
                    for char in value[:limit])
 
 
+def _encode_wss_text_frame(frame: dict[str, Any]) -> str:
+    """Encode JSON as a WebSocket text frame, not a binary frame.
+
+    The shared encoder returns bounded UTF-8 bytes; websockets treats bytes as
+    binary messages, which the Android Companion client intentionally rejects.
+    """
+    return encode_server_frame(frame).decode("utf-8")
+
+
 def _remote_session_metadata(records: object) -> list[dict[str, Any]]:
     """Expose a bounded metadata allowlist; never forward local paths or raw meta."""
     if not isinstance(records, list):
@@ -286,7 +295,7 @@ class CompanionWssListener:
                 "pairing_id": frame["pairing_id"],
                 "code": "pairing_unavailable",
             }
-        await websocket.send(encode_server_frame(response))
+        await websocket.send(_encode_wss_text_frame(response))
 
     async def _session(self, websocket) -> None:
         first = await asyncio.wait_for(
@@ -308,7 +317,7 @@ class CompanionWssListener:
         identity = self._host.authenticate(first)
         # Validate envelope again to guarantee exact auth-frame shape.
         validate_client_frame(first, authenticated=False)
-        await websocket.send(encode_server_frame({
+        await websocket.send(_encode_wss_text_frame({
             "type": "auth.ok", "protocol": "1.0",
             "workspace_id": identity["workspace_id"],
             "scopes": sorted(identity["scopes"]),
@@ -345,5 +354,5 @@ class CompanionWssListener:
             else:
                 response = {"type": "error", "request_id": frame.get("request_id"),
                            "code": "not_implemented"}
-            await websocket.send(encode_server_frame(response))
+            await websocket.send(_encode_wss_text_frame(response))
         await websocket.close(code=1001, reason="Companion disabled")

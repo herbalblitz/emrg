@@ -275,6 +275,10 @@ The listener also rejects a second concurrent `start()` while the first bind is 
 - Android Pairing v2 request/redeem transport and pinned WSS client primitives exist. The authenticated socket now matches the host's `auth.ok` response and validates exact workspace/scope binding. Authenticated status/session UI operations, physical-device Keystore validation and live Android-to-Windows end-to-end tests remain open.
 
 
+## Companion WSS WebSocket frame encoding
+
+The host serializes bounded JSON with `encode_server_frame`, which returns UTF-8 bytes. Before calling the Python `websockets` API, the listener decodes those bytes to a UTF-8 string so the library emits a WebSocket **text** frame. Passing bytes to `websocket.send` would emit a binary frame; the Android Companion client rejects binary frames. Regression tests assert text-frame delivery for authentication, status, session-list and Pairing v2 responses.
+
 ## JSON byte encoding regression
 
 The host protocol accepts JSON text encoded as UTF-8 only. When validators receive byte payloads, they decode strict UTF-8 before JSON parsing; UTF-16/UTF-32 payloads are rejected even though Python's generic JSON byte decoder can auto-detect those encodings. The existing frame-size limit is still measured against the original UTF-8 byte length. This applies to both the v1 authenticated client-frame validator and the separate v2 pairing-frame validator.

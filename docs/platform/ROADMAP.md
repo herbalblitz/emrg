@@ -34,6 +34,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Document safe reconnect/reconciliation constraints: never replay non-idempotent commands; mark active streams interrupted and require authoritative host snapshot before resuming UI state (design-only).
 - [x] Add Android protocol-event-to-chat bridge with request binding and mismatch isolation (CI passed run 44260106387).
 - [x] Align Android authenticated WSS response handling with the host's actual `auth.ok` frame; require exact approved workspace/scopes (JVM regression tests added; CI pending).
+- [x] Send host auth/status/session/pairing responses as WebSocket text frames (not binary); add mock-socket type assertions for each WSS response path (CI pending).
 - [ ] Review pairing design without weakening local endpoint.
 
 ### M2 — Android foundation

@@ -115,6 +115,7 @@ def test_wss_session_authenticates_and_returns_scoped_status(tmp_path):
                 except StopIteration:
                     raise asyncio.TimeoutError()
             async def send(self, data):
+                assert isinstance(data, str), "Companion WSS responses must be text frames"
                 self.sent.append(data)
             async def close(self, **kwargs):
                 pass
@@ -161,6 +162,7 @@ def test_wss_session_lists_only_credential_bound_workspace(tmp_path, monkeypatch
                 except StopIteration:
                     raise asyncio.TimeoutError()
             async def send(self, data):
+                assert isinstance(data, str), "Companion WSS responses must be text frames"
                 self.sent.append(data)
             async def close(self, **kwargs):
                 pass
@@ -208,6 +210,7 @@ def test_wss_rechecks_device_revocation_before_each_request(tmp_path):
                 host.revoke_device("phone-revoked")
                 return json.dumps(status)
             async def send(self, data):
+                assert isinstance(data, str), "Companion WSS responses must be text frames"
                 self.sent.append(json.loads(data))
             async def close(self, **kwargs):
                 self.closed.append(kwargs)
@@ -344,6 +347,7 @@ def test_wss_chat_send_is_explicitly_not_dispatched_even_with_scope(tmp_path, mo
                 except StopIteration:
                     raise asyncio.TimeoutError()
             async def send(self, data):
+                assert isinstance(data, str), "Companion WSS responses must be text frames"
                 self.sent.append(json.loads(data))
             async def close(self, **kwargs):
                 pass
@@ -395,6 +399,7 @@ def test_wss_rejects_sessions_list_without_scope_before_dispatch(tmp_path, monke
                 except StopIteration:
                     raise asyncio.TimeoutError()
             async def send(self, data):
+                assert isinstance(data, str), "Companion WSS responses must be text frames"
                 self.sent.append(json.loads(data))
             async def close(self, **kwargs):
                 self.closed.append(kwargs)
@@ -437,6 +442,7 @@ def test_wss_closes_existing_socket_after_credential_rotation(tmp_path):
                     cwd=str(tmp_path), scopes={"status"})
                 return json.dumps(status)
             async def send(self, data):
+                assert isinstance(data, str), "Companion WSS responses must be text frames"
                 self.sent.append(json.loads(data))
             async def close(self, **kwargs):
                 self.closed.append(kwargs)
@@ -681,6 +687,7 @@ def test_wss_pairing_v2_request_and_redeem_require_host_local_approval(tmp_path)
             async def recv(self):
                 return self.frame
             async def send(self, data):
+                assert isinstance(data, str), "Companion WSS responses must be text frames"
                 self.sent.append(json.loads(data))
             async def close(self, **kwargs):
                 self.closed.append(kwargs)
@@ -754,6 +761,7 @@ def test_wss_pairing_v2_redeem_before_local_approval_fails_closed(tmp_path):
             async def recv(self):
                 return self.frame
             async def send(self, data):
+                assert isinstance(data, str), "Companion WSS responses must be text frames"
                 self.sent.append(json.loads(data))
             async def close(self, **kwargs):
                 pass
@@ -936,6 +944,7 @@ def test_wss_pairing_v2_request_and_redeem_are_one_frame_local_approval_only(tmp
                 self.received = True
                 return json.dumps(self.frame)
             async def send(self, data):
+                assert isinstance(data, str), "Companion WSS responses must be text frames"
                 self.sent.append(json.loads(data))
             async def close(self, **kwargs):
                 pass
@@ -1010,6 +1019,7 @@ def test_wss_pairing_v2_does_not_reveal_unapproved_transaction_state(tmp_path):
             async def recv(self):
                 return json.dumps(self.frame)
             async def send(self, data):
+                assert isinstance(data, str), "Companion WSS responses must be text frames"
                 self.sent.append(json.loads(data))
             async def close(self, **kwargs):
                 pass
