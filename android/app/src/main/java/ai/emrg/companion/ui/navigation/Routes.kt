@@ -4,12 +4,18 @@ import ai.emrg.companion.CompanionConnection
 import ai.emrg.companion.ui.screens.AboutScreen
 import ai.emrg.companion.ui.screens.ChatScreen
 import ai.emrg.companion.ui.screens.EditorScreen
+import ai.emrg.companion.ui.screens.EvolutionScreen
 import ai.emrg.companion.ui.screens.FilesScreen
 import ai.emrg.companion.ui.screens.HostsScreen
+import ai.emrg.companion.ui.screens.MemoryScreen
+import ai.emrg.companion.ui.screens.ModelsScreen
 import ai.emrg.companion.ui.screens.NotYetAvailableScreen
 import ai.emrg.companion.ui.screens.PairScreen
+import ai.emrg.companion.ui.screens.RantScreen
 import ai.emrg.companion.ui.screens.SandboxScreen
 import ai.emrg.companion.ui.screens.SessionsScreen
+import ai.emrg.companion.ui.screens.SkillsScreen
+import ai.emrg.companion.ui.screens.TasksScreen
 import ai.emrg.companion.ui.screens.TerminalScreen
 import ai.emrg.companion.ui.screens.ToolMonitorScreen
 import androidx.compose.foundation.layout.padding
@@ -183,15 +189,26 @@ internal fun CompanionNavHost(
                     sessionId = entry.arguments?.getString(Route.ArgSessionId).orEmpty(),
                 )
             }
-            // Batch B/C routes exist in the spine now; their screens land in later
-            // batches. Until then each shows which scope it needs and that it is
-            // not built yet — never a dead navigation target.
-            composable(Route.Memory) { NotYetAvailableScreen("Memory", ai.emrg.companion.PairingScope.READ_MEMORY, connection, navController) }
-            composable(Route.Models) { NotYetAvailableScreen("Models", ai.emrg.companion.PairingScope.MANAGE_MODELS, connection, navController) }
-            composable(Route.Rant) { NotYetAvailableScreen("Rant", ai.emrg.companion.PairingScope.SUBMIT_RANT, connection, navController) }
-            composable(Route.Evolution) { NotYetAvailableScreen("Evolution", ai.emrg.companion.PairingScope.READ_EVOLUTION, connection, navController) }
-            composable(Route.Tasks) { NotYetAvailableScreen("Tasks", ai.emrg.companion.PairingScope.MANAGE_TASKS, connection, navController) }
-            composable(Route.Skills) { NotYetAvailableScreen("Skills", ai.emrg.companion.PairingScope.MANAGE_SKILLS, connection, navController) }
+            // Batch B screens are built; Batch C routes still show the stub
+            // until their screens land — never a dead navigation target.
+            composable(Route.Memory) {
+                MemoryScreen(connection = connection, navController = navController)
+            }
+            composable(Route.Models) {
+                ModelsScreen(connection = connection, navController = navController)
+            }
+            composable(Route.Rant) {
+                RantScreen(connection = connection, navController = navController)
+            }
+            composable(Route.Evolution) {
+                EvolutionScreen(connection = connection, navController = navController)
+            }
+            composable(Route.Tasks) {
+                TasksScreen(connection = connection, navController = navController)
+            }
+            composable(Route.Skills) {
+                SkillsScreen(connection = connection, navController = navController)
+            }
             composable(Route.Logs) { NotYetAvailableScreen("Logs", ai.emrg.companion.PairingScope.READ_LOGS, connection, navController) }
             composable(Route.Audit) { NotYetAvailableScreen("Audit", ai.emrg.companion.PairingScope.READ_AUDIT, connection, navController) }
             composable(Route.Devices) { NotYetAvailableScreen("Devices", ai.emrg.companion.PairingScope.MANAGE_DEVICES, connection, navController) }

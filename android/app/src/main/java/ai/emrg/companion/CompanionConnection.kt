@@ -162,6 +162,48 @@ internal class CompanionConnection(context: Context) {
 
     fun sendSandboxRoots(requestId: String, op: String, path: String? = null, sessionId: String? = null): Boolean =
         socket.sendSandboxRoots(requestId, op, path, sessionId)
+
+    fun sendMemoryList(requestId: String, scope: String = "agent", sessionId: String? = null): Boolean =
+        socket.sendMemoryList(requestId, scope, sessionId)
+
+    fun sendMemoryRead(requestId: String, memoryId: String, scope: String = "agent", sessionId: String? = null): Boolean =
+        socket.sendMemoryRead(requestId, memoryId, scope, sessionId)
+
+    fun sendModelsList(requestId: String): Boolean = socket.sendModelsList(requestId)
+
+    fun sendModelsSet(requestId: String, model: String): Boolean = socket.sendModelsSet(requestId, model)
+
+    fun sendRantList(requestId: String, status: String? = null): Boolean =
+        socket.sendRantList(requestId, status)
+
+    fun sendRantSubmit(requestId: String, message: String, agent: String? = null): Boolean =
+        socket.sendRantSubmit(requestId, message, agent)
+
+    fun sendEvolutionSummary(requestId: String, limit: Int = 5): Boolean =
+        socket.sendEvolutionSummary(requestId, limit)
+
+    fun sendTasks(
+        requestId: String,
+        type: String,
+        name: String? = null,
+        prompt: String? = null,
+        taskType: String? = null,
+        agent: String? = null,
+        interval: Int? = null,
+        enabled: Boolean? = null,
+        repo: String? = null,
+        description: String? = null,
+        sandbox: String? = null,
+    ): Boolean = socket.sendTasks(
+        requestId, type, name, prompt, taskType, agent, interval, enabled, repo, description, sandbox,
+    )
+
+    fun sendSkills(
+        requestId: String,
+        type: String,
+        name: String? = null,
+        confirmed: Boolean? = null,
+    ): Boolean = socket.sendSkills(requestId, type, name, confirmed)
 }
 
 /** A host error frame surfaced to the user without leaking raw payloads. */

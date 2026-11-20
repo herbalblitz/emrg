@@ -338,6 +338,114 @@ internal class PinnedRemoteWebSocket(
         return socket?.send(companionSandboxRootsFrame(requestId, workspaceId, op, path, sessionId).toString()) == true
     }
 
+    /** List agent memories (scope "agent" by default). Gated by memory.read. */
+    fun sendMemoryList(requestId: String, scope: String = "agent", sessionId: String? = null): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.READ_MEMORY !in host.scopes) return false
+        if (scope !in MEMORY_SCOPES) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionMemoryListFrame(requestId, workspaceId, scope, sessionId).toString()) == true
+    }
+
+    /** Read one memory by id. Gated by memory.read. */
+    fun sendMemoryRead(requestId: String, memoryId: String, scope: String = "agent", sessionId: String? = null): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.READ_MEMORY !in host.scopes) return false
+        if (scope !in MEMORY_SCOPES) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionMemoryReadFrame(requestId, workspaceId, memoryId, scope, sessionId).toString()) == true
+    }
+
+    /** List the engine's available models. Gated by models.manage. */
+    fun sendModelsList(requestId: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_MODELS !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionModelsListFrame(requestId, workspaceId).toString()) == true
+    }
+
+    /**
+     * Switch the engine model. Gated by models.manage. The model is global
+     * engine state: it changes what every client sees, not just this device.
+     */
+    fun sendModelsSet(requestId: String, model: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_MODELS !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionModelsSetFrame(requestId, workspaceId, model).toString()) == true
+    }
+
+    /** List recorded rants. Gated by rant.submit. */
+    fun sendRantList(requestId: String, status: String? = null): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.SUBMIT_RANT !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionRantListFrame(requestId, workspaceId, status).toString()) == true
+    }
+
+    /** Submit a rant/feedback message. Gated by rant.submit. */
+    fun sendRantSubmit(requestId: String, message: String, agent: String? = null): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.SUBMIT_RANT !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionRantSubmitFrame(requestId, workspaceId, message, agent).toString()) == true
+    }
+
+    /** Read the evolution summary (cycle count + recent records). Gated by evolution.read. */
+    fun sendEvolutionSummary(requestId: String, limit: Int = 5): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.READ_EVOLUTION !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionEvolutionSummaryFrame(requestId, workspaceId, limit).toString()) == true
+    }
+
+    /**
+     * One tasks.* frame (list/trigger/create/update/delete/templates and the
+     * template_* trio). Gated by tasks.manage. The server reports
+     * "scheduler not running" as an error when the scheduler is down.
+     */
+    fun sendTasks(
+        requestId: String,
+        type: String,
+        name: String? = null,
+        prompt: String? = null,
+        taskType: String? = null,
+        agent: String? = null,
+        interval: Int? = null,
+        enabled: Boolean? = null,
+        repo: String? = null,
+        description: String? = null,
+        sandbox: String? = null,
+    ): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_TASKS !in host.scopes) return false
+        if (type !in TASKS_TYPES) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(
+            companionTasksFrame(
+                requestId, workspaceId, type, name, prompt, taskType, agent,
+                interval, enabled, repo, description, sandbox,
+            ).toString()
+        ) == true
+    }
+
+    /**
+     * One skills.* frame (list/available/install/update). Gated by
+     * skills.manage. Install and update fetch and install code on the host.
+     */
+    fun sendSkills(
+        requestId: String,
+        type: String,
+        name: String? = null,
+        confirmed: Boolean? = null,
+    ): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_SKILLS !in host.scopes) return false
+        if (type !in SKILLS_TYPES) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionSkillsFrame(requestId, workspaceId, type, name, confirmed).toString()) == true
+    }
+
     /** True when this socket is authenticated and the paired host granted [scope]. */
     fun hasScope(scope: PairingScope): Boolean =
         authenticated && pairedHost?.scopes?.contains(scope) == true
@@ -602,6 +710,161 @@ internal class PinnedRemoteWebSocket(
                 }
         }
 
+        internal fun companionMemoryListFrame(
+            requestId: String,
+            workspaceId: String,
+            scope: String,
+            sessionId: String? = null,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(scope in MEMORY_SCOPES) { "unsupported memory scope" }
+            return JSONObject()
+                .put("type", "memory.list")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("scope", scope)
+                .apply { sessionId?.takeIf { it.isNotBlank() }?.let { put("session_id", it) } }
+        }
+
+        internal fun companionMemoryReadFrame(
+            requestId: String,
+            workspaceId: String,
+            memoryId: String,
+            scope: String,
+            sessionId: String? = null,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(scope in MEMORY_SCOPES) { "unsupported memory scope" }
+            require(memoryId.isNotBlank() && memoryId.toByteArray(Charsets.UTF_8).size <= 256) {
+                "invalid memory ID"
+            }
+            return JSONObject()
+                .put("type", "memory.read")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("memory_id", memoryId)
+                .put("scope", scope)
+                .apply { sessionId?.takeIf { it.isNotBlank() }?.let { put("session_id", it) } }
+        }
+
+        internal fun companionModelsListFrame(requestId: String, workspaceId: String): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            return JSONObject()
+                .put("type", "models.list")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+        }
+
+        internal fun companionModelsSetFrame(requestId: String, workspaceId: String, model: String): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(model.isNotBlank() && model.toByteArray(Charsets.UTF_8).size <= 256) {
+                "invalid model name"
+            }
+            return JSONObject()
+                .put("type", "models.set")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("model", model)
+        }
+
+        internal fun companionRantListFrame(requestId: String, workspaceId: String, status: String?): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            return JSONObject()
+                .put("type", "rant.list")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .apply { status?.takeIf { it.isNotBlank() }?.let { put("status", it) } }
+        }
+
+        internal fun companionRantSubmitFrame(
+            requestId: String,
+            workspaceId: String,
+            message: String,
+            agent: String?,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(message.isNotBlank() && message.toByteArray(Charsets.UTF_8).size <= 64 * 1024) {
+                "invalid rant message"
+            }
+            return JSONObject()
+                .put("type", "rant.submit")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("message", message)
+                .apply { agent?.takeIf { it.isNotBlank() }?.let { put("agent", it) } }
+        }
+
+        internal fun companionEvolutionSummaryFrame(requestId: String, workspaceId: String, limit: Int): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(limit in 1..20) { "limit out of range" }
+            return JSONObject()
+                .put("type", "evolution.summary")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("limit", limit)
+        }
+
+        internal fun companionTasksFrame(
+            requestId: String,
+            workspaceId: String,
+            type: String,
+            name: String?,
+            prompt: String?,
+            taskType: String?,
+            agent: String?,
+            interval: Int?,
+            enabled: Boolean?,
+            repo: String?,
+            description: String?,
+            sandbox: String?,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(type in TASKS_TYPES) { "unsupported tasks frame" }
+            return JSONObject()
+                .put("type", type)
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .apply {
+                    name?.takeIf { it.isNotBlank() }?.let { put("name", it) }
+                    prompt?.let { put("prompt", it) }
+                    taskType?.takeIf { it.isNotBlank() }?.let { put("task_type", it) }
+                    agent?.takeIf { it.isNotBlank() }?.let { put("agent", it) }
+                    interval?.let { require(it >= 0) { "interval must be non-negative" }; put("interval", it) }
+                    enabled?.let { put("enabled", it) }
+                    repo?.takeIf { it.isNotBlank() }?.let { put("repo", it) }
+                    description?.let { put("description", it) }
+                    sandbox?.takeIf { it.isNotBlank() }?.let { put("sandbox", it) }
+                }
+        }
+
+        internal fun companionSkillsFrame(
+            requestId: String,
+            workspaceId: String,
+            type: String,
+            name: String?,
+            confirmed: Boolean?,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(type in SKILLS_TYPES) { "unsupported skills frame" }
+            return JSONObject()
+                .put("type", type)
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .apply {
+                    name?.takeIf { it.isNotBlank() }?.let { put("name", it) }
+                    confirmed?.let { put("confirmed", it) }
+                }
+        }
+
         private fun requireValidRequestId(requestId: String) {
             require(requestId.isNotBlank() && requestId.toByteArray(Charsets.UTF_8).size <= 128) {
                 "invalid request ID"
@@ -633,6 +896,14 @@ internal class PinnedRemoteWebSocket(
         internal val SESSION_MANAGE_TYPES = setOf(
             "sessions.resume", "sessions.rename", "sessions.delete", "sessions.clear",
             "sessions.compact", "sessions.rewind", "sessions.history", "sessions.resolve_cwd",
+        )
+        internal val MEMORY_SCOPES = setOf("agent", "session")
+        internal val TASKS_TYPES = setOf(
+            "tasks.list", "tasks.trigger", "tasks.create", "tasks.update", "tasks.delete",
+            "tasks.templates", "tasks.template_create", "tasks.template_update", "tasks.template_delete",
+        )
+        internal val SKILLS_TYPES = setOf(
+            "skills.list", "skills.available", "skills.install", "skills.update",
         )
         internal val TERMINAL_MODES = setOf("read-only", "workspace-write", "danger-full-access")
         internal val SANDBOX_MODES = TERMINAL_MODES
