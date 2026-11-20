@@ -184,6 +184,21 @@ internal class PinnedRemoteWebSocket(
         })
     }
 
+    /** Request the host's bounded status snapshot after authentication. */
+    fun sendStatus(requestId: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.READ_STATUS !in host.scopes) return false
+        return socket?.send(companionStatusFrame(requestId).toString()) == true
+    }
+
+    /** Request read-only session metadata for the exact workspace approved by the host. */
+    fun sendSessionsList(requestId: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.LIST_SESSIONS !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionSessionsListFrame(requestId, workspaceId).toString()) == true
+    }
+
     /** Only chat-task payloads are exposed here; arbitrary daemon commands are not. */
     fun sendTask(command: TaskCommand): Boolean {
         val host = pairedHost ?: return false
@@ -246,6 +261,26 @@ internal class PinnedRemoteWebSocket(
                 if (value !is String || value.isBlank() || !returnedScopes.add(value)) return false
             }
             return returnedScopes == expectedScopes
+        }
+
+        internal fun companionStatusFrame(requestId: String): JSONObject {
+            require(requestId.isNotBlank() && requestId.toByteArray(Charsets.UTF_8).size <= 128) {
+                "invalid request ID"
+            }
+            return JSONObject().put("type", "status").put("request_id", requestId)
+        }
+
+        internal fun companionSessionsListFrame(requestId: String, workspaceId: String): JSONObject {
+            require(requestId.isNotBlank() && requestId.toByteArray(Charsets.UTF_8).size <= 128) {
+                "invalid request ID"
+            }
+            require(workspaceId.isNotBlank() && workspaceId.toByteArray(Charsets.UTF_8).size <= 128) {
+                "approved workspace is invalid"
+            }
+            return JSONObject()
+                .put("type", "sessions.list")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
         }
 
         internal fun companionChatFrame(command: TaskCommand, workspaceId: String): JSONObject {
