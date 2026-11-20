@@ -180,6 +180,9 @@ class CompanionStreamHub:
         self._subscribers: dict[str, set[_Subscriber]] = {}
         self._buffers: dict[str, deque[dict[str, Any]]] = {}
         self._daemon_sinks: dict[str, _HubSink] = {}
+        # Session ids are scoped by cwd on disk. Never let two workspaces
+        # share one stream buffer or daemon sink just because ids collide.
+        self._session_cwds: dict[str, str] = {}
 
     def subscribed_sessions(self) -> list[str]:
         return sorted(self._subscribers)
@@ -203,6 +206,12 @@ class CompanionStreamHub:
         are required for the daemon side; without them the subscription is
         companion-local only (used by tests that drive the hub directly).
         """
+        canonical_cwd = str(Path(cwd).resolve()) if cwd else None
+        bound_cwd = self._session_cwds.get(session_id)
+        if bound_cwd is not None and canonical_cwd is not None and bound_cwd != canonical_cwd:
+            raise CompanionDaemonError("session is already bound to another workspace")
+        if bound_cwd is None and canonical_cwd is not None:
+            self._session_cwds[session_id] = canonical_cwd
         subscriber = _Subscriber(websocket, scopes, device_id)
         members = self._subscribers.setdefault(session_id, set())
         members.add(subscriber)
@@ -216,7 +225,7 @@ class CompanionStreamHub:
             sink = _HubSink(self, session_id)
             subscribers = getattr(daemon, "_session_subscribers", None)
             if isinstance(subscribers, dict):
-                subscribers.setdefault(session_id, {})[sink] = cwd or ""
+                subscribers.setdefault(session_id, {})[sink] = canonical_cwd or cwd or ""
                 self._daemon_sinks[session_id] = sink
 
     async def unsubscribe(self, websocket: Any, *, daemon: Any = None) -> None:
@@ -229,6 +238,7 @@ class CompanionStreamHub:
                 continue
             del self._subscribers[session_id]
             self._buffers.pop(session_id, None)
+            self._session_cwds.pop(session_id, None)
             sink = self._daemon_sinks.pop(session_id, None)
             if sink is not None and daemon is not None:
                 subscribers = getattr(daemon, "_session_subscribers", None)
