@@ -27,6 +27,13 @@ def _server(tmp_path):
     server = object.__new__(EmrgServer)
     server._companion_host_service = host
     server._companion_local_control = CompanionLocalControl(host)
+    class RuntimeStatus:
+        def status(self):
+            return {
+                "listener_running": False, "endpoint": None,
+                "fingerprint_sha256": None, "active_connections": 0,
+            }
+    server._companion_runtime = RuntimeStatus()
     return server, host
 
 
@@ -65,7 +72,10 @@ def test_daemon_companion_status_is_disabled_by_default(tmp_path):
     assert writer.frames == [{
         "type": "companion_local_control_result",
         "ok": True,
-        "result": {"enabled": False, "pending_count": 0},
+        "result": {
+            "enabled": False, "pending_count": 0, "listener_running": False,
+            "endpoint": None, "fingerprint_sha256": None, "active_connections": 0,
+        },
     }]
 
 
