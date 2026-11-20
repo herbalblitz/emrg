@@ -38,6 +38,17 @@ describe("CompanionPanel", () => {
     expect(await screen.findByLabelText("Pairing descriptor")).toBeTruthy();
   });
 
+  it("rejects ports outside the TCP range before calling the host", async () => {
+    const api = setup();
+    await screen.findByTestId("companion-status");
+    const port = screen.getByLabelText("Port");
+    fireEvent.change(port, { target: { value: "65536" } });
+    const start = screen.getByRole("button", { name: /start host/i }) as HTMLButtonElement;
+    expect(start.disabled).toBe(true);
+    fireEvent.click(start);
+    expect(api.companionListenerStart).not.toHaveBeenCalled();
+  });
+
   it("approves or rejects only through the named pairing method", async () => {
     const pairing = {
       pairing_id: "A".repeat(43), device_id: "android-test",
