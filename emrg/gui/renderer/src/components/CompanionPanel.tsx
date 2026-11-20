@@ -20,6 +20,7 @@ type Bridge = {
   companionPendingPairings(): Promise<{ items?: Pairing[] }>;
   companionDecidePairing(p: { pairingId: string; approved: boolean }): Promise<unknown>;
   companionListenerStart(p: { bindAddress: string; port: number; cwd: string }): Promise<{ descriptor?: string; endpoint?: string; fingerprint_sha256?: string }>;
+  companionPairingQr(p: { descriptor: string }): Promise<{ data_uri?: string }>;
   companionListenerStop(): Promise<unknown>;
 };
 
@@ -35,6 +36,7 @@ export function CompanionPanel() {
   const [port, setPort] = useState("18476");
   const [cwd, setCwd] = useState(".");
   const [descriptor, setDescriptor] = useState("");
+  const [qrDataUri, setQrDataUri] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -59,12 +61,23 @@ export function CompanionPanel() {
   async function start() {
     const api = emrg();
     if (!api || !validPort || !cwd.trim()) return;
-    setBusy(true); setError(""); setDescriptor(""); setCopied(false);
+    setBusy(true); setError(""); setDescriptor(""); setQrDataUri(""); setCopied(false);
     try {
       const result = await api.companionListenerStart({
         bindAddress, port: Number(port), cwd,
       });
-      if (result.descriptor) setDescriptor(result.descriptor);
+      if (result.descriptor) {
+        setDescriptor(result.descriptor);
+        try {
+          const qr = await api.companionPairingQr({ descriptor: result.descriptor });
+          if (typeof qr.data_uri !== "string" || !qr.data_uri.startsWith("data:image/svg+xml;base64,")) {
+            throw new Error("The host returned an invalid pairing QR image.");
+          }
+          setQrDataUri(qr.data_uri);
+        } catch (e) {
+          setError((e as Error).message || "Could not create pairing QR.");
+        }
+      }
       await refresh();
     } catch (e) { setError((e as Error).message || "Could not start listener."); }
     finally { setBusy(false); }
@@ -87,7 +100,7 @@ export function CompanionPanel() {
     const api = emrg();
     if (!api) return;
     setBusy(true); setError(""); setCopied(false);
-    try { await api.companionListenerStop(); setDescriptor(""); await refresh(); }
+    try { await api.companionListenerStop(); setDescriptor(""); setQrDataUri(""); await refresh(); }
     catch (e) { setError((e as Error).message || "Could not stop listener."); }
     finally { setBusy(false); }
   }
@@ -116,7 +129,7 @@ export function CompanionPanel() {
           <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void refresh()}>Refresh</button>
         </div>
         {status && <p className="hint" data-testid="companion-status">{status.listener_running ? `Running at ${status.endpoint || "unknown endpoint"}` : "Host stopped"} · Active connections: {status.active_connections ?? 0}</p>}
-        {descriptor && <div><p>Import this pairing descriptor on Android:</p><textarea aria-label="Pairing descriptor" readOnly value={descriptor} rows={4} style={{ width: "100%" }} /><button type="button" className="btn btn-ghost" onClick={() => void copyDescriptor()}>Copy pairing descriptor</button>{copied && <span role="status">Copied pairing descriptor.</span>}</div>}
+        {descriptor && <div><p>Scan this pairing QR code with Android, or import the descriptor manually:</p>{qrDataUri && <img alt="Companion pairing QR code" src={qrDataUri} width={256} height={256} style={{ display: "block", maxWidth: "100%", height: "auto" }} />}<textarea aria-label="Pairing descriptor" readOnly value={descriptor} rows={4} style={{ width: "100%" }} /><button type="button" className="btn btn-ghost" onClick={() => void copyDescriptor()}>Copy pairing descriptor</button>{copied && <span role="status">Copied pairing descriptor.</span>}</div>}
         {error && <p role="alert" className="settings-msg err" data-testid="companion-error">{error}</p>}
       </div>
       <div className="settings-group">
