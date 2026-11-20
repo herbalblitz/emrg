@@ -25,6 +25,7 @@ from emrg.server.companion_protocol import (
     validate_pairing_v2_frame,
 )
 from emrg.server.companion_tls import create_server_context, CompanionTlsError
+from emrg.server.companion_tls_identity import create_identity_server_context
 from emrg.session import Session
 from pathlib import Path
 
@@ -67,11 +68,25 @@ class CompanionWssListener:
     """Lifecycle-managed bounded WSS server; must be explicitly started."""
 
     def __init__(self, host_service: CompanionHostService,
-                 config: CompanionListenerConfig, cert_file, key_file):
+                 config: CompanionListenerConfig, cert_file=None, key_file=None, *,
+                 identity_directory=None):
+        """Create a listener with a protected identity directory or explicit PEM paths.
+
+        Production integrations should pass identity_directory so Windows DPAPI
+        keys are unwrapped only for the in-memory TLS context. The explicit
+        certificate/key pair remains available for isolated tests and existing
+        callers; mixing the two forms is rejected.
+        """
+        if identity_directory is not None:
+            if cert_file is not None or key_file is not None:
+                raise ValueError("choose identity_directory or cert_file/key_file")
+        elif cert_file is None or key_file is None:
+            raise ValueError("TLS identity directory or both certificate/key paths required")
         self._host = host_service
         self._config = config
         self._cert_file = cert_file
         self._key_file = key_file
+        self._identity_directory = identity_directory
         self._server = None
         self._starting = False
         self._semaphore = asyncio.Semaphore(config.max_connections)
@@ -100,7 +115,9 @@ class CompanionWssListener:
             raise CompanionTlsError("companion disabled")
         self._starting = True
         try:
-            tls = create_server_context(self._cert_file, self._key_file)
+            tls = (create_identity_server_context(self._identity_directory)
+                   if self._identity_directory is not None
+                   else create_server_context(self._cert_file, self._key_file))
             self._closing = False
             self._loop = asyncio.get_running_loop()
             server = await serve(
