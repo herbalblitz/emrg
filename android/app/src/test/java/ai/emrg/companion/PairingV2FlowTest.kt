@@ -240,4 +240,31 @@ class PairingV2FlowTest {
         assertEquals("PAIRING_REQUEST_INVALID", listener.failure)
         assertEquals(0, exchange.calls)
     }
+
+    @Test
+    fun challengeWithDifferentHostIdentityIsRejectedBeforeRedeemTransport() {
+        val exchange = FakeExchange()
+        val listener = RecordingListener()
+        val wrongExpectedIdentity = "BB:".repeat(31) + "BB"
+        val mismatchedClient = PairingV2Client(
+            keys = FakeKeys(),
+            deviceId = "android-device",
+            keyAlias = "emrg-device",
+            expectedHostIdentity = wrongExpectedIdentity,
+            nowEpochSeconds = { 1_000L },
+        )
+        val pairingFlow = flow(exchange, mismatchedClient)
+
+        pairingFlow.requestChallenge(listener)
+        deliverChallenge(exchange, listener)
+        pairingFlow.redeem(listener.challenge!!, listener)
+
+        // The host challenge was received, but its signed host identity does not
+        // match the fingerprint pinned from the QR descriptor. No redeem frame
+        // may be sent and therefore no device proof may be signed/transmitted.
+        assertEquals("PAIRING_REDEEM_INVALID", listener.failure)
+        assertEquals(1, exchange.calls)
+        assertEquals("pairing.request", exchange.lastRequest?.optString("type"))
+    }
+
 }
