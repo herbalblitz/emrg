@@ -704,10 +704,15 @@ class CompanionWssListener:
             return _error(frame.get("request_id"), "daemon_unavailable")
         device_id = identity["device_id"]
         if frame["type"] == "chat.cancel":
+            # A remote client may cancel only sessions whose stream it joined.
+            # Never treat a client-supplied session id as an authorization token.
+            subscribed = self._hub.sessions_for(websocket)
+            if frame.get("session_id") and frame["session_id"] not in subscribed:
+                return _error(frame.get("request_id"), "session_not_subscribed")
             # No session_id: cancel every turn this connection is subscribed
             # to (the client cancels "the active turn" without naming it).
             targets = ([frame["session_id"]] if frame.get("session_id")
-                       else self._hub.sessions_for(websocket))
+                       else subscribed)
             stopped = False
             for session_id in targets:
                 stopped = await cancel_turn(
@@ -716,6 +721,11 @@ class CompanionWssListener:
                     "workspace_id": identity["workspace_id"],
                     "session_id": frame.get("session_id"), "stopped": stopped}
         if frame["type"] == "chat.approve":
+            pending = getattr(daemon, "_pending_approvals", {}).get(
+                frame["approval_request_id"])
+            subscribed = self._hub.sessions_for(websocket)
+            if pending is None or pending[1] not in subscribed:
+                return _error(frame.get("request_id"), "approval_not_for_subscribed_session")
             answered = answer_approval(
                 daemon, approval_request_id=frame["approval_request_id"],
                 approved=frame["approved"], device_id=device_id)
