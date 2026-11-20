@@ -35,7 +35,7 @@ import java.util.UUID
  */
 @Suppress("UnsafeOptInUsageError")
 @Composable
-internal fun SecurePairingPanel() {
+internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: RemoteSocketState) -> Unit = { _, _ -> }) {
     val context = LocalContext.current
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
     var qrPayload by remember { mutableStateOf("") }
@@ -78,6 +78,7 @@ internal fun SecurePairingPanel() {
         remoteSocket = null
         remoteStateText = "Not connected"
         remoteConnectionState = RemoteSocketState.CLOSED
+        onConnectionChanged(false, RemoteSocketState.CLOSED)
         statusResultText = null
         sessionsResultText = null
         statusRequestId = null
@@ -152,6 +153,7 @@ internal fun SecurePairingPanel() {
         sessionsResultText = null
         remoteStateText = RemoteSocketState.CONNECTING.name
         remoteConnectionState = RemoteSocketState.CONNECTING
+        onConnectionChanged(true, RemoteSocketState.CONNECTING)
 
         val socket = PinnedRemoteWebSocket(
             credentialStore = AndroidKeystoreCredentialStore(context),
@@ -163,6 +165,7 @@ internal fun SecurePairingPanel() {
                         ) return@post
                         remoteConnectionState = state
                         remoteStateText = safeMessage ?: state.name
+                        onConnectionChanged(true, state)
                         if (state == RemoteSocketState.AUTHENTICATED) {
                             val current = remoteSocket
                             val statusId = statusRequestId
@@ -408,6 +411,7 @@ internal fun SecurePairingPanel() {
                             remoteSocket?.close()
                             remoteSocket = null
                             remoteConnectionState = RemoteSocketState.CLOSED
+                            onConnectionChanged(true, RemoteSocketState.CLOSED)
                             remoteStateText = "Disconnected"
                         },
                     ) { Text("Disconnect") }
