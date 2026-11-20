@@ -132,3 +132,25 @@ def test_runtime_does_not_leave_host_enabled_when_listener_start_fails(tmp_path,
     assert host.enabled is False
     assert runtime.running is False
     assert BrokenListener.instances[-1].closed is True
+
+
+
+def test_runtime_rejects_duplicate_start_without_replacing_listener(tmp_path, monkeypatch):
+    _FakeListener.instances.clear()
+    monkeypatch.setattr(
+        "emrg.server.companion_runtime.CompanionWssListener", _FakeListener,
+    )
+    host = CompanionHostService(tmp_path / "credentials.json")
+    runtime = CompanionRuntime(host, tmp_path / "tls-identity")
+    payload = {
+        "bind_address": "127.0.0.1", "port": 18476, "cwd": str(tmp_path),
+    }
+    asyncio.run(runtime.start(payload))
+    with pytest.raises(CompanionRuntimeError, match="already running"):
+        asyncio.run(runtime.start(payload))
+    assert len(_FakeListener.instances) == 1
+    assert runtime.running is True
+    assert host.enabled is True
+    asyncio.run(runtime.stop())
+    asyncio.run(runtime.stop())
+    assert host.enabled is False
