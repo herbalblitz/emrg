@@ -66,6 +66,7 @@ export function CompanionPanel() {
       const result = await api.companionListenerStart({
         bindAddress, port: Number(port), cwd,
       });
+      await refresh();
       if (result.descriptor) {
         setDescriptor(result.descriptor);
         try {
@@ -78,7 +79,6 @@ export function CompanionPanel() {
           setError((e as Error).message || "Could not create pairing QR.");
         }
       }
-      await refresh();
     } catch (e) { setError((e as Error).message || "Could not start listener."); }
     finally { setBusy(false); }
   }
