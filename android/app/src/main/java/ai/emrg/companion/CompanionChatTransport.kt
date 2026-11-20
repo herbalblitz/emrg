@@ -1,6 +1,7 @@
 package ai.emrg.companion
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,7 +66,7 @@ internal class CompanionChatTransport(
         var failure: String? = null
         var cancelled = false
 
-        val collecting = async {
+        val collecting = async(start = CoroutineStart.UNDISPATCHED) {
             withTimeoutOrNull(CHAT_TURN_TIMEOUT_MS) {
                 connection.frames.first { frame ->
                     val forThisTurn = frame.requestId == requestId ||
