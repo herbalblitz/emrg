@@ -277,7 +277,7 @@ The listener also rejects a second concurrent `start()` while the first bind is 
 
 ## Companion WSS WebSocket frame encoding
 
-The host serializes bounded JSON with `encode_server_frame`, which returns UTF-8 bytes. Before calling the Python `websockets` API, the listener decodes those bytes to a UTF-8 string so the library emits a WebSocket **text** frame. Passing bytes to `websocket.send` would emit a binary frame; the Android Companion client rejects binary frames. Regression tests assert text-frame delivery for authentication, status, session-list and Pairing v2 responses. Companion security CI run #44659155014 passed on Ubuntu and Windows; the same run's renderer job passed unit tests, TypeScript checking and production build.
+The host serializes bounded JSON with `encode_server_frame`, which returns UTF-8 bytes. Before calling the Python `websockets` API, the listener decodes those bytes to a UTF-8 string so the library emits a WebSocket **text** frame. Passing bytes to `websocket.send` would emit a binary frame; the Android Companion client rejects binary frames. Regression tests assert text-frame delivery for authentication, status, session-list and Pairing v2 responses. Companion security CI run #44659155014: passed on Ubuntu and Windows; the same run's renderer job passed unit tests, TypeScript checking and production build.
 
 ## JSON byte encoding regression
 

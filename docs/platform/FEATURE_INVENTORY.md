@@ -67,10 +67,10 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 
 - [x] Host frame schema strictness: duplicate JSON keys, unknown fields and invalid Unicode fail closed; host parser tests passed in CI #44659155014 on Ubuntu and Windows.
 - [x] Host v1 and pairing-v2 validators enforce UTF-8-only byte payloads (UTF-16/32 rejected); regression tests passed in CI #44659155014 on Ubuntu and Windows.
-- [x] WSS listener emits JSON text frames for auth/status/session/pairing responses; mock transport tests reject accidental binary frames (CI #44659155014 passed on Ubuntu and Windows).
+- [x] WSS listener emits JSON text frames for auth/status/session/pairing responses; mock transport tests reject accidental binary frames (CI #44659155014: passed on Ubuntu and Windows).
 - [x] Registry same-instance thread serialization for credential issue/revoke/read; concurrent-issuance test added. Cross-process lock and Windows ACL hardening are open.
-- [x] Host TLS identity generation/persistence, protected TLS context loading, daemon-owned opt-in WSS lifecycle, and transaction-bound v2 QR descriptor creation are integrated in source; latest host security CI #44659155014 passed on Ubuntu and Windows.
-- [x] Trusted local React CompanionPanel approval/QR UI is wired through named IPC (renderer CI #44659155014 passed); [ ] registered-device management UI and Android-to-Windows live pairing E2E remain open.
+- [x] Host TLS identity generation/persistence, protected TLS context loading, daemon-owned opt-in WSS lifecycle, and transaction-bound v2 QR descriptor creation are integrated in source; latest host security CI #44659155014: passed on Ubuntu and Windows.
+- [x] Trusted local React CompanionPanel approval/QR UI is wired through named IPC (renderer CI #44659155014: passed); [ ] registered-device management UI and Android-to-Windows live pairing E2E remain open.
 
 ## Host TLS identity (implementation status)
 
@@ -102,7 +102,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Reject endpoint host outside certificate SAN and invalid/insecure endpoint forms.
 - [x] Enforce QR expiry at no more than 180 seconds.
 - [x] Daemon runtime now starts an explicit IP-bound listener, opens a status-only Pairing v2 transaction, and returns a short-lived v2 QR descriptor containing the pairing ID; runtime tests are included in Companion Security CI.
-- [x] Integrate v2 descriptor display/copy and pending approval/rejection into the React CompanionPanel (renderer CI #44659155014 passed). [ ] Chat/session UI dispatch remains limited to the existing scoped read-only host operations.
+- [x] Integrate v2 descriptor display/copy and pending approval/rejection into the React CompanionPanel (renderer CI #44659155014: passed). [ ] Chat/session UI dispatch remains limited to the existing scoped read-only host operations.
 
 
 ## Companion listener safety primitives
@@ -126,7 +126,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Electron Main exposes fixed status/pending/decision IPC handlers and validates primary BrowserWindow, top-level frame, and local `file://` origin.
 - [x] Preload exposes only named Companion methods; preload API contract test updated.
 - [x] Daemon owns explicit listener start/stop, TLS identity provisioning, and v2 QR descriptor generation; Electron Main/Preload expose fixed guarded lifecycle IPC methods.
-- [x] React renderer CompanionPanel implements explicit host start/stop, QR descriptor display/copy, pending approval list and approve/reject interactions (renderer CI #44659155014 passed).
+- [x] React renderer CompanionPanel implements explicit host start/stop, QR descriptor display/copy, pending approval list and approve/reject interactions (renderer CI #44659155014: passed).
 - [x] Static Electron IPC tests cover the primary top-level local renderer guard for status, approval, and listener lifecycle handlers; daemon tests cover listener start/stop routing.
 - [ ] Full Electron↔daemon runtime tests, registered-device revoke UI, physical Android Keystore checks, and live Android-to-Windows pairing remain open. This is not yet a completed end-to-end pairing implementation.
 

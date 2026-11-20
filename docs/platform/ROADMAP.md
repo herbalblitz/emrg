@@ -353,7 +353,7 @@ The QR panel is now wired to the v2 controller, superseding earlier notes that t
 ### CI verification update (2026-11-20)
 
 - [x] Android Companion CI run [#326](https://github.com/herbalblitz/emrg/actions/runs/44659501296) passed on commit `44b4846cca04ccd05256228a7db089a3c29ed11a`: debug APK assembly, shared debug-keystore signature verification, JVM unit-test task, lint, and APK artifact upload all completed successfully. The uploaded artifact is a debug APK, not a signed production release.
-- [x] Companion security CI run [#228](https://github.com/herbalblitz/emrg/actions/runs/44659155014) passed on commit `92cc02c3f7a5f30e65cebaf338da75961830c333`: Ubuntu **251 passed**; Windows **247 passed, 4 skipped**. Windows skips are platform-specific test cases; no test failures were reported.
+- [x] Companion security CI run [#228](https://github.com/herbalblitz/emrg/actions/runs/44659155014) passed on commit `92cc02c3f7a5f30e65cebaf338da75961830c333` on Ubuntu and Windows. Windows skips are platform-specific test cases; no test failures were reported.
 - [x] All four platform dependency lockfiles contain `qrcode==8.2`, including Linux ARM64.
 - [ ] Physical Android Keystore/device validation, live Android ↔ Windows pairing, authenticated status/session-list UI, and Windows clean-machine install/lifecycle smoke tests remain release gates. These CI runs do not establish end-to-end device pairing or full EMRG feature parity.
 
@@ -363,7 +363,7 @@ The QR panel is now wired to the v2 controller, superseding earlier notes that t
 - Android now exposes authenticated `status` and `sessions.list` request-frame builders and guarded send methods. Both require a completed authenticated WSS session and the corresponding approved scope; session listing additionally requires the host-approved workspace ID.
 - Pairing requests both `status` and `sessions.list`; the Windows daemon grants those two read-only scopes for the QR pairing transaction.
 - Android unit tests cover request frame shape, request-ID bounds, workspace binding, and existing authentication/TLS pin checks.
-- Verification: Android Companion workflow #329 passed (debug APK assemble, signature check, unit tests, lint, artifact upload). Companion Security workflow #229 passed on Windows, Ubuntu, and GUI (renderer tests, TypeScript check, production build).
+- Verification: Android Companion workflow #329: passed (debug APK assemble, signature check, unit tests, lint, artifact upload). Companion Security workflow #229: passed on Windows, Ubuntu, and GUI (renderer tests, TypeScript check, production build).
 - Important integration gap: `SecurePairingPanel` currently completes pairing and stores the credential, but it does not yet instantiate the authenticated remote socket or render live status/session results. The new send methods are transport primitives, not an end-to-end UI feature. A paired host's approved workspace ID must be carried into the authenticated client state before `sessions.list` can be sent.
 - Physical Android Keystore validation and real Android-to-Windows pairing smoke tests remain release gates.
 
