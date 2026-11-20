@@ -1,7 +1,7 @@
 # Companion Electron Local-Control Design
 
 Status: daemon local-control routing and fixed Electron Main/Preload IPC are implemented and CI-covered; listener lifecycle, host approval UI, TLS identity provisioning, and end-to-end pairing remain incomplete.
-Date: 2026-11-19
+Date: 2026-11-20
 
 ## 1. Purpose and boundary
 
@@ -15,7 +15,7 @@ This design does not authorize remote chat, tool execution, filesystem access, a
 - Navigation is restricted to the packaged renderer document; external navigation is denied or opened in the system browser.
 - `emrg/gui/preload.js` exposes a fixed `emrg` API through `contextBridge.exposeInMainWorld`. It does not expose raw `ipcRenderer`.
 - Electron Main and Preload now have three fixed Companion IPC methods (status, pending list, approve/reject), with primary-window/top-frame/local-file URL checks in Main. The React renderer has not yet consumed these methods.
-- `CompanionHostService` and `CompanionWssListener` are Python-side components. The WSS listener is standalone and must be explicitly started; it is not daemon-managed.
+- `CompanionHostService` and `CompanionWssListener` are Python-side components. The WSS listener is standalone and must be explicitly started; it is not daemon-managed. It now accepts the protected TLS identity directory and loads its hardened context through `create_identity_server_context`, including Windows DPAPI unprotection; direct PEM paths remain a compatibility/test-only construction option.
 - `EmrgServer` owns one `CompanionHostService` at `~/.emrg/companion/credentials.json` and a `CompanionLocalControl` facade. The host remains disabled by default; construction does not enable a listener or open a socket.
 - The authenticated desktop-daemon protocol routes only the fixed `companion_local_control` message into the facade. The facade allows `status`, `pairing.pending.list`, `pairing.decide`, and `pairing.cancel`; exact payload schemas and the non-secret pending projection are unit-tested.
 - Electron Main exposes three fixed handlers for status, pending-list, and approve/reject. They validate that the caller is the primary BrowserWindow's top-level local `file://` renderer. Preload exposes only the corresponding named methods; no generic IPC or arbitrary daemon command is exposed.
