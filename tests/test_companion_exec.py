@@ -131,9 +131,18 @@ def test_exec_run_refuses_risky_without_confirmation(tmp_path):
     assert exc.value.code == "approval_required"
 
 
-def test_exec_run_fails_closed_without_sandbox_backend(tmp_path):
-    # This VM has no bwrap: a workspace-write run must refuse, never run
-    # unconfined.
+def test_exec_run_fails_closed_without_sandbox_backend(tmp_path, monkeypatch):
+    # Simulate a host with no sandbox backend: run_command raises, and
+    # run() must refuse with sandbox_unavailable, never run unconfined.
+    # The missing backend is faked, not assumed — bwrap exists on CI
+    # runners but not on this VM, so the old no-mock version passed
+    # locally and failed on CI.
+    from emrg.sandbox.contract import SandboxUnavailableError
+
+    async def no_backend(command, *, policy, workdir, timeout):
+        raise SandboxUnavailableError("bwrap is not installed")
+
+    monkeypatch.setattr("emrg.tools.bash_tool_v2.run_command", no_backend)
     with pytest.raises(CompanionExecError) as exc:
         asyncio.run(run(
             exec_id="exec-4", command="echo hi", cwd=str(tmp_path),
