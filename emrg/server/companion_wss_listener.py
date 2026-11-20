@@ -2,13 +2,13 @@
 
 Authenticated operations: status, session listing, session management,
 chat (with per-session stream fan-out), file reads, sandbox management,
-terminal execution, file writes/deletes, and the Batch B screens
+terminal execution, file writes/deletes, the Batch B screens
 (memory, models, rant, evolution, tasks, skills) dispatched to the daemon
-in-process. Batch C frames (hosts/logs/audit/devices/settings) are
-validated against the frozen wire contract but not yet dispatched — the
-listener answers ``not_implemented`` until their batch lands.
-Host-lifecycle operations (``shutdown``, ``init_auto_evolve``) are
-never reachable from a remote companion.
+in-process, and the Batch C screens (hosts via daemon ``list_agents``;
+logs/audit/devices/settings via the additive ``companion_logs`` /
+``companion_audit`` / ``companion_devices`` / ``companion_config``
+modules). Host-lifecycle operations (``shutdown``, ``init_auto_evolve``)
+are never reachable from a remote companion.
 
 Daemon-native operations run in-process through the daemon object supplied
 via ``daemon_accessor``; the listener never opens a socket to the daemon.
@@ -25,6 +25,8 @@ from typing import Any
 from websockets.asyncio.server import serve
 from websockets.exceptions import ConnectionClosed
 
+from emrg.server.companion_audit import CompanionAuditError
+from emrg.server.companion_audit import tail as companion_audit_tail
 from emrg.server.companion_chat import (
     CompanionDaemonError,
     CompanionStreamHub,
@@ -33,11 +35,24 @@ from emrg.server.companion_chat import (
     cancel_turn,
     start_task,
 )
+from emrg.server.companion_config import (
+    CompanionConfigError,
+    apply_companion_patch,
+    apply_patch as companion_apply_settings_patch,
+)
+from emrg.server.companion_config import snapshot as companion_settings_snapshot
+from emrg.server.companion_devices import (
+    CompanionDevicesError,
+    list_devices as companion_list_devices,
+    revoke_device as companion_revoke_device,
+)
 from emrg.server.companion_exec import (
     CompanionExecConfig,
     CompanionExecError,
     ExecManager,
 )
+from emrg.server.companion_logs import CompanionLogsError
+from emrg.server.companion_logs import tail as companion_logs_tail
 from emrg.server.companion_files import (
     CompanionFileError,
     delete as companion_delete_file,
@@ -133,6 +148,16 @@ _TASK_FIELD_ALLOWLIST: frozenset[str] = frozenset({
 #: answers the whole history for limit=None, which would blow the 256 KiB
 #: frame cap on a long session).
 DEFAULT_HISTORY_LIMIT = 100
+
+#: Batch C operations dispatched by ``_dispatch_batch_c``. ``hosts.list``
+#: is daemon-native (``list_agents``); the rest are companion-side modules.
+_BATCH_C_OPS: frozenset[str] = frozenset({
+    "hosts.list", "logs.tail", "audit.tail",
+    "devices.list", "devices.revoke", "settings.get", "settings.set",
+})
+
+#: Maximum agents returned by hosts.list (same bound as sessions.list).
+_MAX_REMOTE_AGENTS = 200
 
 
 def _error(request_id: str | None, code: str, detail: str | None = None) -> dict[str, Any]:
@@ -534,10 +559,12 @@ class CompanionWssListener:
                 return await self._dispatch_files_write(frame, identity)
             if kind in _BATCH_B_DAEMON_OPS:
                 return await self._dispatch_batch_b(frame, identity)
-            # Validated Batch C frames: the frozen contract names them, but
-            # their server dispatch lands in a later batch.
+            if kind in _BATCH_C_OPS:
+                return await self._dispatch_batch_c(frame, identity)
             return _error(request_id, "not_implemented")
-        except (CompanionDaemonError, CompanionExecError, CompanionFileError) as exc:
+        except (CompanionDaemonError, CompanionExecError, CompanionFileError,
+                CompanionLogsError, CompanionAuditError, CompanionConfigError,
+                CompanionDevicesError) as exc:
             code = getattr(exc, "code", "daemon_error")
             return _error(request_id, code, str(exc))
         except Exception:  # noqa: BLE001 — one bad frame must not kill the socket
@@ -873,3 +900,109 @@ class CompanionWssListener:
                 "path": outcome.path, "bytes_written": outcome.bytes_written,
                 "sha256": outcome.sha256, "created": outcome.created,
                 "mode": outcome.mode, "line_count": outcome.line_count}
+
+    @staticmethod
+    def _agent_display_path(root: Path, absolute: str) -> str:
+        """Render one agent directory for the Hosts screen.
+
+        Inside the bound workspace it is workspace-relative, like every
+        other path the listener returns. Outside it the full host path
+        never leaves the host: only the final directory name is shown.
+        The Hosts screen lists workspaces; it never needs a host path to
+        select one, because sessions stay bound to the identity cwd.
+        """
+        if not isinstance(absolute, str) or not absolute:
+            return "."
+        try:
+            return Path(absolute).relative_to(root).as_posix() or "."
+        except (ValueError, TypeError):
+            return Path(absolute).name or "."
+
+    async def _dispatch_batch_c(self, frame: dict[str, Any],
+                                identity: dict[str, Any]) -> dict[str, Any]:
+        """Dispatch one Batch C frame.
+
+        ``hosts.list`` reuses daemon ``list_agents`` in-process.
+        ``logs.tail`` / ``audit.tail`` tail allowlisted host logs (paths
+        are sanitised in the modules; the client never names a file).
+        ``devices.list`` / ``devices.revoke`` wrap the host service; the
+        wrapper blocks self-revocation and audit-logs every revoke.
+        ``settings.get`` / ``settings.set`` snapshot / patch the engine
+        config under the strict allowlist in ``companion_config``; the
+        patch is audit-logged by key name only, never values.
+        Reads are not audit-logged, matching Batches A/B.
+        """
+        kind = frame["type"]
+        request_id = frame.get("request_id")
+        workspace_id = identity["workspace_id"]
+        root = Path(identity["cwd"]).resolve()
+        if kind == "hosts.list":
+            daemon = self._daemon()
+            if daemon is None:
+                return _error(request_id, "daemon_unavailable")
+            replies = await call_daemon_message(daemon, {"type": "list_agents"})
+            reply = next((item for item in replies if item.get("type") == "agents_list"),
+                         replies[0] if replies else None)
+            if reply is None:
+                return _error(request_id, "daemon_error", "no reply from daemon")
+            agents: list[dict[str, Any]] = []
+            for entry in reply.get("agents", [])[:_MAX_REMOTE_AGENTS]:
+                if not isinstance(entry, dict):
+                    continue
+                repo = entry.get("repo", "")
+                agents.append({
+                    "name": entry.get("name", "")[:256]
+                    if isinstance(entry.get("name", ""), str) else "",
+                    "repo": repo[:256] if isinstance(repo, str) else "",
+                    "path": self._agent_display_path(root, entry.get("path", "")),
+                    "latest_session_at": entry.get("latest_session_at", "")[:64]
+                    if isinstance(entry.get("latest_session_at", ""), str) else "",
+                })
+            return {"type": "hosts.list.result", "request_id": request_id,
+                    "workspace_id": workspace_id, "agents": agents}
+        if kind == "logs.tail":
+            result = await asyncio.to_thread(
+                companion_logs_tail, frame.get("source", "daemon"),
+                lines=frame.get("lines", 200), workspace_root=root)
+            return {"type": "logs.tail.result", "request_id": request_id,
+                    "workspace_id": workspace_id, **result}
+        if kind == "audit.tail":
+            result = await asyncio.to_thread(
+                companion_audit_tail, frame.get("limit", 200), workspace_root=root)
+            return {"type": "audit.tail.result", "request_id": request_id,
+                    "workspace_id": workspace_id, **result}
+        if kind == "devices.list":
+            devices = await asyncio.to_thread(
+                companion_list_devices, self._host)
+            return {"type": "devices.list.result", "request_id": request_id,
+                    "workspace_id": workspace_id, "devices": devices}
+        if kind == "devices.revoke":
+            outcome = await asyncio.to_thread(
+                companion_revoke_device, self._host,
+                device_id=frame["device_id"],
+                current_device_id=identity["device_id"])
+            return {"type": "devices.revoke.result", "request_id": request_id,
+                    "workspace_id": workspace_id, **outcome}
+        if kind == "settings.get":
+            result = await asyncio.to_thread(
+                companion_settings_snapshot,
+                exec_config=self._exec_config, listener_config=self._config)
+            return {"type": "settings.get.result", "request_id": request_id,
+                    "workspace_id": workspace_id, **result}
+        # settings.set: the engine TOML write and the companion-policy
+        # changes are validated together in the module (an unknown key
+        # rejects the whole patch before anything is written); the
+        # listener then installs the returned live-config changes.
+        result = await asyncio.to_thread(
+            companion_apply_settings_patch, frame["patch"],
+            device_id=identity["device_id"])
+        if result["companion_changed"]:
+            self._exec_config, self._config = apply_companion_patch(
+                self._exec_config, self._config, result["companion_changed"])
+        return {"type": "settings.set.result", "request_id": request_id,
+                "workspace_id": workspace_id,
+                "changed": result["changed"],
+                "reloadable": result["reloadable"],
+                "hints": result["hints"],
+                "restart_required": result["restart_required"],
+                "backup_created": result["backup_created"]}

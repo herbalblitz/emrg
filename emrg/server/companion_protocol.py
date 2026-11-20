@@ -230,10 +230,9 @@ def _v_sha256(value: Any) -> str:
 # (scope, allowed fields, required fields, per-field validators,
 #  extra conditional requirement or None)
 # Batch A and Batch B frames are dispatched by the listener. Batch C
-# frames are validated here against the frozen wire contract so both sides
-# agree on shapes now; their dispatch lands in a later batch and the
-# listener answers ``not_implemented`` until then. Batch C *field* shapes
-# are provisional — only the frame names and scopes are frozen.
+# frames are dispatched too (see companion_wss_listener._dispatch_batch_c);
+# their field shapes are the frozen contract for this batch: logs/audit
+# tails are capped at 400 lines/entries, matching the handlers' bounds.
 _FRAME_SPECS: dict[str, tuple[str, set[str], set[str], dict[str, Callable[[Any], Any]], Any]] = {
     # Batch A — sessions.manage
     "sessions.resume": ("sessions.manage",
@@ -317,7 +316,7 @@ _FRAME_SPECS: dict[str, tuple[str, set[str], set[str], dict[str, Callable[[Any],
          "confirm_danger"}, {"path"},
         {"path": _v_text(4096), "session_id": _v_text(128),
          "mode": _v_text(64), "confirm_danger": _v_bool}, None),
-    # Batch B/C — validated now, dispatched later (see note above).
+    # Batch B — validated and dispatched (listener._dispatch_batch_b).
     "hosts.list": ("hosts.list",
         {"type", "request_id", "workspace_id"}, set(), {}, None),
     "memory.list": ("memory.read",
@@ -378,10 +377,10 @@ _FRAME_SPECS: dict[str, tuple[str, set[str], set[str], dict[str, Callable[[Any],
         {"name": _v_text(512), "confirmed": _v_bool}, None),
     "logs.tail": ("logs.read",
         {"type", "request_id", "workspace_id", "source", "lines"}, set(),
-        {"source": _v_text(64), "lines": _v_int(1, 1000)}, None),
+        {"source": _v_text(64), "lines": _v_int(1, 400)}, None),
     "audit.tail": ("audit.read",
         {"type", "request_id", "workspace_id", "limit"}, set(),
-        {"limit": _v_int(1, 1000)}, None),
+        {"limit": _v_int(1, 400)}, None),
     "devices.list": ("devices.manage",
         {"type", "request_id", "workspace_id"}, set(), {}, None),
     "devices.revoke": ("devices.manage",

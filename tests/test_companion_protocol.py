@@ -410,12 +410,73 @@ def test_batch_b_frames_validate(kind, scope, extra):
     ("settings.get", "settings.manage", {}),
     ("settings.set", "settings.manage", {"patch": {}}),
 ])
-def test_batch_c_frames_validate_but_are_not_dispatched_yet(kind, scope, extra):
-    # Frozen contract: shapes + scopes agreed now; dispatch lands later.
+def test_batch_c_frames_validate(kind, scope, extra):
+    # Frozen contract: shapes + scopes; dispatch landed in Batch C.
     frame = {"type": kind, "request_id": "r", "workspace_id": "w", **extra}
     assert _authed(frame, scope)["type"] == kind
     with pytest.raises(CompanionProtocolError):
         _authed(frame, "status")
+
+
+def test_batch_c_tail_caps_are_400():
+    # Logs/audit tails are capped at 400 lines/entries, matching the handlers.
+    assert _authed({"type": "logs.tail", "request_id": "r", "workspace_id": "w",
+                    "lines": 400}, "logs.read")["lines"] == 400
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "logs.tail", "request_id": "r", "workspace_id": "w",
+                 "lines": 401}, "logs.read")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "logs.tail", "request_id": "r", "workspace_id": "w",
+                 "lines": 0}, "logs.read")
+    assert _authed({"type": "audit.tail", "request_id": "r", "workspace_id": "w",
+                    "limit": 400}, "audit.read")["limit"] == 400
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "audit.tail", "request_id": "r", "workspace_id": "w",
+                 "limit": 401}, "audit.read")
+
+
+def test_batch_c_frames_are_scope_workspace_and_field_bound():
+    # Wrong scope rejected for every Batch C scope.
+    cases = [
+        ({"type": "hosts.list", "request_id": "r", "workspace_id": "w"}, "logs.read"),
+        ({"type": "logs.tail", "request_id": "r", "workspace_id": "w"}, "audit.read"),
+        ({"type": "audit.tail", "request_id": "r", "workspace_id": "w"}, "devices.manage"),
+        ({"type": "devices.list", "request_id": "r", "workspace_id": "w"}, "settings.manage"),
+        ({"type": "devices.revoke", "request_id": "r", "workspace_id": "w",
+          "device_id": "d"}, "hosts.list"),
+        ({"type": "settings.get", "request_id": "r", "workspace_id": "w"}, "logs.read"),
+        ({"type": "settings.set", "request_id": "r", "workspace_id": "w",
+          "patch": {}}, "devices.manage"),
+    ]
+    for frame, wrong_scope in cases:
+        with pytest.raises(CompanionProtocolError):
+            _authed(frame, wrong_scope)
+    # Workspace mismatch rejected even with the right scope.
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame(
+            json.dumps({"type": "logs.tail", "request_id": "r", "workspace_id": "other"}),
+            authenticated=True, scopes=frozenset({"logs.read"}), workspace_id="w")
+    # Unknown fields rejected — the client never names a log path, a config
+    # path, or a cwd.
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "logs.tail", "request_id": "r", "workspace_id": "w",
+                 "path": "/var/log/syslog"}, "logs.read")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "settings.set", "request_id": "r", "workspace_id": "w",
+                 "patch": {}, "config_path": "/etc/x"}, "settings.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "devices.revoke", "request_id": "r", "workspace_id": "w",
+                 "device_id": "d", "cwd": "/etc"}, "devices.manage")
+    # Required fields: devices.revoke needs device_id; settings.set needs patch.
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "devices.revoke", "request_id": "r",
+                 "workspace_id": "w"}, "devices.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "settings.set", "request_id": "r",
+                 "workspace_id": "w"}, "settings.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "settings.set", "request_id": "r", "workspace_id": "w",
+                 "patch": "not-a-dict"}, "settings.manage")
 
 
 def test_batch_b_frames_are_scope_workspace_and_field_bound():

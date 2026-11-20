@@ -71,6 +71,8 @@ ALLOWED_DAEMON_TYPES: frozenset[str] = frozenset({
     "task_delete", "task_template_list", "task_template_create",
     "task_template_update", "task_template_delete",
     "list_skills", "skills_available", "skills_install", "skills_update",
+    # Batch C — hosts.list reuses the daemon-native list_agents.
+    "list_agents",
 })
 
 #: Stream frames buffered per session for replay to late subscribers.

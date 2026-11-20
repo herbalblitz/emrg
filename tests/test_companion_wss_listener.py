@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 
 import pytest
 
@@ -1157,6 +1158,14 @@ class _BatchBFakeDaemon:
                 {"type": reply_types[kind], "error": self.error_for[kind]}))
             return
         cwd = msg.get("cwd", str(self.tmp_path))
+        if kind == "list_agents":
+            await ws.send(json.dumps({"type": "agents_list", "agents": [
+                {"name": "in-ws", "repo": "https://example.com/r.git",
+                 "path": cwd + "/proj", "latest_session_at": "2026-11-20T00:00:00Z"},
+                {"name": "out-ws", "repo": "",
+                 "path": "/elsewhere/other", "latest_session_at": ""},
+            ]}))
+            return
         if kind == "rant":
             # The real daemon replies {"ok": ..., "count": ...} with no type.
             await ws.send(json.dumps({"ok": True, "count": 3}))
@@ -1429,14 +1438,185 @@ def test_batch_b_dispatch_without_daemon_is_unavailable(tmp_path):
     assert result == {"type": "error", "request_id": "r", "code": "daemon_unavailable"}
 
 
-def test_batch_c_frames_still_answer_not_implemented(tmp_path):
+def test_batch_c_dispatch_without_daemon_is_unavailable(tmp_path):
+    # hosts.list is the one Batch C frame that needs the daemon.
+    host = CompanionHostService(tmp_path / "registry.json")
+    config = CompanionListenerConfig.build("127.0.0.1", 8765)
+    listener = CompanionWssListener(host, config, tmp_path / "cert.pem", tmp_path / "key.pem")
+    identity = {"device_id": "phone-1", "workspace_id": "ws",
+                "cwd": str(tmp_path), "scopes": {"hosts.list"}, "generation": 1}
+    result = asyncio.run(listener._dispatch(
+        {"type": "hosts.list", "request_id": "r", "workspace_id": "ws"},
+        identity, _BatchBDummySocket()))
+    assert result == {"type": "error", "request_id": "r", "code": "daemon_unavailable"}
+
+
+class _BatchCHost:
+    """One host service + listener pair shared across Batch C dispatches."""
+
+    def __init__(self, tmp_path, daemon=None):
+        self.host = CompanionHostService(tmp_path / "registry.json")
+        self.host.enable()
+        self.tmp_path = tmp_path
+        config = CompanionListenerConfig.build("127.0.0.1", 8765)
+        self.listener = CompanionWssListener(
+            self.host, config, tmp_path / "cert.pem", tmp_path / "key.pem",
+            daemon_accessor=(lambda: daemon) if daemon is not None else None)
+
+    def dispatch(self, frame, scopes, device_id="phone-1"):
+        identity = {"device_id": device_id, "workspace_id": "ws",
+                    "cwd": str(self.tmp_path), "scopes": set(scopes),
+                    "generation": 1}
+        return asyncio.run(self.listener._dispatch(
+            frame, identity, _BatchBDummySocket()))
+
+    def register(self, device_id):
+        pending = self.host.begin_pairing(workspace_id="ws", cwd=str(self.tmp_path),
+                                          scopes={"status"})
+        assert self.host.decide_pairing(pending["pairing_id"], approved=True)
+        return self.host.redeem_pairing(
+            pairing_id=pending["pairing_id"],
+            pairing_secret=pending["pairing_secret"], device_id=device_id)
+
+
+def test_batch_c_hosts_list_relativizes_paths(tmp_path):
     daemon = _BatchBFakeDaemon(tmp_path)
-    for frame, scopes in [
-        ({"type": "hosts.list", "request_id": "r", "workspace_id": "ws"}, {"hosts.list"}),
-        ({"type": "logs.tail", "request_id": "r", "workspace_id": "ws"}, {"logs.read"}),
-        ({"type": "settings.set", "request_id": "r", "workspace_id": "ws",
-          "patch": {}}, {"settings.manage"}),
-    ]:
-        result = _batch_b_dispatch(tmp_path, daemon, frame, scopes)
-        assert result == {"type": "error", "request_id": "r", "code": "not_implemented"}
-    assert daemon.calls == []
+    pair = _BatchCHost(tmp_path, daemon)
+    result = pair.dispatch(
+        {"type": "hosts.list", "request_id": "r", "workspace_id": "ws"},
+        {"hosts.list"})
+    assert result["type"] == "hosts.list.result"
+    assert result["request_id"] == "r" and result["workspace_id"] == "ws"
+    assert daemon.calls[0] == {"type": "list_agents"}
+    agents = result["agents"]
+    assert agents[0]["name"] == "in-ws"
+    assert agents[0]["path"] == "proj"
+    assert agents[0]["repo"] == "https://example.com/r.git"
+    # An agent outside the workspace never leaks its host path.
+    assert agents[1]["name"] == "out-ws"
+    assert agents[1]["path"] == "other"
+    assert "/elsewhere" not in json.dumps(agents)
+
+
+def test_batch_c_logs_tail_dispatch(tmp_path, monkeypatch):
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    (log_dir / "emrgd.log").write_text(
+        f"first {tmp_path}/ws/file.py\nsecond line\n", encoding="utf-8")
+    monkeypatch.setattr("emrg.server.companion_logs.logs_dir", lambda: log_dir)
+    pair = _BatchCHost(tmp_path)
+    result = pair.dispatch(
+        {"type": "logs.tail", "request_id": "r", "workspace_id": "ws",
+         "source": "daemon", "lines": 10},
+        {"logs.read"})
+    assert result["type"] == "logs.tail.result"
+    assert result["source"] == "daemon"
+    assert result["lines"][0] == "first ./ws/file.py"
+    assert result["lines"][1] == "second line"
+    # An unknown source is a safe error, not a file read.
+    result = pair.dispatch(
+        {"type": "logs.tail", "request_id": "r", "workspace_id": "ws",
+         "source": "gateway"},
+        {"logs.read"})
+    assert result["type"] == "error"
+    assert result["code"] == "unknown_log_source"
+
+
+def test_batch_c_audit_tail_dispatch(tmp_path, monkeypatch):
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    (log_dir / "emrgd.log").write_text(
+        "2026-11-20 16:09:15 [INFO] [-] [-] emrg.server.daemon: "
+        "companion session allowed: operation='sessions.delete' session='s' device='phone-1'\n"
+        "2026-11-20 16:09:16 [INFO] [-] [-] emrg.server.daemon: unrelated noise\n",
+        encoding="utf-8")
+    monkeypatch.setattr("emrg.server.companion_audit.logs_dir", lambda: log_dir)
+    pair = _BatchCHost(tmp_path)
+    result = pair.dispatch(
+        {"type": "audit.tail", "request_id": "r", "workspace_id": "ws",
+         "limit": 10},
+        {"audit.read"})
+    assert result["type"] == "audit.tail.result"
+    assert len(result["entries"]) == 1
+    assert result["entries"][0]["action"] == "companion session sessions.delete"
+    assert result["entries"][0]["decision"] == "allow"
+
+
+def test_batch_c_devices_list_and_revoke(tmp_path, caplog):
+    pair = _BatchCHost(tmp_path)
+    pair.register("phone-1")
+    pair.register("phone-2")
+    result = pair.dispatch(
+        {"type": "devices.list", "request_id": "r", "workspace_id": "ws"},
+        {"devices.manage"})
+    assert result["type"] == "devices.list.result"
+    assert [d["device_id"] for d in result["devices"]] == ["phone-1", "phone-2"]
+    with caplog.at_level(logging.INFO, logger="emrg.server.companion_devices"):
+        result = pair.dispatch(
+            {"type": "devices.revoke", "request_id": "r", "workspace_id": "ws",
+             "device_id": "phone-2"},
+            {"devices.manage"}, device_id="phone-1")
+    assert result == {"type": "devices.revoke.result", "request_id": "r",
+                      "workspace_id": "ws", "device_id": "phone-2", "revoked": True}
+    assert "companion devices allowed" in caplog.text
+    # Self-revocation is refused and the connection survives.
+    result = pair.dispatch(
+        {"type": "devices.revoke", "request_id": "r", "workspace_id": "ws",
+         "device_id": "phone-1"},
+        {"devices.manage"}, device_id="phone-1")
+    assert result["type"] == "error"
+    assert result["code"] == "cannot_revoke_self"
+    devices = {d["device_id"]: d for d in pair.host.registered_devices()}
+    assert devices["phone-1"]["revoked"] is False
+    assert devices["phone-2"]["revoked"] is True
+    # Unknown device is an error, not a silent no-op.
+    result = pair.dispatch(
+        {"type": "devices.revoke", "request_id": "r", "workspace_id": "ws",
+         "device_id": "ghost"},
+        {"devices.manage"}, device_id="phone-1")
+    assert result["type"] == "error"
+    assert result["code"] == "device_not_found"
+
+
+def test_batch_c_settings_get_and_set(tmp_path, monkeypatch, caplog):
+    cfg = tmp_path / "config.toml"
+    cfg.write_text("[llm]\nbase_url = \"https://api.deepseek.com\"\n"
+                   "api_key = \"sk-testkey1234567890abcdef\"\n"
+                   "model = \"deepseek-chat\"\nmax_tokens = 8192\n",
+                   encoding="utf-8")
+    monkeypatch.setattr("emrg.server.companion_config.config_path", lambda: cfg)
+    pair = _BatchCHost(tmp_path)
+    result = pair.dispatch(
+        {"type": "settings.get", "request_id": "r", "workspace_id": "ws"},
+        {"settings.manage"})
+    assert result["type"] == "settings.get.result"
+    assert result["engine"]["model"] == "deepseek-chat"
+    assert result["engine"]["api_key_set"] is True
+    assert "sk-testkey1234567890abcdef" not in json.dumps(result)
+    with caplog.at_level(logging.INFO, logger="emrg.server.companion_config"):
+        caplog.clear()
+        result = pair.dispatch(
+            {"type": "settings.set", "request_id": "r", "workspace_id": "ws",
+             "patch": {"llm.max_tokens": 4096,
+                       "companion.command_timeout": 45.0}},
+            {"settings.manage"}, device_id="phone-1")
+    assert result["type"] == "settings.set.result"
+    assert result["changed"] == {"llm.max_tokens": 4096,
+                                 "companion.command_timeout": 45.0}
+    assert "llm.max_tokens" in result["reloadable"]
+    assert result["backup_created"] is True
+    assert "companion settings allowed" in caplog.text
+    assert "4096" not in caplog.text  # values never reach the audit log
+    assert "max_tokens = 4096" in cfg.read_text(encoding="utf-8")
+    # The companion-policy change lands on the listener's live config.
+    assert pair.listener._exec_config.command_timeout == 45.0
+    # An unknown key rejects the whole patch and writes nothing.
+    before = cfg.read_text(encoding="utf-8")
+    result = pair.dispatch(
+        {"type": "settings.set", "request_id": "r", "workspace_id": "ws",
+         "patch": {"llm.api_key": "sk-attacker", "llm.max_tokens": 1}},
+        {"settings.manage"}, device_id="phone-1")
+    assert result["type"] == "error"
+    assert result["code"] == "invalid_patch"
+    assert result["error"] == "settings key not allowed"
+    assert cfg.read_text(encoding="utf-8") == before
