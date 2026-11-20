@@ -122,6 +122,7 @@ internal class PairingV2SessionController(
                     deviceId = deviceId,
                     credentialAlias = credentialAlias,
                     scopes = scopes,
+                    approvedWorkspaceId = accepted.workspaceId,
                 )
                 // Serialize duplicate/overlapping responses. A second valid response for
                 // the same transaction must not turn an already-paired state into FAILED.
