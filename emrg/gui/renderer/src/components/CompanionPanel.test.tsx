@@ -12,6 +12,7 @@ function setup(over: Record<string, unknown> = {}) {
       fingerprint_sha256: "a".repeat(64),
       descriptor: '{"version":2}',
     }),
+    companionPairingQr: vi.fn().mockResolvedValue({ data_uri: "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=" }),
     companionListenerStop: vi.fn().mockResolvedValue({ running: false }),
     ...over,
   };
@@ -36,6 +37,8 @@ describe("CompanionPanel", () => {
       bindAddress: "127.0.0.1", port: 18476, cwd: ".",
     }));
     expect(await screen.findByLabelText("Pairing descriptor")).toBeTruthy();
+    expect(await screen.findByAltText("Companion pairing QR code")).toBeTruthy();
+    expect(api.companionPairingQr).toHaveBeenCalledWith({ descriptor: '{"version":2}' });
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     fireEvent.click(screen.getByRole("button", { name: "Copy pairing descriptor" }));
@@ -44,6 +47,16 @@ describe("CompanionPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /start host/i }));
     await waitFor(() => expect(api.companionListenerStart).toHaveBeenCalledTimes(2));
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+
+  it("keeps the manual descriptor available when QR rendering fails", async () => {
+    setup({ companionPairingQr: vi.fn().mockRejectedValue(new Error("QR unavailable")) });
+    await screen.findByTestId("companion-status");
+    fireEvent.click(screen.getByRole("button", { name: /start host/i }));
+    expect(await screen.findByLabelText("Pairing descriptor")).toBeTruthy();
+    expect(await screen.findByRole("alert")).toHaveTextContent("QR unavailable");
+    expect(screen.queryByAltText("Companion pairing QR code")).toBeNull();
   });
 
   it("surfaces clipboard failures without claiming the descriptor was copied", async () => {
