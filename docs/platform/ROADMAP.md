@@ -16,6 +16,8 @@ Target: preserve all original EMRG features while delivering robust Android and 
 
 ## Companion remote-chat integration gate (verified 2026-11-20)
 
+**Status update (2026-11-20, same day): the gates below are now satisfied by the 20-screen expansion — `emrg/server/companion_chat.py` reuses the daemon task path via an injected in-process `daemon_accessor` (one-line `daemon.py` wiring, no loopback socket), `CompanionStreamHub` is the bounded per-session event sink with replay, `chat.send` is host-consented through the scope grant, and tests cover scope/workspace/session validation, queueing, cancellation and disconnect. The `not_implemented` response for `chat.send` is removed; the analysis below is kept as the design record of why the boundary is shaped this way.**
+
 Remote chat must reuse the daemon's existing task/session engine; it must not create a second LLM/tool runner inside the WSS listener. The current source has a clear but incomplete boundary:
 
 - `CompanionRuntime` owns the WSS listener and provisions a pairing transaction with only `status` and `sessions.list` scopes. It currently has no daemon task-dispatch callback.
