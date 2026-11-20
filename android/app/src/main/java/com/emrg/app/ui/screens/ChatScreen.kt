@@ -50,7 +50,7 @@ fun ChatScreen(
         get() = __input.value
         set(value) { __input.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 

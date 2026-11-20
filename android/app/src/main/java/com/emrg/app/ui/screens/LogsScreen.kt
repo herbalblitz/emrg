@@ -35,7 +35,7 @@ fun LogsScreen(
         get() = __lines.value
         set(value) { __lines.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -83,7 +83,7 @@ fun AuditScreen(
         get() = __entries.value
         set(value) { __entries.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -125,7 +125,7 @@ fun DevicesScreen(
         get() = __devices.value
         set(value) { __devices.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 

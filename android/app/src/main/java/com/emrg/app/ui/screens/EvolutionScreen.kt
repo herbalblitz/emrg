@@ -33,7 +33,7 @@ fun EvolutionScreen(
         get() = __records.value
         set(value) { __records.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -77,7 +77,7 @@ fun TasksScreen(
         get() = __tasks.value
         set(value) { __tasks.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
     val __taskName = remember { mutableStateOf("") }
@@ -142,7 +142,7 @@ fun SkillsScreen(
         get() = __skills.value
         set(value) { __skills.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 

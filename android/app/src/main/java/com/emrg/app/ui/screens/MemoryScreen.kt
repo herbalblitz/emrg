@@ -33,7 +33,7 @@ fun MemoryScreen(
         get() = __loading.value
         set(value) { __loading.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -81,7 +81,7 @@ fun ModelsScreen(
         get() = __models.value
         set(value) { __models.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 
@@ -137,7 +137,7 @@ fun RantScreen(
         get() = __result.value
         set(value) { __result.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 

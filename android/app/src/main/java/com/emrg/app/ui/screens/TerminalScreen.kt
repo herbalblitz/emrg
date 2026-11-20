@@ -38,7 +38,7 @@ fun TerminalScreen(
         get() = __output.value
         set(value) { __output.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
     val __mode = remember { mutableStateOf("workspace-write") }

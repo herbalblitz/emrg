@@ -36,11 +36,11 @@ fun SandboxScreen(
         get() = __root.value
         set(value) { __root.value = value }
     val __result = remember { mutableStateOf<String?>(null) }
-    var result: String?
+    var result: String? = null
         get() = __result.value
         set(value) { __result.value = value }
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String?
+    var error: String? = null
         get() = __error.value
         set(value) { __error.value = value }
 
