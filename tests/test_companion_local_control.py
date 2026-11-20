@@ -118,3 +118,36 @@ def test_local_control_rejects_non_object_payload(tmp_path):
     control = CompanionLocalControl(CompanionHostService(tmp_path / "registry.json"))
     with pytest.raises(CompanionLocalControlError):
         control.dispatch("pairing.pending.list", [])
+
+
+def test_local_control_generates_offline_svg_qr_for_valid_v2_descriptor(tmp_path):
+    import json
+    import time
+    import base64
+
+    host = CompanionHostService(tmp_path / "registry.json")
+    control = CompanionLocalControl(host)
+    descriptor = json.dumps({
+        "version": 2,
+        "endpoint": "wss://192.168.1.20:18476",
+        "fingerprint_sha256": ":".join(["AA"] * 32),
+        "expires_at": int(time.time()) + 120,
+        "pairing_id": "A" * 43,
+    })
+    result = control.dispatch("pairing.qr", {"descriptor": descriptor})
+    assert result["data_uri"].startswith("data:image/svg+xml;base64,")
+    svg = base64.b64decode(result["data_uri"].split(",", 1)[1])
+    assert b"<svg" in svg
+    assert b"192.168.1.20" not in svg
+
+
+@pytest.mark.parametrize("descriptor", [
+    "",
+    "not-json",
+    '{"version":2,"endpoint":"ws://127.0.0.1","fingerprint_sha256":"AA","expires_at":9999999999,"pairing_id":"' + "A" * 43 + '"}',
+    '{"version":2,"endpoint":"wss://127.0.0.1","fingerprint_sha256":"AA","expires_at":9999999999,"pairing_id":"' + "A" * 43 + '","token":"secret"}',
+])
+def test_local_control_rejects_invalid_qr_descriptor(tmp_path, descriptor):
+    control = CompanionLocalControl(CompanionHostService(tmp_path / "registry.json"))
+    with pytest.raises(CompanionLocalControlError):
+        control.dispatch("pairing.qr", {"descriptor": descriptor})
