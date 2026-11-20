@@ -100,3 +100,64 @@ def test_daemon_companion_control_rejects_unlisted_operation(tmp_path):
         "ok": False,
         "error": "unknown local control operation",
     }]
+
+
+
+def test_daemon_starts_and_stops_only_the_explicit_companion_listener(tmp_path):
+    class Runtime:
+        def __init__(self):
+            self.calls = []
+        async def start(self, payload):
+            self.calls.append(("start", payload))
+            return {"running": True, "endpoint": "wss://127.0.0.1:18476"}
+        async def stop(self):
+            self.calls.append(("stop", {}))
+            return {"running": False}
+
+    server, _host = _server(tmp_path)
+    runtime = Runtime()
+    server._companion_runtime = runtime
+    writer = _Writer()
+
+    asyncio.run(server._process_message({
+        "type": "companion_local_control",
+        "operation": "listener.start",
+        "payload": {"bind_address": "127.0.0.1", "port": 18476},
+    }, writer))
+    asyncio.run(server._process_message({
+        "type": "companion_local_control",
+        "operation": "listener.stop",
+        "payload": {},
+    }, writer))
+
+    assert runtime.calls == [
+        ("start", {"bind_address": "127.0.0.1", "port": 18476}),
+        ("stop", {}),
+    ]
+    assert writer.frames == [
+        {
+            "type": "companion_local_control_result",
+            "ok": True,
+            "result": {"running": True, "endpoint": "wss://127.0.0.1:18476"},
+        },
+        {
+            "type": "companion_local_control_result",
+            "ok": True,
+            "result": {"running": False},
+        },
+    ]
+
+
+def test_daemon_listener_stop_rejects_unexpected_payload(tmp_path):
+    server, _host = _server(tmp_path)
+    writer = _Writer()
+    asyncio.run(server._process_message({
+        "type": "companion_local_control",
+        "operation": "listener.stop",
+        "payload": {"force": True},
+    }, writer))
+    assert writer.frames == [{
+        "type": "companion_local_control_result",
+        "ok": False,
+        "error": "invalid listener stop request",
+    }]
