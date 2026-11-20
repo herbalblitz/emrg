@@ -59,7 +59,7 @@ jobs:
       - name: Install 32-bit libs for AAPT2
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lib32gcc-s1 lib32stdc++6 lib32z1
       - name: Debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace --info --max-workers=1 --no-build-cache
+        run: ./gradlew :app:assembleDebug --stacktrace --info --max-workers=1
         working-directory: android
       - name: Release APK / AAB
         env:
