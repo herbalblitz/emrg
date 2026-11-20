@@ -48,6 +48,12 @@ internal fun SecurePairingPanel() {
     var controller by remember { mutableStateOf<PairingV2SessionController?>(null) }
     var challenge by remember { mutableStateOf<PairingV2Challenge?>(null) }
     var activeHandle by remember { mutableStateOf<PairingV2ExchangeHandle?>(null) }
+    var remoteSocket by remember { mutableStateOf<PinnedRemoteWebSocket?>(null) }
+    var remoteStateText by remember { mutableStateOf("Not connected") }
+    var statusResultText by remember { mutableStateOf<String?>(null) }
+    var sessionsResultText by remember { mutableStateOf<String?>(null) }
+    var statusRequestId by remember { mutableStateOf<String?>(null) }
+    var sessionsRequestId by remember { mutableStateOf<String?>(null) }
     var statusText by remember { mutableStateOf("Scan or paste a host pairing v2 QR descriptor.") }
     var busy by remember { mutableStateOf(false) }
     // Ignore callbacks queued by an older QR transaction after reset or rescan.
@@ -64,13 +70,24 @@ internal fun SecurePairingPanel() {
         cancelActiveExchange()
         controller = null
         challenge = null
+        remoteSocket?.close()
+        remoteSocket = null
+        remoteStateText = "Not connected"
+        statusResultText = null
+        sessionsResultText = null
+        statusRequestId = null
+        sessionsRequestId = null
         state = PairingState()
         statusText = "Pairing transaction cleared."
     }
 
     val latestHandle by rememberUpdatedState(activeHandle)
+    val latestRemoteSocket by rememberUpdatedState(remoteSocket)
     DisposableEffect(Unit) {
-        onDispose { latestHandle?.cancel() }
+        onDispose {
+            latestHandle?.cancel()
+            latestRemoteSocket?.close()
+        }
     }
 
     fun createController(): PairingV2SessionController? {
@@ -148,6 +165,53 @@ internal fun SecurePairingPanel() {
                 busy = false
                 state = PairingState(phase = PairingPhase.PAIRED, pairedHost = host)
                 statusText = "Paired securely. Credential stored in Android Keystore-backed storage."
+                statusResultText = null
+                sessionsResultText = null
+                statusRequestId = UUID.randomUUID().toString()
+                sessionsRequestId = UUID.randomUUID().toString()
+                val socket = PinnedRemoteWebSocket(
+                    credentialStore = AndroidKeystoreCredentialStore(context),
+                    listener = object : RemoteSocketListener {
+                        override fun onState(state: RemoteSocketState, safeMessage: String?) {
+                            mainHandler.post {
+                                remoteStateText = safeMessage ?: state.name
+                                if (state == RemoteSocketState.CLOSED ||
+                                    state == RemoteSocketState.FAILED ||
+                                    state == RemoteSocketState.AUTH_REJECTED ||
+                                    state == RemoteSocketState.IDENTITY_REJECTED
+                                ) {
+                                    statusText = "Pairing is stored; live host connection is ${state.name.lowercase()}."
+                                }
+                            }
+                        }
+
+                        override fun onFrame(frame: ProtocolFrame) {
+                            mainHandler.post {
+                                when (frame.type) {
+                                    "status.result" -> {
+                                        if (frame.requestId == statusRequestId) {
+                                            statusResultText = frame.raw.toString().take(4096)
+                                        }
+                                    }
+                                    "sessions.result" -> {
+                                        if (frame.requestId == sessionsRequestId) {
+                                            sessionsResultText = frame.raw.toString().take(16 * 1024)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                )
+                remoteSocket?.close()
+                remoteSocket = socket
+                try {
+                    socket.connect(host)
+                    statusText = "Pairing saved. Establishing pinned, authenticated read-only connection…"
+                } catch (_: Exception) {
+                    remoteStateText = "Connection could not be started"
+                    statusText = "Pairing is saved, but the live host connection could not be started."
+                }
             }
         }
 
@@ -276,7 +340,38 @@ internal fun SecurePairingPanel() {
                 }
                 PairingPhase.HOST_APPROVED -> Text("Host approval validated.")
                 PairingPhase.FAILED -> Text("Pairing setup failed: ${state.errorCode ?: "PAIRING_FAILED"}", color = MaterialTheme.colorScheme.error)
-                PairingPhase.PAIRED -> Text("Paired securely", style = MaterialTheme.typography.titleSmall)
+                PairingPhase.PAIRED -> {
+                    Text("Paired securely", style = MaterialTheme.typography.titleSmall)
+                    Text("Live host: $remoteStateText", style = MaterialTheme.typography.bodySmall)
+                    if (statusResultText != null) {
+                        Text("Host status", style = MaterialTheme.typography.titleSmall)
+                        Text(statusResultText!!, style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (sessionsResultText != null) {
+                        Text("Read-only sessions", style = MaterialTheme.typography.titleSmall)
+                        Text(sessionsResultText!!, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Button(
+                        enabled = remoteStateText == RemoteSocketState.AUTHENTICATED.name,
+                        onClick = {
+                            statusRequestId = UUID.randomUUID().toString()
+                            sessionsRequestId = UUID.randomUUID().toString()
+                            statusResultText = null
+                            sessionsResultText = null
+                            val current = remoteSocket ?: return@Button
+                            current.sendStatus(statusRequestId!!)
+                            current.sendSessionsList(sessionsRequestId!!)
+                        },
+                    ) { Text("Refresh host status and sessions") }
+                    Button(
+                        enabled = remoteSocket != null,
+                        onClick = {
+                            remoteSocket?.close()
+                            remoteSocket = null
+                            remoteStateText = "Disconnected"
+                        },
+                    ) { Text("Disconnect") }
+                }
                 PairingPhase.REVOKED -> Text("Pairing revoked")
                 PairingPhase.DISCONNECTED -> Unit
             }
