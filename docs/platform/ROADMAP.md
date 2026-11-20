@@ -7,9 +7,9 @@ Target: preserve all original EMRG features while delivering robust Android and 
 ## Verified implementation status (2026-11-20; supersedes older historical notes below)
 - Android has a native Compose companion UI, QR/manual pairing descriptor flow, Android Keystore-backed device credentials, pinned WSS host authentication, and reconnect/refresh/disconnect state handling.
 - The Windows daemon has an opt-in dedicated WSS companion listener, local pairing approval UI/IPC, TLS identity provisioning, and QR descriptor display.
-- The currently implemented remote WSS operations are limited to authenticated status and read-only session metadata listing. Pairing approval remains local to Windows. Remote chat execution, tools, filesystem access, and remote pairing administration are not available.
-- The Android chat/session UI still includes offline/demo-only behavior; this does not establish live chat or full EMRG feature parity.
-- Latest verified Android workflow: run 44688101322 passed on commit b342578157714cf4970452ae9feafb53953b7c59 (APK assembly, signature verification, JVM tests, lint and artifact upload). This is CI evidence only, not a physical-device or Android-to-Windows end-to-end test.
+- The currently implemented remote WSS operations are scope-gated per paired device: status, session listing/management, live chat (with approval round-trip), tool-activity monitoring, files read/write, terminal exec (capped at workspace-write unless the host opts a device into danger), and sandbox management. Pairing approval remains local to Windows.
+- The Android chat/session UI now talks to the live companion transport when paired with the granted scopes; DemoTransport remains only for previews/tests.
+- Latest verified Android workflow: #44688101322: passed on commit b342578157714cf4970452ae9feafb53953b7c59 (APK assembly, signature verification, JVM tests, lint and artifact upload). This is CI evidence only, not a physical-device or Android-to-Windows end-to-end test.
 - Remaining release gates include physical Android↔Windows pairing/reconnect validation, Android Keystore device validation, Windows clean-machine install/upgrade/uninstall and lifecycle smoke tests, Gradle wrapper/reproducible builds, and parity work for chat/tools/providers/settings/memory/skills/scheduling/evolution/diagnostics.
 - Older notes later in this file describe earlier milestones and may say that the listener or transport was not yet implemented. Treat those statements as historical snapshots, not the current state.
 
