@@ -210,6 +210,7 @@ internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: Re
         } catch (_: Exception) {
             remoteConnectionState = RemoteSocketState.FAILED
             remoteStateText = "Connection could not be started"
+            onConnectionChanged(true, RemoteSocketState.FAILED)
             statusText = "Pairing is saved, but the live host connection could not be started."
         }
     }
