@@ -41,6 +41,11 @@ class CompanionRuntime:
         return self._listener is not None and self._listener.running
 
     async def start(self, payload: object) -> dict[str, Any]:
+        """Serialize the complete startup against stop and concurrent starts."""
+        async with self._lock:
+            return await self._start_locked(payload)
+
+    async def _start_locked(self, payload: object) -> dict[str, Any]:
         """Start only from an exact, explicit local bind request."""
         if not isinstance(payload, dict) or set(payload) != {"bind_address", "port"}:
             raise CompanionRuntimeError("invalid listener start request")
@@ -61,21 +66,20 @@ class CompanionRuntime:
         except CompanionTlsError:
             raise CompanionRuntimeError("could not create pairing descriptor") from None
 
-        async with self._lock:
-            if self.running:
-                raise CompanionRuntimeError("listener already running")
-            listener = CompanionWssListener(
-                self._host, config, identity_directory=self._identity_directory,
-            )
-            self._host.enable()
-            try:
-                await listener.start()
-            except Exception:
-                self._host.disable()
-                await listener.close()
-                raise CompanionRuntimeError("listener could not be started") from None
-            self._listener = listener
-            self._endpoint = endpoint
+        if self.running:
+            raise CompanionRuntimeError("listener already running")
+        listener = CompanionWssListener(
+            self._host, config, identity_directory=self._identity_directory,
+        )
+        self._host.enable()
+        try:
+            await listener.start()
+        except Exception:
+            self._host.disable()
+            await listener.close()
+            raise CompanionRuntimeError("listener could not be started") from None
+        self._listener = listener
+        self._endpoint = endpoint
         return {
             "running": True,
             "endpoint": endpoint,
