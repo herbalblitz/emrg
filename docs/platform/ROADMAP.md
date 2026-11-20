@@ -17,7 +17,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Extract session command/reply payloads and inspect daemon event lifecycle; Windows packaging baseline documented separately.
 
 ### M1 — Protocol
-- [x] Enforce UTF-8-only decoding for byte-oriented v1 and pairing-v2 JSON frames; reject UTF-16/UTF-32 payloads before schema validation (regression tests added; CI verification pending).
+- [x] Enforce UTF-8-only decoding for byte-oriented v1 and pairing-v2 JSON frames; reject UTF-16/UTF-32 payloads before schema validation (regression tests passed in Companion security CI #44659155014 on Ubuntu and Windows).
 - [x] Document local authentication/task fields and source-verified session command/reply schemas.
 - [x] Record protocol/documentation transport mismatch.
 - [x] Correct protocol.py module documentation to state that it models JSON payloads, not transport framing.
@@ -34,7 +34,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Document safe reconnect/reconciliation constraints: never replay non-idempotent commands; mark active streams interrupted and require authoritative host snapshot before resuming UI state (design-only).
 - [x] Add Android protocol-event-to-chat bridge with request binding and mismatch isolation (CI passed run 44260106387).
 - [x] Align Android authenticated WSS response handling with the host's actual `auth.ok` frame; require exact approved workspace/scopes (JVM regression tests added; CI pending).
-- [x] Send host auth/status/session/pairing responses as WebSocket text frames (not binary); add mock-socket type assertions for each WSS response path (CI pending).
+- [x] Send host auth/status/session/pairing responses as WebSocket text frames (not binary); mock-socket type assertions passed in Companion security CI #44659155014 on Ubuntu and Windows.
 - [ ] Review pairing design without weakening local endpoint.
 
 ### M2 — Android foundation
@@ -70,7 +70,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [ ] Workspace via scoped storage/capabilities; memory; skills; scheduled tasks; evolution; diagnostics; opt-in notifications.
 
 ### M5 — Windows reliability
-- [x] Electron CompanionPanel provides explicit listener start/stop, QR display/copy, pending approvals and approve/reject actions through guarded named IPC (renderer tests added; latest CI verification pending).
+- [x] Electron CompanionPanel provides explicit listener start/stop, QR display/copy, pending approvals and approve/reject actions through guarded named IPC (renderer tests, TypeScript check and production build passed in CI #44659155014).
 - [x] Windows CI job and Inno Setup script compile smoke test baseline inspected.
 - [ ] Clean-machine packaging/install/update/uninstall smoke tests.
 - [ ] Lifecycle/restart/reconnect, PATH/shell integration.
