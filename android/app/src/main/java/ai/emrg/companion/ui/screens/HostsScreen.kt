@@ -73,6 +73,11 @@ internal fun HostsScreen(connection: CompanionConnection, navController: NavHost
                             host.scopes.mapNotNull { it.wireName }.sorted().joinToString(", "),
                         style = MaterialTheme.typography.bodySmall,
                     )
+                    Button(
+                        onClick = {
+                            navController.navigate(Route.pair(host.endpoint, host.hostFingerprintSha256))
+                        },
+                    ) { Text("Re-pair this host") }
                 }
             }
             statusResult?.let {
@@ -109,7 +114,7 @@ internal fun HostsScreen(connection: CompanionConnection, navController: NavHost
 
 /** Every route, its hub label, and the scope that gates it (null = no scope). */
 internal val screenLinks: List<Triple<String, String, PairingScope?>> = listOf(
-    Triple(Route.Pair, "Pair host", null),
+    Triple(Route.Pair, "Pair new host", null),
     Triple(Route.Sessions, "Sessions", PairingScope.MANAGE_SESSIONS),
     Triple(Route.Chat, "Chat", PairingScope.SEND_CHAT),
     Triple(Route.ToolMonitor, "Tool monitor", PairingScope.MONITOR_TOOLS),

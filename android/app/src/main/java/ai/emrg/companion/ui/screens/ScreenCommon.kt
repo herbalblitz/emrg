@@ -72,7 +72,17 @@ internal fun ScopeGate(
                         "Re-pair and tick this scope to enable it.",
                     style = MaterialTheme.typography.bodySmall,
                 )
-                Button(onClick = { navController.navigate(Route.Pair) }) { Text("Re-pair with this scope") }
+                Button(
+                    onClick = {
+                        navController.navigate(
+                            Route.pair(
+                                pairedHost!!.endpoint,
+                                pairedHost!!.hostFingerprintSha256,
+                                scope.wireName,
+                            )
+                        )
+                    }
+                ) { Text("Re-pair with this scope") }
             }
         }
         return

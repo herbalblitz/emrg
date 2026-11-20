@@ -110,9 +110,34 @@ internal enum class PairingScope(val wireName: String?, val description: String)
         /** The 20 requestable scopes, in the order the scope picker shows them. */
         val REQUESTABLE: List<PairingScope> = entries.filter { it.wireName != null }
 
-        /** The 3 scopes requested by default at pair time. */
-        val DEFAULT_REQUESTED: Set<PairingScope> =
-            setOf(READ_STATUS, LIST_SESSIONS, SEND_CHAT)
+        /** The scopes pre-selected at pair time: all 20 requestable scopes. */
+        val DEFAULT_REQUESTED: Set<PairingScope> = REQUESTABLE.toSet()
+
+        /**
+         * The 20 requestable scopes grouped by the screen that needs them, in
+         * hub order. The scope picker renders one section per group; every
+         * group maps to a real screen (Status/Hosts are hub-level, not screens).
+         */
+        val GROUPED_BY_SCREEN: List<Pair<String, List<PairingScope>>> = listOf(
+            "Status" to listOf(READ_STATUS),
+            "Sessions" to listOf(LIST_SESSIONS, MANAGE_SESSIONS),
+            "Chat" to listOf(SEND_CHAT),
+            "Tool monitor" to listOf(MONITOR_TOOLS),
+            "Files" to listOf(READ_FILES, WRITE_FILES),
+            "Terminal" to listOf(EXEC_TERMINAL),
+            "Sandbox" to listOf(MANAGE_SANDBOX),
+            "Hosts" to listOf(LIST_HOSTS),
+            "Memory" to listOf(READ_MEMORY),
+            "Models" to listOf(MANAGE_MODELS),
+            "Rant" to listOf(SUBMIT_RANT),
+            "Evolution" to listOf(READ_EVOLUTION),
+            "Tasks" to listOf(MANAGE_TASKS),
+            "Skills" to listOf(MANAGE_SKILLS),
+            "Logs" to listOf(READ_LOGS),
+            "Audit" to listOf(READ_AUDIT),
+            "Devices" to listOf(MANAGE_DEVICES),
+            "Settings" to listOf(MANAGE_SETTINGS),
+        )
 
         /** All 20 wire names, the single client-side allowlist. */
         val ALL_WIRE_NAMES: Set<String> = REQUESTABLE.mapNotNull { it.wireName }.toSet()

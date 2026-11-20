@@ -47,13 +47,28 @@ import java.util.UUID
 internal fun SecurePairingPanel(
     connection: CompanionConnection,
     onConnectionChanged: (paired: Boolean, state: RemoteSocketState) -> Unit = { _, _ -> },
+    /**
+     * Re-pair prefill: endpoint + fingerprint of an already-known host.
+     * Only a display hint — the fresh QR still supplies the pairing id and
+     * its own fingerprint, which the verify step checks. Null = fresh pairing.
+     */
+    prefillEndpoint: String? = null,
+    prefillFingerprint: String? = null,
+    /** Scopes pre-ticked when the panel opens; null = all 20 (DEFAULT_REQUESTED). */
+    initialScopes: Set<PairingScope>? = null,
+    /**
+     * True when re-pairing a host that is already connected: clearing a
+     * pairing transaction must not drop the live socket or the stored
+     * credential — the existing pairing stays until the new one succeeds.
+     */
+    preserveConnection: Boolean = false,
 ) {
     val context = LocalContext.current
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
     var qrPayload by remember { mutableStateOf("") }
     var scannerVisible by remember { mutableStateOf(false) }
-    var endpoint by remember { mutableStateOf("") }
-    var fingerprint by remember { mutableStateOf("") }
+    var endpoint by remember { mutableStateOf(prefillEndpoint.orEmpty()) }
+    var fingerprint by remember { mutableStateOf(prefillFingerprint.orEmpty()) }
     var pairingId by remember { mutableStateOf<String?>(null) }
     var descriptorVersion by remember { mutableStateOf<Int?>(null) }
     var state by remember { mutableStateOf(PairingState()) }
@@ -63,10 +78,16 @@ internal fun SecurePairingPanel(
     var remoteStateText by remember { mutableStateOf("Not connected") }
     var statusText by remember { mutableStateOf("Scan or paste a host pairing v2 QR descriptor.") }
     var busy by remember { mutableStateOf(false) }
-    // Scopes this device asks the host for. Default: the 3 original scopes.
+    // Scopes this device asks the host for. Default: all 20 requestable scopes.
     // The host grants only what it has enabled; asking for an ungranted scope
     // fails pairing, so the host must enable a scope before it is ticked here.
-    var selectedScopes by remember { mutableStateOf(PairingScope.DEFAULT_REQUESTED) }
+    // A re-pair may pass the host's currently granted scopes instead.
+    var selectedScopes by remember {
+        mutableStateOf(
+            initialScopes?.filter { it in PairingScope.REQUESTABLE }.toSet()
+                .takeIf { !it.isNullOrEmpty() } ?: PairingScope.DEFAULT_REQUESTED
+        )
+    }
     // Ignore callbacks queued by an older QR transaction after reset or rescan.
     var transactionGeneration by remember { mutableStateOf(0) }
 
@@ -85,9 +106,11 @@ internal fun SecurePairingPanel(
         cancelActiveExchange()
         controller = null
         challenge = null
-        connection.disconnect()
-        remoteStateText = "Not connected"
-        onConnectionChanged(false, RemoteSocketState.CLOSED)
+        if (!preserveConnection) {
+            connection.disconnect()
+            remoteStateText = "Not connected"
+            onConnectionChanged(false, RemoteSocketState.CLOSED)
+        }
         state = PairingState()
         statusText = "Pairing transaction cleared."
     }
@@ -227,6 +250,14 @@ internal fun SecurePairingPanel(
                 "Pairing v2 uses a QR-pinned WSS connection and a non-exportable Android Keystore device key. Host approval is always performed on the host.",
                 style = MaterialTheme.typography.bodySmall
             )
+            if (!prefillEndpoint.isNullOrBlank()) {
+                Text(
+                    "Re-pairing known host $prefillEndpoint. Your existing pairing " +
+                        "and live connection stay untouched until the new pairing succeeds. " +
+                        "Scan a fresh QR from this host — the QR supplies the new pairing transaction.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             Button(onClick = { scannerVisible = true }, enabled = !busy) { Text("Scan QR with camera") }
             OutlinedTextField(
                 value = qrPayload,
@@ -261,6 +292,18 @@ internal fun SecurePairingPanel(
                         } else {
                             "QR v1 is valid for identity display only; live Pairing v2 requires a v2 QR."
                         }
+                        // Re-pair guard: a QR for a different host than the one
+                        // being re-paired is almost certainly the wrong QR.
+                        // Warn loudly; the fingerprint-verify step still gates
+                        // on the scanned QR itself, so this never weakens it.
+                        if (!prefillEndpoint.isNullOrBlank() &&
+                            (!parsed.descriptor.endpoint.equals(prefillEndpoint, ignoreCase = true) ||
+                                !parsed.descriptor.fingerprintSha256.equals(prefillFingerprint.orEmpty(), ignoreCase = true))
+                        ) {
+                            statusText = "Warning: this QR is for ${parsed.descriptor.endpoint}, " +
+                                "not the host being re-paired ($prefillEndpoint). " +
+                                "Check you scanned the right host's QR. " + statusText
+                        }
                     }
                     is PairingDescriptorResult.Invalid -> {
                         endpoint = ""
@@ -284,24 +327,37 @@ internal fun SecurePairingPanel(
                 Text("Scopes to request", style = MaterialTheme.typography.titleSmall)
                 Text(
                     "The host must have enabled each scope first — requesting a scope " +
-                        "the host has not granted fails pairing. Default: status, sessions.list, chat.send.",
+                        "the host has not granted fails pairing. Default: all 20 scopes.",
                     style = MaterialTheme.typography.bodySmall,
                 )
-                PairingScope.REQUESTABLE.forEach { scope ->
-                    val checked = scope in selectedScopes
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = checked,
-                            // At least one scope must stay selected.
-                            enabled = !busy && (!checked || selectedScopes.size > 1),
-                            onCheckedChange = { want ->
-                                selectedScopes = if (want) selectedScopes + scope
-                                else if (selectedScopes.size > 1) selectedScopes - scope else selectedScopes
-                            },
-                        )
-                        Column {
-                            Text(scope.wireName ?: scope.name, style = MaterialTheme.typography.bodyMedium)
-                            Text(scope.description, style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { selectedScopes = PairingScope.REQUESTABLE.toSet() },
+                        enabled = !busy && selectedScopes.size < PairingScope.REQUESTABLE.size,
+                    ) { Text("Select all") }
+                    Button(
+                        onClick = { selectedScopes = setOf(PairingScope.READ_STATUS) },
+                        enabled = !busy && selectedScopes != setOf(PairingScope.READ_STATUS),
+                    ) { Text("Status only") }
+                }
+                PairingScope.GROUPED_BY_SCREEN.forEach { (group, scopes) ->
+                    Text(group, style = MaterialTheme.typography.titleSmall)
+                    scopes.forEach { scope ->
+                        val checked = scope in selectedScopes
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = checked,
+                                // At least one scope must stay selected.
+                                enabled = !busy && (!checked || selectedScopes.size > 1),
+                                onCheckedChange = { want ->
+                                    selectedScopes = if (want) selectedScopes + scope
+                                    else if (selectedScopes.size > 1) selectedScopes - scope else selectedScopes
+                                },
+                            )
+                            Column {
+                                Text(scope.wireName ?: scope.name, style = MaterialTheme.typography.bodyMedium)
+                                Text(scope.description, style = MaterialTheme.typography.bodySmall)
+                            }
                         }
                     }
                 }

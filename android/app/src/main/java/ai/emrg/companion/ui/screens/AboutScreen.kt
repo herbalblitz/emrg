@@ -30,6 +30,7 @@ internal fun AboutScreen(navController: NavHostController) {
         ) {
             Text("EMRG Android companion", style = MaterialTheme.typography.titleMedium)
             Text("App version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodySmall)
+            Text("Package ${BuildConfig.APPLICATION_ID}", style = MaterialTheme.typography.bodySmall)
             Text(
                 "Pairs with a Windows EMRG host over pinned WSS using Pairing v2 " +
                     "(P-256 device key, scope binding, QR descriptor expires after 180 s). " +

@@ -64,10 +64,28 @@ object Route {
     const val ArgSessionId = "session_id"
     const val ArgCwd = "cwd"
     const val ArgPath = "path"
+    const val ArgEndpoint = "endpoint"
+    const val ArgFingerprint = "fingerprint"
+    const val ArgScope = "scope"
 
     /** Route pattern with optional args, for navigation-compose. */
     fun chat(sessionId: String? = null): String =
         if (sessionId.isNullOrBlank()) Chat else "$Chat?$ArgSessionId=${android.net.Uri.encode(sessionId)}"
+
+    /**
+     * Pair route. No args = fresh pairing. With endpoint/fingerprint = re-pair
+     * a known host (endpoint/fingerprint pre-filled, fresh QR still required);
+     * [scope] is the wire name of one scope to pre-tick on top of the host's
+     * already-granted scopes.
+     */
+    fun pair(endpoint: String? = null, fingerprint: String? = null, scope: String? = null): String {
+        val args = listOfNotNull(
+            endpoint?.takeIf { it.isNotBlank() }?.let { "$ArgEndpoint=${android.net.Uri.encode(it)}" },
+            fingerprint?.takeIf { it.isNotBlank() }?.let { "$ArgFingerprint=${android.net.Uri.encode(it)}" },
+            scope?.takeIf { it.isNotBlank() }?.let { "$ArgScope=${android.net.Uri.encode(it)}" },
+        )
+        return if (args.isEmpty()) Pair else "$Pair?${args.joinToString("&")}"
+    }
 
     fun editor(path: String, sessionId: String? = null): String =
         "$Editor?$ArgPath=${android.net.Uri.encode(path)}" +
@@ -124,8 +142,23 @@ internal fun CompanionNavHost(
             composable(Route.Hosts) {
                 HostsScreen(connection = connection, navController = navController)
             }
-            composable(Route.Pair) {
-                PairScreen(connection = connection, navController = navController)
+            composable(
+                route = "${Route.Pair}?${Route.ArgEndpoint}={${Route.ArgEndpoint}}" +
+                    "&${Route.ArgFingerprint}={${Route.ArgFingerprint}}" +
+                    "&${Route.ArgScope}={${Route.ArgScope}}",
+                arguments = listOf(
+                    navArgument(Route.ArgEndpoint) { type = NavType.StringType; defaultValue = "" },
+                    navArgument(Route.ArgFingerprint) { type = NavType.StringType; defaultValue = "" },
+                    navArgument(Route.ArgScope) { type = NavType.StringType; defaultValue = "" },
+                ),
+            ) { entry ->
+                PairScreen(
+                    connection = connection,
+                    navController = navController,
+                    prefillEndpoint = entry.arguments?.getString(Route.ArgEndpoint).orEmpty().ifBlank { null },
+                    prefillFingerprint = entry.arguments?.getString(Route.ArgFingerprint).orEmpty().ifBlank { null },
+                    requestedScope = entry.arguments?.getString(Route.ArgScope).orEmpty().ifBlank { null },
+                )
             }
             composable(Route.Sessions) {
                 SessionsScreen(connection = connection, navController = navController)
