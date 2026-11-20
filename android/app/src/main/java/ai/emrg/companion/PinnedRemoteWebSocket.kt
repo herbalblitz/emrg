@@ -639,6 +639,8 @@ internal class PinnedRemoteWebSocket(
         internal val SANDBOX_ROOT_OPS = setOf("list", "add", "remove")
         internal const val MAX_FILE_WRITE_BYTES = 1024 * 1024
         internal const val MAX_TERMINAL_COMMAND_BYTES = 64 * 1024
+
+        internal fun createAuthFrame(deviceId: String, credential: String): JSONObject =
             JSONObject()
                 .put("type", "auth")
                 .put("protocol", "1.0")

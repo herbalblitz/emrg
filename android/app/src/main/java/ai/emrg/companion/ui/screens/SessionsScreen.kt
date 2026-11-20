@@ -2,6 +2,7 @@ package ai.emrg.companion.ui.screens
 
 import ai.emrg.companion.CompanionConnection
 import ai.emrg.companion.PairingScope
+import ai.emrg.companion.userErrorMessage
 import ai.emrg.companion.ui.navigation.Route
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

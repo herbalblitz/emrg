@@ -46,6 +46,8 @@ internal class CompanionChatTransport(
     @Volatile private var activeRequestId: String? = null
     @Volatile private var activeSessionId: String? = null
 
+    override suspend fun send(prompt: String): String = stream(prompt) {}
+
     override suspend fun stream(prompt: String, onDelta: (String) -> Unit): String = coroutineScope {
         if (!connection.hasScope(PairingScope.SEND_CHAT)) {
             throw IllegalStateException("chat.send scope is not granted")

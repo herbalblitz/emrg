@@ -16,6 +16,10 @@ android {
         jvmTarget = "17"
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "ai.emrg.companion"
         minSdk = 26
