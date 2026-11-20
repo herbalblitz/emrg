@@ -63,7 +63,8 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 
 - [x] Host frame schema strictness: duplicate JSON keys, unknown fields and invalid Unicode fail closed; host parser tests added (CI execution pending).
 - [x] Registry same-instance thread serialization for credential issue/revoke/read; concurrent-issuance test added. Cross-process lock and Windows ACL hardening are open.
-- [ ] Host TLS identity generation/persistence and trusted local UI are not yet built; TLS primitives remain transport-free.
+- [x] Host TLS identity generation/persistence, protected TLS context loading, daemon-owned opt-in WSS lifecycle, and transaction-bound v2 QR descriptor creation are integrated in source; CI for the latest runtime changes is pending.
+- [ ] Trusted local React approval/QR UI and Android-to-Windows live pairing E2E remain open.
 
 ## Host TLS identity (implementation status)
 
@@ -71,7 +72,8 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Stable identity persistence; no silent regeneration on missing/corrupt state; explicit reset/rotation.
 - [x] Windows DPAPI-protected private key and POSIX restrictive file modes; atomic writes.
 - [x] TLS context loader, TLS 1.2 minimum, no socket creation; process-local provisioning/context lock.
-- [ ] Python tests/CI, lockfile regeneration and Windows DPAPI/ACL review.
+- [x] Python TLS identity tests cover persistence, corruption, SAN mismatch, key mismatch, atomicity, and DPAPI-backed key file selection (cross-platform CI previously passed).
+- [ ] Latest daemon runtime + QR v2 tests/CI and Windows DPAPI/ACL review remain open.
 - [ ] Android trust strategy for self-signed pins, local host UI confirmation, QR generation and live listener integration.
 
 ## Authentication replay defense
@@ -93,7 +95,8 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Generate Android-compatible, credential-free v1 pairing descriptor with WSS endpoint and SHA-256 pin.
 - [x] Reject endpoint host outside certificate SAN and invalid/insecure endpoint forms.
 - [x] Enforce QR expiry at no more than 180 seconds.
-- [ ] Integrate descriptor into host approval UI and QR rendering; WSS listener currently exposes authentication and status only, with chat/session dispatch not yet connected.
+- [x] Daemon runtime now starts an explicit IP-bound listener, opens a status-only Pairing v2 transaction, and returns a short-lived v2 QR descriptor containing the pairing ID; runtime tests are included in Companion Security CI.
+- [ ] Integrate descriptor into React QR rendering and pending approval UI; chat/session dispatch remains limited to the existing scoped read-only operations.
 
 
 ## Companion listener safety primitives
@@ -116,8 +119,10 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Authenticated daemon command routes only `status`, `pairing.pending.list`, `pairing.decide`, and `pairing.cancel`; unknown operations and malformed payloads fail closed.
 - [x] Electron Main exposes fixed status/pending/decision IPC handlers and validates primary BrowserWindow, top-level frame, and local `file://` origin.
 - [x] Preload exposes only named Companion methods; preload API contract test updated.
-- [ ] React renderer approval screen, host enable/disable UX, TLS identity provisioning, QR descriptor display, and WSS listener lifecycle are not wired.
-- [ ] Windows/Linux daemon and Electron IPC sender-origin tests and live Android-to-host pairing remain open. This bridge is not an end-to-end pairing implementation.
+- [x] Daemon owns explicit listener start/stop, TLS identity provisioning, and v2 QR descriptor generation; Electron Main/Preload expose fixed guarded lifecycle IPC methods.
+- [ ] React renderer approval screen, host enable/disable UX, QR descriptor display, and pending approval interactions are not wired.
+- [x] Static Electron IPC tests cover the primary top-level local renderer guard for status, approval, and listener lifecycle handlers; daemon tests cover listener start/stop routing.
+- [ ] React UI, full Electron↔daemon runtime tests, physical Android Keystore checks, and live Android-to-Windows pairing remain open. This is not yet a completed end-to-end pairing implementation.
 
 ## Pairing v2 host transaction core
 
