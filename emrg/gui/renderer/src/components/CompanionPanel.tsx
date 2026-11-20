@@ -57,7 +57,7 @@ export function CompanionPanel() {
 
   async function start() {
     const api = emrg();
-    if (!api) return;
+    if (!api || !validPort || !cwd.trim()) return;
     setBusy(true); setError(""); setDescriptor("");
     try {
       const result = await api.companionListenerStart({
