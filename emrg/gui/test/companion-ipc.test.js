@@ -36,5 +36,7 @@ test("Companion preload has named methods only, no generic IPC bridge", () => {
   assert.match(PRELOAD, /companionStatus:\s*\(\) => ipcRenderer\.invoke\("emrg:companionStatus"\)/);
   assert.match(PRELOAD, /companionPendingPairings:\s*\(\) => ipcRenderer\.invoke\("emrg:companionPendingPairings"\)/);
   assert.match(PRELOAD, /companionDecidePairing:\s*\(payload\) => ipcRenderer\.invoke\("emrg:companionDecidePairing", payload\)/);
+  assert.match(PRELOAD, /companionListenerStart:\s*\(payload\) => ipcRenderer\.invoke\("emrg:companionListenerStart", payload\)/);
+  assert.match(PRELOAD, /companionListenerStop:\s*\(\) => ipcRenderer\.invoke\("emrg:companionListenerStop"\)/);
   assert.doesNotMatch(PRELOAD, /invoke:\s*\([^)]*channel/);
 });
