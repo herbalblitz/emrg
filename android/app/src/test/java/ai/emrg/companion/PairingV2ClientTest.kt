@@ -276,6 +276,7 @@ class PairingV2ClientTest {
         val parsed = client.parseChallengeResponse(pairingId, response)
         assertEquals(pairingId, parsed.pairingId)
         assertEquals(challengeId, parsed.challengeId)
+        assertEquals("workspace-1", parsed.workspaceId)
 
         val credentialResponse = org.json.JSONObject()
             .put("type", "pairing.credential")
@@ -284,6 +285,37 @@ class PairingV2ClientTest {
             .put("device_id", "android-device-1")
             .put("credential", "host-scoped-credential")
         assertEquals("host-scoped-credential", client.parseCredentialResponse(pairingId, credentialResponse))
+    }
+
+    @Test
+    fun rejectsPairingChallengeWithoutValidWorkspaceBinding() {
+        val keys = FakeDeviceKeys()
+        val client = PairingV2Client(
+            keys, "android-device-1", "emrg-host-1",
+            nowEpochSeconds = { 1_700_000_000L }, expectedHostIdentity = hostFingerprint,
+        )
+        val pairingId = b64(32)
+        val challengeId = b64(16)
+        client.createRequestFrame(pairingId).also { activeClientNonce = it.getString("client_nonce") }
+        val validPayload = challenge(
+            pairingId, challengeId, "android-device-1",
+            keys.publicKeyDigest(), 1_700_000_100L,
+        ).toString(Charsets.UTF_8)
+        for (invalidWorkspace in listOf("", "x".repeat(129), "workspace/id")) {
+            val malformed = validPayload.replace(
+                "\\"workspace_id\\":\\"workspace-1\\"",
+                "\\"workspace_id\\":\\"$invalidWorkspace\\"",
+            ).toByteArray(Charsets.UTF_8)
+            val response = org.json.JSONObject()
+                .put("type", "pairing.challenge")
+                .put("protocol", "2.0")
+                .put("pairing_id", pairingId)
+                .put("challenge_id", challengeId)
+                .put("challenge", Base64.getUrlEncoder().withoutPadding().encodeToString(malformed))
+            assertThrows(IllegalArgumentException::class.java) {
+                client.parseChallengeResponse(pairingId, response)
+            }
+        }
     }
 
     @Test
