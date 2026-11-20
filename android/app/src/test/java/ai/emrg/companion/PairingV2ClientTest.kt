@@ -303,8 +303,7 @@ class PairingV2ClientTest {
         ).toString(Charsets.UTF_8)
         for (invalidWorkspace in listOf("", "x".repeat(129), "workspace/id")) {
             val malformed = validPayload.replace(
-                "\\"workspace_id\\":\\"workspace-1\\"",
-                "\\"workspace_id\\":\\"$invalidWorkspace\\"",
+                "workspace-1", invalidWorkspace,
             ).toByteArray(Charsets.UTF_8)
             val response = org.json.JSONObject()
                 .put("type", "pairing.challenge")
