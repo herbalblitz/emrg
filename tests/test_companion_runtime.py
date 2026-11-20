@@ -21,6 +21,10 @@ class _FakeListener:
         self.closed = False
         self.instances.append(self)
 
+    @property
+    def active_connections(self):
+        return 0
+
     async def start(self):
         assert self.host.enabled
         self.running = True
