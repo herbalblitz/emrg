@@ -38,7 +38,7 @@ export function CompanionPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const portNumber = Number(port);
-  const validPort = /^\\d+$/.test(port) && portNumber >= 1 && portNumber <= 65535;
+  const validPort = /^\d+$/.test(port) && portNumber >= 1 && portNumber <= 65535;
 
   const refresh = useCallback(async () => {
     const api = emrg();
@@ -98,7 +98,7 @@ export function CompanionPanel() {
           <label>Workspace directory <input aria-label="Workspace directory" value={cwd} onChange={e => setCwd(e.target.value)} disabled={busy || Boolean(status?.listener_running)} /></label>
           {status?.listener_running
             ? <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void stop()}>Stop host</button>
-            : <button type="button" className="btn btn-primary" disabled={busy || !cwd.trim() || !/^\d+$/.test(port)} onClick={() => void start()}>Start host and create pairing code</button>}
+            : <button type="button" className="btn btn-primary" disabled={busy || !cwd.trim() || !validPort} onClick={() => void start()}>Start host and create pairing code</button>}
           <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void refresh()}>Refresh</button>
         </div>
         {status && <p className="hint" data-testid="companion-status">{status.listener_running ? `Running at ${status.endpoint || "unknown endpoint"}` : "Host stopped"} · Active connections: {status.active_connections ?? 0}</p>}
