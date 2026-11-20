@@ -45,7 +45,7 @@ internal class ExactPinTrustManager(expectedFingerprint: String) : X509TrustMana
             ?: throw IllegalArgumentException("Host certificate fingerprint is invalid")
 }
 
-/** Events from a paired host socket. Authentication is not considered ready until host auth_ok. */
+/** Events from a paired host socket. Authentication is not ready until host auth.ok. */
 internal interface RemoteSocketListener {
     fun onState(state: RemoteSocketState, safeMessage: String? = null)
     fun onFrame(frame: ProtocolFrame)
@@ -62,7 +62,9 @@ internal enum class RemoteSocketState {
  * default hostname verifier remains enabled. The pin is checked during TLS handshake,
  * before any credential frame can be sent. No reconnect or command replay is implemented.
  *
- * Host-side remote pairing/auth endpoints are not implemented in EMRG daemon yet.
+ * The host listener implements pinned Pairing v2 exchange and device-scoped authentication.
+ * Its authenticated dispatch is currently limited to status and read-only session listing;
+ * chat execution is deliberately not wired.
  */
 internal class PinnedRemoteWebSocket(
     private val credentialStore: CredentialStore,
@@ -108,8 +110,8 @@ internal class PinnedRemoteWebSocket(
                 }
                 listener.onState(RemoteSocketState.TLS_IDENTITY_VERIFIED)
                 listener.onState(RemoteSocketState.AUTHENTICATING)
-                // This client frame is a proposed companion-auth contract; the daemon currently
-                // only supports its local desktop token auth and must not accept this yet.
+                // This device-scoped frame matches the dedicated Companion WSS listener;
+                // it is separate from the desktop daemon's local token authentication.
                 val auth = createAuthFrame(host.deviceId, credential)
                 if (!webSocket.send(auth.toString())) {
                     terminalState = RemoteSocketState.FAILED
@@ -136,7 +138,7 @@ internal class PinnedRemoteWebSocket(
                     return
                 }
                 when (frame.type) {
-                    "auth_ok" -> {
+                    "auth.ok" -> {
                         val expectedHost = pairedHost
                         if (expectedHost == null || !isValidAuthSuccess(frame, expectedHost)) {
                             authenticated = false
@@ -204,20 +206,42 @@ internal class PinnedRemoteWebSocket(
 
     companion object {
         internal fun isAllowedFrameInAuthState(authenticated: Boolean, frameType: String?): Boolean {
-            val authFrames = setOf("auth_ok", "auth_error", "auth_rejected")
+            // Exact host wire type from CompanionWssListener; do not accept the
+            // desktop daemon's separate auth_ok spelling as an alias.
+            val authFrames = setOf("auth.ok")
             return frameType?.let {
                 if (authenticated) it !in authFrames else it in authFrames
             } == true
         }
 
         internal fun isValidAuthSuccess(frame: ProtocolFrame, host: PairedHost): Boolean {
-            if (frame.type != "auth_ok" || frame.raw.optString("protocol") != "1.0") return false
+            if (frame.type != "auth.ok" || frame.raw.optString("protocol") != "1.0") return false
+
             val returnedWorkspace = frame.raw.optString("workspace_id").takeIf { it.isNotBlank() }
-            if (PairingScope.SEND_CHAT in host.scopes) {
-                return !host.approvedWorkspaceId.isNullOrBlank() &&
-                    returnedWorkspace == host.approvedWorkspaceId
+                ?: return false
+            if (!host.approvedWorkspaceId.isNullOrBlank() &&
+                returnedWorkspace != host.approvedWorkspaceId
+            ) return false
+
+            val expectedScopes = mutableSetOf<String>()
+            for (scope in host.scopes) {
+                val wireScope = when (scope) {
+                    PairingScope.READ_STATUS -> "status"
+                    PairingScope.LIST_SESSIONS -> "sessions.list"
+                    PairingScope.SEND_CHAT -> "chat.send"
+                    PairingScope.CONTINUE_SESSIONS,
+                    PairingScope.VIEW_TOOL_ACTIVITY -> return false
+                }
+                expectedScopes.add(wireScope)
             }
-            return host.approvedWorkspaceId == null || returnedWorkspace == host.approvedWorkspaceId
+            val returnedScopeArray = frame.raw.optJSONArray("scopes") ?: return false
+            if (returnedScopeArray.length() != expectedScopes.size) return false
+            val returnedScopes = mutableSetOf<String>()
+            for (index in 0 until returnedScopeArray.length()) {
+                val value = returnedScopeArray.opt(index)
+                if (value !is String || value.isBlank() || !returnedScopes.add(value)) return false
+            }
+            return returnedScopes == expectedScopes
         }
 
         internal fun companionChatFrame(command: TaskCommand, workspaceId: String): JSONObject {

@@ -38,7 +38,9 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for streaming integration run `44239121243` (`bc1d3bf2`); markdown renderer CI pending
 - [x] WSS client primitive with system TLS + pinned host certificate fingerprint, auth-envelope send, protocol/workspace-bound auth-success validation, chat-only scoped frame construction and connection generation guards; dedicated opt-in host WSS listener implements device authentication, scoped status and bounded read-only session metadata dispatch.
 - [x] Credential-safe QR descriptor parsing: WSS-only, strict allowlist, mandatory <=180-second expiry; endpoint query/user-info/fragment and invalid ports rejected.
-- [ ] Trusted host approval UI and pairing/revoke management UI remain unimplemented. Android Pairing v2 challenge/redeem transport is integrated in source; authenticated status/session-list UI operations and cross-platform end-to-end validation remain open.
+- [x] Electron CompanionPanel exposes explicit listener start/stop, QR display/copy, pending device approvals and approve/reject through guarded named IPC (renderer tests added; CI verification pending).
+- [ ] Registered-device revocation/management UI, Android authenticated status/session-list UI operations, physical-device Keystore validation and cross-platform end-to-end validation remain open.
+- [x] Android authenticated WSS client matches the host's `auth.ok` response and requires exact approved workspace/scopes (regression tests added; CI pending).
 - [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
 - [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI passed in run `44239121243`); no real daemon transport yet.
 - [x] Offline UI integration for response streaming, partial text display and Stop/cancel action (no live transport; CI passed in run `44239121243`).
@@ -67,7 +69,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Host v1 and pairing-v2 validators enforce UTF-8-only byte payloads (UTF-16/32 rejected); regression tests added (CI pending).
 - [x] Registry same-instance thread serialization for credential issue/revoke/read; concurrent-issuance test added. Cross-process lock and Windows ACL hardening are open.
 - [x] Host TLS identity generation/persistence, protected TLS context loading, daemon-owned opt-in WSS lifecycle, and transaction-bound v2 QR descriptor creation are integrated in source; CI for the latest runtime changes is pending.
-- [ ] Trusted local React approval/QR UI and Android-to-Windows live pairing E2E remain open.
+- [x] Trusted local React CompanionPanel approval/QR UI is wired through named IPC; [ ] registered-device management UI and Android-to-Windows live pairing E2E remain open.
 
 ## Host TLS identity (implementation status)
 
@@ -99,7 +101,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Reject endpoint host outside certificate SAN and invalid/insecure endpoint forms.
 - [x] Enforce QR expiry at no more than 180 seconds.
 - [x] Daemon runtime now starts an explicit IP-bound listener, opens a status-only Pairing v2 transaction, and returns a short-lived v2 QR descriptor containing the pairing ID; runtime tests are included in Companion Security CI.
-- [ ] Integrate descriptor into React QR rendering and pending approval UI; chat/session dispatch remains limited to the existing scoped read-only operations.
+- [x] Integrate v2 descriptor display/copy and pending approval/rejection into the React CompanionPanel (renderer tests added; CI verification pending). [ ] Chat/session UI dispatch remains limited to the existing scoped read-only host operations.
 
 
 ## Companion listener safety primitives
@@ -110,7 +112,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Host-service disable lifecycle observer stops the listener, closes active WSS clients and invalidates pending pairings; transport tests cover auth + scoped status and disable shutdown.
 - [x] Read-only `sessions.list` WSS dispatch uses the approved credential's stored workspace path (never a client-supplied cwd), requires the `sessions.list` scope and returns correlated, allowlisted metadata (max 200 records; bounded text and message counts); tests cover workspace binding, data redaction and unauthorized dispatch.
 - [x] Local pairing transaction bounds workspace/device/secret inputs, rejects malformed UTF-8 and invalid scope collections, and validates approval/cancellation IDs and strict boolean decisions; regression tests cover malformed inputs and one-time approval.
-- [ ] Chat dispatch into daemon runtime, UI pairing/QR, Android live transport and full end-to-end remain open.
+- [ ] Chat dispatch into daemon runtime, authenticated Android status/session UI, and full end-to-end remain open.
 
 - [x] Active WSS device sessions revalidate the authenticated device's current registry authorization before each request; revocation and credential rotation invalidate existing connections, and registry read failures fail closed. Regression tests cover credential rotation on an already-open socket.
 - [x] WSS session listing returns only bounded, allowlisted metadata; local cwd, transcripts, and arbitrary meta fields are excluded.
@@ -123,9 +125,9 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Electron Main exposes fixed status/pending/decision IPC handlers and validates primary BrowserWindow, top-level frame, and local `file://` origin.
 - [x] Preload exposes only named Companion methods; preload API contract test updated.
 - [x] Daemon owns explicit listener start/stop, TLS identity provisioning, and v2 QR descriptor generation; Electron Main/Preload expose fixed guarded lifecycle IPC methods.
-- [ ] React renderer approval screen, host enable/disable UX, QR descriptor display, and pending approval interactions are not wired.
+- [x] React renderer CompanionPanel implements explicit host start/stop, QR descriptor display/copy, pending approval list and approve/reject interactions (renderer tests added; CI verification pending).
 - [x] Static Electron IPC tests cover the primary top-level local renderer guard for status, approval, and listener lifecycle handlers; daemon tests cover listener start/stop routing.
-- [ ] React UI, full Electron↔daemon runtime tests, physical Android Keystore checks, and live Android-to-Windows pairing remain open. This is not yet a completed end-to-end pairing implementation.
+- [ ] Full Electron↔daemon runtime tests, registered-device revoke UI, physical Android Keystore checks, and live Android-to-Windows pairing remain open. This is not yet a completed end-to-end pairing implementation.
 
 ## Pairing v2 host transaction core
 

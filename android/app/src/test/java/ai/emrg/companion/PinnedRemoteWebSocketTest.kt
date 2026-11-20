@@ -27,12 +27,20 @@ class PinnedRemoteWebSocketTest {
             approvedWorkspaceId = "workspace-expected",
             approvedCwd = "/approved"
         )
-        val matching = ProtocolFrame.parse("""{"type":"auth_ok","protocol":"1.0","workspace_id":"workspace-expected"}""")
-        val wrongWorkspace = ProtocolFrame.parse("""{"type":"auth_ok","protocol":"1.0","workspace_id":"other"}""")
-        val missingProtocol = ProtocolFrame.parse("""{"type":"auth_ok","workspace_id":"workspace-expected"}""")
+        val matching = ProtocolFrame.parse("""{"type":"auth.ok","protocol":"1.0","workspace_id":"workspace-expected","scopes":["chat.send"]}""")
+        val wrongWorkspace = ProtocolFrame.parse("""{"type":"auth.ok","protocol":"1.0","workspace_id":"other","scopes":["chat.send"]}""")
+        val missingProtocol = ProtocolFrame.parse("""{"type":"auth.ok","workspace_id":"workspace-expected","scopes":["chat.send"]}""")
         assertEquals(true, PinnedRemoteWebSocket.isValidAuthSuccess(matching, host))
         assertEquals(false, PinnedRemoteWebSocket.isValidAuthSuccess(wrongWorkspace, host))
         assertEquals(false, PinnedRemoteWebSocket.isValidAuthSuccess(missingProtocol, host))
+        val missingScopes = ProtocolFrame.parse("""{"type":"auth.ok","protocol":"1.0","workspace_id":"workspace-expected"}""")
+        val extraScope = ProtocolFrame.parse("""{"type":"auth.ok","protocol":"1.0","workspace_id":"workspace-expected","scopes":["chat.send","sessions.list"]}""")
+        val duplicateScope = ProtocolFrame.parse("""{"type":"auth.ok","protocol":"1.0","workspace_id":"workspace-expected","scopes":["chat.send","chat.send"]}""")
+        val desktopAlias = ProtocolFrame.parse("""{"type":"auth_ok","protocol":"1.0","workspace_id":"workspace-expected","scopes":["chat.send"]}""")
+        assertEquals(false, PinnedRemoteWebSocket.isValidAuthSuccess(missingScopes, host))
+        assertEquals(false, PinnedRemoteWebSocket.isValidAuthSuccess(extraScope, host))
+        assertEquals(false, PinnedRemoteWebSocket.isValidAuthSuccess(duplicateScope, host))
+        assertEquals(false, PinnedRemoteWebSocket.isValidAuthSuccess(desktopAlias, host))
     }
 
     @Test fun chatFrameUsesCompanionAllowlistAndHostApprovedWorkspace() {
@@ -139,15 +147,17 @@ class PinnedRemoteWebSocketTest {
     }
 
     @Test fun applicationFramesAreRejectedUntilAuthenticationCompletes() {
-        assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "auth_ok"))
-        assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "auth_error"))
-        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "sessions_list"))
+        assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "auth.ok"))
+        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "auth_ok"))
+        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "auth.error"))
+        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "sessions.result"))
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, "chat.delta"))
 
-        assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "sessions_list"))
+        assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "status.result"))
+        assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "sessions.result"))
         assertEquals(true, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "chat.delta"))
+        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "auth.ok"))
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "auth_ok"))
-        assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "auth_rejected"))
     }
 
     @Test fun missingFrameTypeIsRejectedInEveryAuthenticationState() {

@@ -259,22 +259,20 @@ The WSS listener does not publish a newly-bound server if local Companion policy
 The listener also rejects a second concurrent `start()` while the first bind is pending. This prevents two independent WSS servers from being bound by racing lifecycle calls; the in-progress state is cleared on both successful and failed startup.
 
 
-## Android inbound authentication-state gate (2026-11-19)
+## Android authenticated WSS contract (2026-11-20)
 
-- The Android WSS client now accepts only `auth_ok`, `auth_error`, or `auth_rejected` while authentication is pending. Application frames received before authentication are rejected and the socket is closed with policy code 1008.
-- After successful authentication, further authentication-control frames are rejected; application frames may be delivered to the listener. A missing/null frame type is rejected in either state.
-- Authentication rejection frames update the client state and are not forwarded as application events.
-- Android Companion CI run #191 (commit `fdd5d1bb`) passed: debug APK assembly, JVM unit tests, lint, and artifact upload.
-- This is a client-side state gate only. It does not make the Android WSS client interoperable with the current daemon, and does not complete pairing UI, live transport integration, chat dispatch, or end-to-end testing.
+- The host's `CompanionWssListener` sends `auth.ok` (dot separator), not the desktop daemon's `auth_ok` spelling. The success envelope contains `protocol: "1.0"`, a non-empty `workspace_id`, and the exact granted `scopes` array.
+- Android now accepts only `auth.ok` while authentication is pending, rejects application frames before it, and rejects auth-control frames after it. A host auth failure currently closes the socket with policy code 1008 rather than sending a separate auth-error frame.
+- The Android client validates the returned workspace when one was pre-approved and requires the returned scope set to match the paired host's approved scopes exactly; missing, duplicate, extra, non-string or unsupported scopes fail closed.
+- This aligns the authentication envelope only. Authenticated status/session UI requests, Android-to-host live UI wiring, reconnect reconciliation and full end-to-end testing remain open.
 
+## Pairing integration boundary (2026-11-20)
 
-## Pairing integration boundary (2026-11-19)
-
-- The Android pairing panel no longer offers a local “Approve pairing request” action. After local fingerprint confirmation it waits for an actual host-side decision; this prevents the phone UI from representing its own action as host consent.
-- Host pairing primitives exist in `CompanionHostService` / `PairingTransactions`: the trusted local host begins a short-lived transaction, locally approves/rejects it, and issues a device credential only on one-time redemption.
-- The current QR descriptor contains only version, WSS endpoint, TLS fingerprint and expiry. It does **not** carry a pairing transaction ID/secret or another transaction binding. The Android parser likewise has no transaction binding fields. The descriptor must remain credential-free; do not put the device credential in QR.
-- The WSS listener currently accepts auth then dispatches only `status` and `sessions.list`. It has no unauthenticated pairing redemption route and no host-local UI adapter for pending pairing decisions.
-- Consequently, do not wire Android `CredentialIssued` or attempt a live pairing handshake yet. Next design step is a versioned, one-time pairing exchange that binds QR transaction, host identity, device identity, expiry and approved scopes; expose approve/reject only through trusted local host UI; redeem over pinned TLS; then deliver the issued device credential only to the requesting device. Add replay, expiry, wrong-device, cancellation, and credential persistence tests before enabling it.
+- Host pairing v2 is implemented in `CompanionHostService` / `PairingV2Transactions`: a host-local transaction binds device public key, client nonce, host TLS identity, workspace and requested scopes; host-local approval is required before signed one-time redemption.
+- The QR descriptor's version 2 form carries WSS endpoint, TLS fingerprint, expiry and the opaque pairing transaction ID. It remains credential-free; the device credential is issued only after the host-approved redeem proof.
+- `CompanionWssListener` routes unauthenticated `pairing.request` and `pairing.redeem` frames to a bounded, rate-limited one-frame exchange. Those frames never establish an authenticated session. After pairing, the listener accepts device-scoped auth and dispatches only `status` and read-only `sessions.list`; `chat.send` remains `not_implemented`.
+- The Electron `CompanionPanel` now starts/stops the opt-in host, displays/copies the v2 QR descriptor, lists pending devices and routes approve/reject through named local IPC. Registered-device revocation UI and full Electron-to-daemon runtime validation remain open.
+- Android Pairing v2 request/redeem transport and pinned WSS client primitives exist. The authenticated socket now matches the host's `auth.ok` response and validates exact workspace/scope binding. Authenticated status/session UI operations, physical-device Keystore validation and live Android-to-Windows end-to-end tests remain open.
 
 
 ## JSON byte encoding regression

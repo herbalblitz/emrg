@@ -33,6 +33,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Require non-empty protocol version in host snapshot before READY; missing version fails closed to STATE_UNKNOWN (CI verification pending).
 - [x] Document safe reconnect/reconciliation constraints: never replay non-idempotent commands; mark active streams interrupted and require authoritative host snapshot before resuming UI state (design-only).
 - [x] Add Android protocol-event-to-chat bridge with request binding and mismatch isolation (CI passed run 44260106387).
+- [x] Align Android authenticated WSS response handling with the host's actual `auth.ok` frame; require exact approved workspace/scopes (JVM regression tests added; CI pending).
 - [ ] Review pairing design without weakening local endpoint.
 
 ### M2 — Android foundation
@@ -68,6 +69,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [ ] Workspace via scoped storage/capabilities; memory; skills; scheduled tasks; evolution; diagnostics; opt-in notifications.
 
 ### M5 — Windows reliability
+- [x] Electron CompanionPanel provides explicit listener start/stop, QR display/copy, pending approvals and approve/reject actions through guarded named IPC (renderer tests added; latest CI verification pending).
 - [x] Windows CI job and Inno Setup script compile smoke test baseline inspected.
 - [ ] Clean-machine packaging/install/update/uninstall smoke tests.
 - [ ] Lifecycle/restart/reconnect, PATH/shell integration.
