@@ -1,6 +1,6 @@
 # Companion Electron Local-Control Design
 
-Status: daemon local-control routing and fixed Electron Main/Preload IPC are implemented and CI-covered; listener lifecycle, host approval UI, TLS identity provisioning, and end-to-end pairing remain incomplete.
+Status: daemon-owned opt-in WSS lifecycle, protected TLS identity loading, transaction-bound v2 QR creation, fixed Electron Main/Preload IPC, and focused tests are implemented in source; CI for the latest changes, React approval/QR UI, and live Android-to-Windows pairing remain incomplete.
 Date: 2026-11-20
 
 ## 1. Purpose and boundary
@@ -15,11 +15,11 @@ This design does not authorize remote chat, tool execution, filesystem access, a
 - Navigation is restricted to the packaged renderer document; external navigation is denied or opened in the system browser.
 - `emrg/gui/preload.js` exposes a fixed `emrg` API through `contextBridge.exposeInMainWorld`. It does not expose raw `ipcRenderer`.
 - Electron Main and Preload now have three fixed Companion IPC methods (status, pending list, approve/reject), with primary-window/top-frame/local-file URL checks in Main. The React renderer has not yet consumed these methods.
-- `CompanionHostService` and `CompanionWssListener` are Python-side components. The WSS listener is standalone and must be explicitly started; it is not daemon-managed. It now accepts the protected TLS identity directory and loads its hardened context through `create_identity_server_context`, including Windows DPAPI unprotection; direct PEM paths remain a compatibility/test-only construction option.
+- `CompanionRuntime` is daemon-owned. It stays inert until the trusted local renderer explicitly starts it with an exact bind IP, port, and workspace directory. It provisions or validates the persistent TLS identity, enables the host, starts the WSS listener, creates a short-lived Pairing v2 transaction restricted to `status`, and returns a credential-free v2 QR descriptor containing that transaction ID. Stop and daemon shutdown disable the host and close the listener. The listener loads the protected identity through `create_identity_server_context`, including Windows DPAPI unprotection; direct PEM paths remain a compatibility/test-only construction option.
 - `EmrgServer` owns one `CompanionHostService` at `~/.emrg/companion/credentials.json` and a `CompanionLocalControl` facade. The host remains disabled by default; construction does not enable a listener or open a socket.
-- The authenticated desktop-daemon protocol routes only the fixed `companion_local_control` message into the facade. The facade allows `status`, `pairing.pending.list`, `pairing.decide`, and `pairing.cancel`; exact payload schemas and the non-secret pending projection are unit-tested.
-- Electron Main exposes three fixed handlers for status, pending-list, and approve/reject. They validate that the caller is the primary BrowserWindow's top-level local `file://` renderer. Preload exposes only the corresponding named methods; no generic IPC or arbitrary daemon command is exposed.
-- These bridges do not yet make pairing operational: the daemon does not provision the TLS identity, start/stop `CompanionWssListener`, enable the host, create a QR descriptor, or render an approval UI.
+- The authenticated desktop-daemon protocol routes the fixed `companion_local_control` message into either the lifecycle controller (`listener.start`, `listener.stop`) or the narrow facade (`status`, `pairing.pending.list`, `pairing.decide`, `pairing.cancel`). Listener startup rejects wildcard/non-unicast binds and requires an existing workspace directory; the daemon derives the workspace ID and fixes the initial grant to `status` rather than accepting renderer-supplied scopes.
+- Electron Main exposes fixed handlers for status, pending-list, approve/reject, listener start, and listener stop. Every handler validates that the caller is the primary BrowserWindow's top-level local `file://` renderer. Preload exposes only corresponding named methods; no generic IPC or arbitrary daemon command is exposed.
+- The lifecycle path now provisions TLS, starts/stops the WSS listener, enables/disables the host, and creates a transaction-bound v2 QR descriptor. The React renderer does not yet call the new lifecycle methods or display the QR/pending approval UI, so a user-facing pairing flow is not complete.
 - The desktop daemon's local IPC authentication material is not a mobile companion credential and must never be returned to the renderer, QR code, Android client, or Companion registry.
 
 ## 3. Required command boundary
@@ -28,7 +28,9 @@ The daemon-side controller/facade now accepts only the implemented subset below 
 
 | Operation | Required behavior |
 | --- | --- |
-| status | Implemented: return host enabled state and bounded pending count. Listener state, bind endpoint, active connection count, and TLS fingerprint remain future work |
+| status | Implemented: return host enabled state and bounded pending count. Detailed listener state and active connection count remain future work |
+| listener.start | Implemented: exact bind IP/port and existing workspace directory; provisions TLS identity, starts WSS, creates status-only Pairing v2 transaction and credential-free v2 QR descriptor |
+| listener.stop | Implemented: disable host policy and close WSS listener/clients |
 | identity.ensure | Provision or validate the persistent TLS identity; never silently replace a corrupt/missing identity |
 | pairing.begin | Create one short-lived host transaction and return a credential-free v2 QR descriptor |
 | pairing.pending.list | Return bounded pending requests with device label, device ID, public-key fingerprint, workspace, scopes, approval state, and expiry. The current host service projection exposes only the SHA-256 public-key fingerprint, never raw public key, client nonce, challenge bytes, signature, or issued credential |
@@ -87,7 +89,7 @@ The UI must clearly distinguish:
 
 ## 6. Lifecycle and concurrency
 
-- The daemon owns the `CompanionHostService`, persistent TLS identity manager, and `CompanionWssListener` instances.
+- The daemon owns `CompanionRuntime`, `CompanionHostService`, persistent TLS identity, and `CompanionWssListener` instances.
 - Startup is opt-in and driven by explicit validated configuration. Do not bind LAN interfaces unless the separate listener policy permits a specific unicast address and the user explicitly enabled it.
 - Disable/revoke must close affected active WSS connections and invalidate pending transactions. Existing listener callbacks must remain race-safe across disable/re-enable and startup/shutdown.
 - Daemon shutdown must stop the listener, close clients, clear pending pairing transactions, and unregister callbacks before releasing service state.
@@ -106,12 +108,12 @@ The UI must clearly distinguish:
 ### Electron
 - only the primary top-level renderer can invoke Companion handlers;
 - preview WebContents, subframes, external origins, destroyed windows, and malformed payloads are rejected;
-- preload exposes only the three implemented named methods and no generic IPC primitive; positive/negative IPC sender-origin tests are still required;
+- preload exposes only named Companion methods and no generic IPC primitive; static sender-origin guards cover the fixed lifecycle and approval handlers; renderer interaction and runtime integration tests remain required;
 - approval UI displays and approves the exact immutable device-key fingerprint/workspace/scopes;
 - no secret material appears in logs, renderer events, or error messages.
 
 ### End-to-end
-- Windows and Linux daemon/Electron tests cover enable, identity provisioning, QR creation, pending request display, host approval/rejection, device revocation, and shutdown;
+- Focused Windows and Linux tests cover runtime enable/disable, identity provisioning, transaction-bound QR creation, daemon listener start/stop routing, listener shutdown, and fail-closed startup. Full Electron↔daemon and Android↔Windows E2E remain required;
 - Android pairing remains blocked until device-key generation, v2 transport, proof-of-possession, secure credential persistence, and real-device validation are complete;
 - no test may treat a standalone WSS listener test as proof of end-to-end Android pairing.
 
