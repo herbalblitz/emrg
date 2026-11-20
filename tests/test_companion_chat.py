@@ -301,6 +301,28 @@ def test_hub_rejects_same_session_id_from_different_workspaces(tmp_path):
     asyncio.run(run())
 
 
+def test_hub_rejects_cross_workspace_when_disconnected_session_is_still_running(tmp_path):
+    async def run():
+        hub = CompanionStreamHub()
+        daemon = type("Daemon", (), {})()
+        daemon._session_subscribers = {}
+        workspace_a = tmp_path / "workspace-a"
+        workspace_b = tmp_path / "workspace-b"
+        daemon._session_task_cwds = {"collision": str(workspace_a.resolve())}
+
+        # The original websocket has disconnected, so the hub has no
+        # in-memory binding left. The daemon's in-flight turn must still
+        # prevent another workspace from joining the same session id.
+        with pytest.raises(CompanionDaemonError, match="running in another workspace"):
+            await hub.subscribe(
+                Socket(), session_id="collision",
+                scopes=frozenset({"chat.send"}), device_id="phone-b",
+                daemon=daemon, cwd=str(workspace_b))
+        assert hub.sessions_for(Socket()) == []
+        assert "collision" not in hub.subscribed_sessions()
+    asyncio.run(run())
+
+
 def test_chat_cancel_cannot_target_unsubscribed_session(tmp_path):
     async def run():
         daemon = FakeDaemon(tmp_path)
