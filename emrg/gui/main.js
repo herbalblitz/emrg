@@ -983,6 +983,24 @@ vision = false
       });
     });
 
+    ipcMain.handle("emrg:companionListenerStart", async (event, payload = {}) => {
+      assertCompanionRenderer(event);
+      if (!payload || typeof payload.bindAddress !== "string" ||
+          payload.bindAddress.length > 45 ||
+          !Number.isInteger(payload.port) || payload.port < 1024 || payload.port > 65535) {
+        throw new Error("invalid Companion listener configuration");
+      }
+      return companionLocalControl("listener.start", {
+        bind_address: payload.bindAddress,
+        port: payload.port,
+      });
+    });
+
+    ipcMain.handle("emrg:companionListenerStop", async (event) => {
+      assertCompanionRenderer(event);
+      return companionLocalControl("listener.stop");
+    });
+
     ipcMain.handle("emrg:listTasks", async () => {
       // GUI / 指令 P4：/trigger — daemon list_tasks → tasks_list
       const frame = await requireConn().sendCommandAndWait("list_tasks", {}, 5000);
