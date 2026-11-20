@@ -14,6 +14,26 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - Older notes later in this file describe earlier milestones and may say that the listener or transport was not yet implemented. Treat those statements as historical snapshots, not the current state.
 
 
+## Companion remote-chat integration gate (verified 2026-11-20)
+
+Remote chat must reuse the daemon's existing task/session engine; it must not create a second LLM/tool runner inside the WSS listener. The current source has a clear but incomplete boundary:
+
+- `CompanionRuntime` owns the WSS listener and provisions a pairing transaction with only `status` and `sessions.list` scopes. It currently has no daemon task-dispatch callback.
+- `CompanionWssListener._session` authenticates the device and validates each frame, but deliberately answers `chat.send` with `not_implemented`. The regression test proves that even a synthetic `chat.send` credential cannot dispatch execution.
+- The daemon's existing `_handle_client` task path owns the canonical behavior: safe session-ID validation, `TaskRequest` construction, session creation, input-history recording, sandbox-tier resolution, per-session queueing, cancellation handles, and `_run_tool_loop_locked` lifecycle.
+- The existing task loop streams through daemon `_broadcast` to local websocket subscribers. A remote companion needs an explicit, bounded event sink keyed by request/session; simply invoking the tool loop from WSS would not deliver the Android stream and risks bypassing lifecycle bookkeeping.
+
+Required implementation sequence before enabling `SEND_CHAT`:
+
+1. Extract a daemon-owned submission API that reuses the same validation, session lock/queue, sandbox resolution, input-history, cancellation, and terminal-frame behavior as the local task path. Keep local websocket transport concerns outside this API.
+2. Inject that API into `CompanionRuntime` / `CompanionWssListener` as a narrow callback. Resolve workspace and cwd only from the approved credential record; never accept a remote path, tool list, sandbox tier, or arbitrary execution options.
+3. Define a bounded remote event subscription for one authenticated request: request/session binding, ordered text/tool/status events, explicit terminal state, disconnect cancellation policy, output/frame limits, and timeout/backpressure behavior.
+4. Add host-local consent for the `chat.send` scope. Pairing must not grant it implicitly; scope changes/revocation must invalidate existing sockets as they do now.
+5. Add tests for unauthorized scope, mismatched workspace/session, unsafe session ID, queueing, duplicate request IDs, concurrent sends, cancellation, disconnect, output bounds, stale socket/revocation, and proof that no arbitrary cwd/tools/sandbox values cross the boundary.
+6. Only then wire Android chat UI to the live stream and run Android/Windows CI plus physical-device end-to-end tests.
+
+Until all gates pass, keep remote chat disabled and preserve the explicit `not_implemented` response. Do not report the Android app as live-chat capable merely because WSS authentication and read-only status/session listing work.
+
 ## Principles
 1. Python runtime/provider/tools/memory/skills/subagents/scheduler/session/sandbox remains source of truth.
 2. Preserve Electron desktop; rebuild weak components only after evidence and parity review.
