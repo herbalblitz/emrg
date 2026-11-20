@@ -2,11 +2,12 @@
 
 Authenticated operations: status, session listing, session management,
 chat (with per-session stream fan-out), file reads, sandbox management,
-terminal execution and file writes/deletes. Batch B/C frames
-(hosts/memory/models/rant/evolution/tasks/skills/logs/audit/devices/
-settings) are validated against the frozen wire contract but not yet
-dispatched — the listener answers ``not_implemented`` until their batches
-land. Host-lifecycle operations (``shutdown``, ``init_auto_evolve``) are
+terminal execution, file writes/deletes, and the Batch B screens
+(memory, models, rant, evolution, tasks, skills) dispatched to the daemon
+in-process. Batch C frames (hosts/logs/audit/devices/settings) are
+validated against the frozen wire contract but not yet dispatched — the
+listener answers ``not_implemented`` until their batch lands.
+Host-lifecycle operations (``shutdown``, ``init_auto_evolve``) are
 never reachable from a remote companion.
 
 Daemon-native operations run in-process through the daemon object supplied
@@ -79,6 +80,53 @@ _SESSION_DAEMON_OPS: dict[str, tuple[str, str]] = {
 _SESSION_MUTATING_OPS: frozenset[str] = frozenset({
     "sessions.resume", "sessions.rename", "sessions.delete",
     "sessions.clear", "sessions.compact", "sessions.rewind",
+})
+
+# Batch B — companion frame -> (daemon message type, expected daemon
+# reply type). ``rant`` is the one daemon op whose reply carries no
+# ``type`` field (``{"ok": ..., "count": ...}``), so its reply type is
+# None and the first captured frame is the answer.
+_BATCH_B_DAEMON_OPS: dict[str, tuple[str, str | None]] = {
+    "memory.list": ("list_memories", "memories_list"),
+    "memory.read": ("read_memory", "memory_content"),
+    "models.list": ("list_models", "models_list"),
+    "models.set": ("set_model", "model_set"),
+    "rant.list": ("list_rants", "rants_list"),
+    "rant.submit": ("rant", None),
+    "evolution.summary": ("evolution_summary", "evolution_summary"),
+    "tasks.list": ("list_tasks", "tasks_list"),
+    "tasks.trigger": ("trigger_task", "trigger_result"),
+    "tasks.create": ("task_create", "task_result"),
+    "tasks.update": ("task_update", "task_result"),
+    "tasks.delete": ("task_delete", "task_result"),
+    "tasks.templates": ("task_template_list", "templates_list"),
+    "tasks.template_create": ("task_template_create", "template_result"),
+    "tasks.template_update": ("task_template_update", "template_result"),
+    "tasks.template_delete": ("task_template_delete", "template_result"),
+    "skills.list": ("list_skills", "skills_list"),
+    "skills.available": ("skills_available", "skills_available_result"),
+    "skills.install": ("skills_install", "skills_install_result"),
+    "skills.update": ("skills_update", "skills_update_result"),
+}
+
+#: Batch B operations that mutate state (audit-logged; reads are not).
+#: ``tasks.*`` create/update/delete fail cleanly when the scheduler is not
+#: running — the daemon's error is surfaced, never masked.
+_BATCH_B_MUTATING_OPS: frozenset[str] = frozenset({
+    "models.set", "rant.submit",
+    "tasks.trigger", "tasks.create", "tasks.update", "tasks.delete",
+    "tasks.template_create", "tasks.template_update", "tasks.template_delete",
+    "skills.install", "skills.update",
+})
+
+#: The daemon's whole vocabulary for a task record (daemon.py
+#: ``task_create``/``task_update``). The companion ``tasks.create`` /
+#: ``tasks.update`` frames carry one nested ``task`` dict; only these keys
+#: are flattened into the daemon message — anything else the client put in
+#: the dict never reaches the daemon.
+_TASK_FIELD_ALLOWLIST: frozenset[str] = frozenset({
+    "name", "task_type", "agent", "interval", "enabled", "repo",
+    "description", "sandbox", "schedule", "when",
 })
 
 #: Default history page when the client leaves ``limit`` unset (the daemon
@@ -484,8 +532,10 @@ class CompanionWssListener:
                 return await self._dispatch_exec(frame, identity)
             if kind in ("files.write", "files.delete"):
                 return await self._dispatch_files_write(frame, identity)
-            # Validated Batch B/C frames: the frozen contract names them, but
-            # their server dispatch lands in later batches.
+            if kind in _BATCH_B_DAEMON_OPS:
+                return await self._dispatch_batch_b(frame, identity)
+            # Validated Batch C frames: the frozen contract names them, but
+            # their server dispatch lands in a later batch.
             return _error(request_id, "not_implemented")
         except (CompanionDaemonError, CompanionExecError, CompanionFileError) as exc:
             code = getattr(exc, "code", "daemon_error")
@@ -528,6 +578,124 @@ class CompanionWssListener:
         if reply is None:
             return _error(frame.get("request_id"), "daemon_error", "no reply from daemon")
         return self._daemon_result(frame, reply)
+
+    async def _dispatch_batch_b(self, frame: dict[str, Any],
+                                identity: dict[str, Any]) -> dict[str, Any]:
+        """Dispatch one Batch B frame to the daemon in-process.
+
+        Every Batch B screen is daemon-native: the companion frame is
+        translated to the daemon message type and the daemon's reply is
+        translated back to ``<type>.result``. The daemon's error is
+        surfaced unchanged (notably ``scheduler not running`` for task
+        create/update/delete/trigger when no scheduler runs); skills
+        install/update results pass through with no added sandboxing;
+        ``set_model`` is global engine state and is restricted only by
+        the ``models.manage`` scope check the validator already did.
+        No session subscription is registered: every Batch B reply is a
+        direct ``_send`` to the capture sink, so a concurrent turn's
+        broadcast frames can never pollute the reply selection.
+        """
+        daemon = self._daemon()
+        if daemon is None:
+            return _error(frame.get("request_id"), "daemon_unavailable")
+        kind = frame["type"]
+        daemon_type, reply_type = _BATCH_B_DAEMON_OPS[kind]
+        message: dict[str, Any] = {"type": daemon_type}
+        if kind in ("memory.list", "memory.read"):
+            # cwd is always the host-bound workspace; a session scope also
+            # needs the session id the client named.
+            message["cwd"] = identity["cwd"]
+            if "scope" in frame:
+                message["scope"] = frame["scope"]
+            if "session_id" in frame:
+                message["session_id"] = frame["session_id"]
+            if kind == "memory.read":
+                message["memory_id"] = frame["memory_id"]
+        elif kind == "models.set":
+            message["model"] = frame["model"]
+        elif kind == "rant.list":
+            if "status" in frame:
+                message["status"] = frame["status"]
+        elif kind == "rant.submit":
+            message["message"] = frame["message"]
+            if "agent" in frame:
+                message["agent"] = frame["agent"]
+        elif kind == "evolution.summary":
+            if "limit" in frame:
+                message["limit"] = frame["limit"]
+        elif kind == "tasks.trigger" or kind == "tasks.delete":
+            message["name"] = frame["name"]
+        elif kind in ("tasks.create", "tasks.update"):
+            # The daemon reads task fields at the top level; the companion
+            # frame nests them in one ``task`` dict.
+            task = frame.get("task") or {}
+            if kind == "tasks.update":
+                message["name"] = frame["name"]
+            for key in _TASK_FIELD_ALLOWLIST:
+                if key in task:
+                    message[key] = task[key]
+        elif kind in ("tasks.template_create", "tasks.template_update"):
+            # The scheduler stores a template as (name, prompt): the prompt
+            # string is extracted from the nested ``template`` dict.
+            message["name"] = frame["name"]
+            template = frame.get("template") or {}
+            message["prompt"] = template.get("prompt", "")
+        elif kind == "tasks.template_delete":
+            message["name"] = frame["name"]
+        elif kind == "skills.list":
+            # The loader resolves skills against the session's directory;
+            # the bound workspace is the only root a remote device may use.
+            message["cwd"] = identity["cwd"]
+        elif kind == "skills.install":
+            message["name"] = frame["name"]
+            if "confirmed" in frame:
+                message["confirmed"] = frame["confirmed"]
+        if kind in _BATCH_B_MUTATING_OPS:
+            target = frame.get("name") or frame.get("model") or ""
+            _LOG.info("companion batch-b allowed: operation=%r target=%r device=%r",
+                      kind, target, identity["device_id"])
+        replies = await call_daemon_message(daemon, message)
+        if reply_type is None:
+            reply = replies[0] if replies else None
+        else:
+            reply = next((item for item in replies if item.get("type") == reply_type),
+                         replies[0] if replies else None)
+        if reply is None:
+            return _error(frame.get("request_id"), "daemon_error", "no reply from daemon")
+        result = self._daemon_result(frame, reply)
+        if kind in ("memory.list", "memory.read", "skills.list"):
+            self._relativize_batch_b_paths(frame, identity, result)
+        return result
+
+    def _relativize_batch_b_paths(self, frame: dict[str, Any],
+                                  identity: dict[str, Any],
+                                  result: dict[str, Any]) -> None:
+        """Rewrite absolute host paths in a Batch B reply as workspace-relative.
+
+        Absolute host paths are never sent to a remote device. Memory
+        replies carry ``directory`` / ``index_path`` / ``path``; the skills
+        list carries a ``path`` per skill and per shadow side. Paths outside
+        the workspace (e.g. user-level skill dirs) render as ``.``.
+        """
+        root = Path(identity["cwd"]).resolve()
+        for key in ("directory", "index_path", "path"):
+            if isinstance(result.get(key), str):
+                result[key] = self._relativize(root, result[key])
+        if frame["type"] == "skills.list":
+            skills = result.get("skills")
+            if isinstance(skills, list):
+                for skill in skills:
+                    if isinstance(skill, dict) and isinstance(skill.get("path"), str):
+                        skill["path"] = self._relativize(root, skill["path"])
+            shadows = result.get("shadows")
+            if isinstance(shadows, list):
+                for shadow in shadows:
+                    if not isinstance(shadow, dict):
+                        continue
+                    for side in ("kept", "dropped"):
+                        entry = shadow.get(side)
+                        if isinstance(entry, dict) and isinstance(entry.get("path"), str):
+                            entry["path"] = self._relativize(root, entry["path"])
 
     async def _dispatch_chat(self, frame: dict[str, Any], identity: dict[str, Any],
                              websocket: Any) -> dict[str, Any]:

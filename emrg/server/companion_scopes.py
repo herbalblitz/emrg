@@ -39,10 +39,10 @@ ALLOWED_SCOPES: frozenset[str] = frozenset({
     "settings.manage",
 })
 
-#: Companion wire frame type -> the scope that gates it. Batch B/C frames are
-#: listed here so both sides agree on the frozen wire contract now; their
-#: server dispatch lands in later batches (the listener answers
-#: ``not_implemented`` until then).
+#: Companion wire frame type -> the scope that gates it. Batch B frames are
+#: dispatched by the listener; Batch C frames are listed here so both sides
+#: agree on the frozen wire contract now, and their server dispatch lands
+#: in a later batch (the listener answers ``not_implemented`` until then).
 SCOPE_OPERATIONS: dict[str, frozenset[str]] = {
     "status": frozenset({"status"}),
     "sessions.list": frozenset({"sessions.list"}),

@@ -225,6 +225,31 @@ def test_scope_registry_has_exactly_twenty_scopes():
     assert scope_for_frame("chat.approve") == "chat.send"
     assert scope_for_frame("tools.monitor") is None  # no request frame
     assert scope_for_frame("nope") is None
+    # Batch B: the registry must match the frozen frame -> scope -> daemon
+    # op list exactly; a drift here is a scope that gates the wrong frames.
+    assert scope_for_frame("memory.list") == "memory.read"
+    assert scope_for_frame("memory.read") == "memory.read"
+    assert scope_for_frame("models.list") == "models.manage"
+    assert scope_for_frame("models.set") == "models.manage"
+    assert scope_for_frame("rant.list") == "rant.submit"
+    assert scope_for_frame("rant.submit") == "rant.submit"
+    assert scope_for_frame("evolution.summary") == "evolution.read"
+    for kind in ("tasks.list", "tasks.trigger", "tasks.create", "tasks.update",
+                 "tasks.delete", "tasks.templates", "tasks.template_create",
+                 "tasks.template_update", "tasks.template_delete"):
+        assert scope_for_frame(kind) == "tasks.manage"
+    for kind in ("skills.list", "skills.available", "skills.install", "skills.update"):
+        assert scope_for_frame(kind) == "skills.manage"
+    assert SCOPE_OPERATIONS["memory.read"] == frozenset({"memory.list", "memory.read"})
+    assert SCOPE_OPERATIONS["models.manage"] == frozenset({"models.list", "models.set"})
+    assert SCOPE_OPERATIONS["rant.submit"] == frozenset({"rant.list", "rant.submit"})
+    assert SCOPE_OPERATIONS["evolution.read"] == frozenset({"evolution.summary"})
+    assert SCOPE_OPERATIONS["tasks.manage"] == frozenset({
+        "tasks.list", "tasks.trigger", "tasks.create", "tasks.update",
+        "tasks.delete", "tasks.templates", "tasks.template_create",
+        "tasks.template_update", "tasks.template_delete"})
+    assert SCOPE_OPERATIONS["skills.manage"] == frozenset({
+        "skills.list", "skills.available", "skills.install", "skills.update"})
 
 
 def test_pairing_v2_accepts_up_to_twenty_scopes_and_rejects_unknown():
@@ -347,7 +372,6 @@ def test_terminal_and_files_write_frames_are_scope_bound():
 
 
 @pytest.mark.parametrize("kind,scope,extra", [
-    ("hosts.list", "hosts.list", {}),
     ("memory.list", "memory.read", {}),
     ("memory.read", "memory.read", {"memory_id": "m-1"}),
     ("models.list", "models.manage", {}),
@@ -358,10 +382,27 @@ def test_terminal_and_files_write_frames_are_scope_bound():
     ("tasks.list", "tasks.manage", {}),
     ("tasks.trigger", "tasks.manage", {"name": "t"}),
     ("tasks.create", "tasks.manage", {"task": {}}),
+    ("tasks.update", "tasks.manage", {"name": "t", "task": {}}),
+    ("tasks.delete", "tasks.manage", {"name": "t"}),
     ("tasks.templates", "tasks.manage", {}),
+    ("tasks.template_create", "tasks.manage", {"name": "tpl", "template": {}}),
+    ("tasks.template_update", "tasks.manage", {"name": "tpl", "template": {}}),
+    ("tasks.template_delete", "tasks.manage", {"name": "tpl"}),
     ("skills.list", "skills.manage", {}),
     ("skills.available", "skills.manage", {}),
     ("skills.install", "skills.manage", {"name": "s"}),
+    ("skills.update", "skills.manage", {}),
+])
+def test_batch_b_frames_validate(kind, scope, extra):
+    # Batch B: frozen contract shapes + scopes; dispatch landed in Batch B.
+    frame = {"type": kind, "request_id": "r", "workspace_id": "w", **extra}
+    assert _authed(frame, scope)["type"] == kind
+    with pytest.raises(CompanionProtocolError):
+        _authed(frame, "status")
+
+
+@pytest.mark.parametrize("kind,scope,extra", [
+    ("hosts.list", "hosts.list", {}),
     ("logs.tail", "logs.read", {}),
     ("audit.tail", "audit.read", {}),
     ("devices.list", "devices.manage", {}),
@@ -369,9 +410,96 @@ def test_terminal_and_files_write_frames_are_scope_bound():
     ("settings.get", "settings.manage", {}),
     ("settings.set", "settings.manage", {"patch": {}}),
 ])
-def test_batch_b_c_frames_validate_but_are_not_dispatched_yet(kind, scope, extra):
+def test_batch_c_frames_validate_but_are_not_dispatched_yet(kind, scope, extra):
     # Frozen contract: shapes + scopes agreed now; dispatch lands later.
     frame = {"type": kind, "request_id": "r", "workspace_id": "w", **extra}
     assert _authed(frame, scope)["type"] == kind
     with pytest.raises(CompanionProtocolError):
         _authed(frame, "status")
+
+
+def test_batch_b_frames_are_scope_workspace_and_field_bound():
+    # Wrong scope rejected for every Batch B scope.
+    cases = [
+        ({"type": "memory.list", "request_id": "r", "workspace_id": "w"}, "models.manage"),
+        ({"type": "models.set", "request_id": "r", "workspace_id": "w", "model": "x"}, "memory.read"),
+        ({"type": "rant.submit", "request_id": "r", "workspace_id": "w", "message": "hi"}, "evolution.read"),
+        ({"type": "evolution.summary", "request_id": "r", "workspace_id": "w"}, "tasks.manage"),
+        ({"type": "tasks.list", "request_id": "r", "workspace_id": "w"}, "skills.manage"),
+        ({"type": "skills.install", "request_id": "r", "workspace_id": "w", "name": "s"}, "tasks.manage"),
+    ]
+    for frame, wrong_scope in cases:
+        with pytest.raises(CompanionProtocolError):
+            _authed(frame, wrong_scope)
+    # Workspace mismatch rejected even with the right scope.
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame(
+            json.dumps({"type": "tasks.list", "request_id": "r", "workspace_id": "other"}),
+            authenticated=True, scopes=frozenset({"tasks.manage"}), workspace_id="w")
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame(
+            json.dumps({"type": "memory.read", "request_id": "r", "workspace_id": "other",
+                        "memory_id": "m-1"}),
+            authenticated=True, scopes=frozenset({"memory.read"}), workspace_id="w")
+    # Unknown fields rejected — cwd must never come from the client, and no
+    # frame may smuggle an extra field past the allowlist.
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "memory.list", "request_id": "r", "workspace_id": "w",
+                 "cwd": "/etc"}, "memory.read")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "tasks.create", "request_id": "r", "workspace_id": "w",
+                 "task": {}, "shutdown": True}, "tasks.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "models.set", "request_id": "r", "workspace_id": "w",
+                 "model": "x", "api_key": "secret"}, "models.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "skills.install", "request_id": "r", "workspace_id": "w",
+                 "name": "s", "force": True}, "skills.manage")
+
+
+def test_batch_b_frames_require_their_fields():
+    # Required fields: missing or wrong-typed values are rejected.
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "memory.read", "request_id": "r", "workspace_id": "w"}, "memory.read")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "models.set", "request_id": "r", "workspace_id": "w"}, "models.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "rant.submit", "request_id": "r", "workspace_id": "w"}, "rant.submit")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "tasks.trigger", "request_id": "r", "workspace_id": "w"}, "tasks.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "tasks.create", "request_id": "r", "workspace_id": "w"}, "tasks.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "tasks.update", "request_id": "r", "workspace_id": "w",
+                 "task": {}}, "tasks.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "tasks.template_create", "request_id": "r", "workspace_id": "w",
+                 "name": "tpl"}, "tasks.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "skills.install", "request_id": "r", "workspace_id": "w"}, "skills.manage")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "tasks.create", "request_id": "r", "workspace_id": "w",
+                 "task": "not-a-dict"}, "tasks.manage")
+    # evolution.summary limit is bounded 1..20, matching the daemon clamp.
+    assert _authed({"type": "evolution.summary", "request_id": "r",
+                    "workspace_id": "w", "limit": 20}, "evolution.read")["limit"] == 20
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "evolution.summary", "request_id": "r",
+                 "workspace_id": "w", "limit": 0}, "evolution.read")
+    with pytest.raises(CompanionProtocolError):
+        _authed({"type": "evolution.summary", "request_id": "r",
+                 "workspace_id": "w", "limit": 21}, "evolution.read")
+
+
+@pytest.mark.parametrize("kind", [
+    "shutdown", "init_auto_evolve",
+    "github_connect", "github_connect_web", "github_disconnect", "github_status",
+])
+def test_host_lifecycle_and_github_frames_are_never_forwarded(kind):
+    # No scope grants these: the validator rejects them outright, so the
+    # listener can never dispatch them however a client asks.
+    frame = {"type": kind, "request_id": "r", "workspace_id": "w"}
+    for scopes in ({"status"}, {"tasks.manage"}, {"settings.manage"}, set()):
+        with pytest.raises(CompanionProtocolError):
+            validate_client_frame(json.dumps(frame), authenticated=True,
+                                  scopes=frozenset(scopes), workspace_id="w")

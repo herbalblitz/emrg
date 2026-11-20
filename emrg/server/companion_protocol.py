@@ -229,11 +229,11 @@ def _v_sha256(value: Any) -> str:
 
 # (scope, allowed fields, required fields, per-field validators,
 #  extra conditional requirement or None)
-# Batch A frames are dispatched by the listener. Batch B/C frames are
-# validated here against the frozen wire contract so both sides agree on
-# shapes now; their dispatch lands in later batches and the listener
-# answers ``not_implemented`` until then. B/C *field* shapes are
-# provisional — only the frame names and scopes are frozen.
+# Batch A and Batch B frames are dispatched by the listener. Batch C
+# frames are validated here against the frozen wire contract so both sides
+# agree on shapes now; their dispatch lands in a later batch and the
+# listener answers ``not_implemented`` until then. Batch C *field* shapes
+# are provisional — only the frame names and scopes are frozen.
 _FRAME_SPECS: dict[str, tuple[str, set[str], set[str], dict[str, Callable[[Any], Any]], Any]] = {
     # Batch A — sessions.manage
     "sessions.resume": ("sessions.manage",
@@ -374,7 +374,7 @@ _FRAME_SPECS: dict[str, tuple[str, set[str], set[str], dict[str, Callable[[Any],
         {"type", "request_id", "workspace_id", "name", "confirmed"}, {"name"},
         {"name": _v_text(512), "confirmed": _v_bool}, None),
     "skills.update": ("skills.manage",
-        {"type", "request_id", "workspace_id", "name", "confirmed"}, {"name"},
+        {"type", "request_id", "workspace_id", "name", "confirmed"}, set(),
         {"name": _v_text(512), "confirmed": _v_bool}, None),
     "logs.tail": ("logs.read",
         {"type", "request_id", "workspace_id", "source", "lines"}, set(),

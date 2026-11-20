@@ -1128,3 +1128,315 @@ def test_host_disable_during_async_bind_prevents_listener_start(tmp_path, monkey
 
     asyncio.run(run())
 
+
+# ── Batch B: memory / models / rant / evolution / tasks / skills ──────
+
+class _BatchBFakeDaemon:
+    """Minimal in-process daemon for Batch B ops: records calls, replies."""
+
+    def __init__(self, tmp_path):
+        self.calls: list[dict] = []
+        self._session_subscribers: dict = {}
+        self.tmp_path = tmp_path
+        # Daemon types that answer with an error (e.g. scheduler down).
+        self.error_for: dict[str, str] = {}
+
+    async def _process_message(self, msg, ws):
+        self.calls.append(dict(msg))
+        kind = msg["type"]
+        if kind in self.error_for:
+            reply_types = {
+                "trigger_task": "trigger_result",
+                "task_create": "task_result", "task_update": "task_result",
+                "task_delete": "task_result",
+                "task_template_create": "template_result",
+                "task_template_update": "template_result",
+                "task_template_delete": "template_result",
+            }
+            await ws.send(json.dumps(
+                {"type": reply_types[kind], "error": self.error_for[kind]}))
+            return
+        cwd = msg.get("cwd", str(self.tmp_path))
+        if kind == "rant":
+            # The real daemon replies {"ok": ..., "count": ...} with no type.
+            await ws.send(json.dumps({"ok": True, "count": 3}))
+            return
+        replies = {
+            "list_memories": {"type": "memories_list", "scope": msg.get("scope", "agent"),
+                              "directory": cwd + "/memory",
+                              "index_path": cwd + "/memory/MEMORY.md",
+                              "index": "# Memory\n", "memories": []},
+            "read_memory": {"type": "memory_content", "scope": msg.get("scope", "agent"),
+                            "memory_id": msg.get("memory_id"),
+                            "file": "m-1.md", "path": cwd + "/memory/m-1.md",
+                            "content": "# m-1\n", "frontmatter": {}, "body": "m-1\n"},
+            "list_models": {"type": "models_list",
+                            "models": [{"name": "m-a", "context_window": 1000}],
+                            "current": "m-a"},
+            "set_model": {"type": "model_set", "model": msg.get("model"), "ok": True},
+            "list_rants": {"type": "rants_list", "rants": []},
+            "evolution_summary": {"type": "evolution_summary", "count": 2, "recent": []},
+            "list_tasks": {"type": "tasks_list", "tasks": [], "min_interval": 60},
+            "trigger_task": {"type": "trigger_result", "ok": True, "name": msg.get("name")},
+            "task_create": {"type": "task_result", "ok": True, "task": {"name": "t1"}},
+            "task_update": {"type": "task_result", "ok": True, "task": {"name": msg.get("name")}},
+            "task_delete": {"type": "task_result", "ok": True},
+            "task_template_list": {"type": "templates_list", "templates": []},
+            "task_template_create": {"type": "template_result", "ok": True},
+            "task_template_update": {"type": "template_result", "ok": True},
+            "task_template_delete": {"type": "template_result", "ok": True},
+            "list_skills": {"type": "skills_list",
+                            "skills": [{"name": "s1", "description": "d",
+                                        "source": "user",
+                                        "path": cwd + "/skills/s1"}],
+                            "shadows": [{"name": "s2",
+                                         "kept": {"source": "user", "path": cwd + "/skills/s2"},
+                                         "dropped": {"source": "bundled",
+                                                     "path": "/opt/emrg/skills/s2"}}]},
+            "skills_available": {"type": "skills_available_result", "skills": []},
+            "skills_install": {"type": "skills_install_result",
+                               "name": msg.get("name"), "ok": True},
+            "skills_update": {"type": "skills_update_result", "ok": True, "updated": []},
+        }
+        await ws.send(json.dumps(replies[kind]))
+
+
+class _BatchBDummySocket:
+    def __init__(self):
+        self.sent = []
+
+    async def send(self, data):
+        self.sent.append(json.loads(data))
+
+    async def close(self, **kwargs):
+        pass
+
+
+def _batch_b_dispatch(tmp_path, daemon, frame, scopes):
+    host = CompanionHostService(tmp_path / "registry.json")
+    config = CompanionListenerConfig.build("127.0.0.1", 8765)
+    listener = CompanionWssListener(
+        host, config, tmp_path / "cert.pem", tmp_path / "key.pem",
+        daemon_accessor=lambda: daemon)
+    identity = {"device_id": "phone-1", "workspace_id": "ws",
+                "cwd": str(tmp_path), "scopes": set(scopes), "generation": 1}
+    return asyncio.run(listener._dispatch(frame, identity, _BatchBDummySocket()))
+
+
+_BATCH_B_CASES = [
+    ("memory.list", "memory.read", {}, "memory.list"),
+    ("memory.read", "memory.read", {"memory_id": "m-1"}, "memory.read"),
+    ("models.list", "models.manage", {}, "models.list"),
+    ("models.set", "models.manage", {"model": "m-a"}, "models.set"),
+    ("rant.list", "rant.submit", {}, "rant.list"),
+    ("rant.submit", "rant.submit", {"message": "hi"}, "rant.submit"),
+    ("evolution.summary", "evolution.read", {"limit": 5}, "evolution.summary"),
+    ("tasks.list", "tasks.manage", {}, "tasks.list"),
+    ("tasks.trigger", "tasks.manage", {"name": "t1"}, "tasks.trigger"),
+    ("tasks.create", "tasks.manage", {"task": {"name": "t1"}}, "tasks.create"),
+    ("tasks.update", "tasks.manage", {"name": "t1", "task": {}}, "tasks.update"),
+    ("tasks.delete", "tasks.manage", {"name": "t1"}, "tasks.delete"),
+    ("tasks.templates", "tasks.manage", {}, "tasks.templates"),
+    ("tasks.template_create", "tasks.manage",
+     {"name": "tpl", "template": {"prompt": "do x"}}, "tasks.template_create"),
+    ("tasks.template_update", "tasks.manage",
+     {"name": "tpl", "template": {"prompt": "do y"}}, "tasks.template_update"),
+    ("tasks.template_delete", "tasks.manage", {"name": "tpl"}, "tasks.template_delete"),
+    ("skills.list", "skills.manage", {}, "skills.list"),
+    ("skills.available", "skills.manage", {}, "skills.available"),
+    ("skills.install", "skills.manage", {"name": "s1"}, "skills.install"),
+    ("skills.update", "skills.manage", {}, "skills.update"),
+]
+
+
+@pytest.mark.parametrize("kind,scope,extra,_", _BATCH_B_CASES)
+def test_batch_b_dispatch_returns_typed_results(tmp_path, kind, scope, extra, _):
+    daemon = _BatchBFakeDaemon(tmp_path)
+    frame = {"type": kind, "request_id": "r-1", "workspace_id": "ws", **extra}
+    result = _batch_b_dispatch(tmp_path, daemon, frame, {scope})
+    assert result["type"] == f"{kind}.result", result
+    assert result["request_id"] == "r-1"
+    assert result["workspace_id"] == "ws"
+    assert result["type"] != "error"
+
+
+def test_batch_b_daemon_receives_host_bound_cwd(tmp_path):
+    daemon = _BatchBFakeDaemon(tmp_path)
+    _batch_b_dispatch(tmp_path, daemon,
+                      {"type": "memory.list", "request_id": "r", "workspace_id": "ws",
+                       "scope": "session", "session_id": "s-1"},
+                      {"memory.read"})
+    assert daemon.calls[0] == {"type": "list_memories", "cwd": str(tmp_path),
+                               "scope": "session", "session_id": "s-1"}
+    _batch_b_dispatch(tmp_path, daemon,
+                      {"type": "memory.read", "request_id": "r", "workspace_id": "ws",
+                       "memory_id": "m-1"},
+                      {"memory.read"})
+    assert daemon.calls[1]["cwd"] == str(tmp_path)
+    assert daemon.calls[1]["memory_id"] == "m-1"
+    _batch_b_dispatch(tmp_path, daemon,
+                      {"type": "skills.list", "request_id": "r", "workspace_id": "ws"},
+                      {"skills.manage"})
+    assert daemon.calls[2] == {"type": "list_skills", "cwd": str(tmp_path)}
+
+
+def test_batch_b_task_frames_are_flattened_for_the_daemon(tmp_path):
+    daemon = _BatchBFakeDaemon(tmp_path)
+    _batch_b_dispatch(tmp_path, daemon,
+                      {"type": "tasks.create", "request_id": "r", "workspace_id": "ws",
+                       "task": {"name": "t1", "task_type": "custom", "agent": "a",
+                                "interval": 60, "enabled": True, "bogus": "drop me"}},
+                      {"tasks.manage"})
+    call = daemon.calls[0]
+    assert call["type"] == "task_create"
+    assert call["name"] == "t1" and call["task_type"] == "custom"
+    assert call["agent"] == "a" and call["interval"] == 60
+    assert "bogus" not in call
+    _batch_b_dispatch(tmp_path, daemon,
+                      {"type": "tasks.update", "request_id": "r", "workspace_id": "ws",
+                       "name": "t1", "task": {"interval": 120}},
+                      {"tasks.manage"})
+    assert daemon.calls[1] == {"type": "task_update", "name": "t1", "interval": 120}
+    _batch_b_dispatch(tmp_path, daemon,
+                      {"type": "tasks.template_create", "request_id": "r",
+                       "workspace_id": "ws", "name": "tpl",
+                       "template": {"prompt": "do x", "extra": "ignored"}},
+                      {"tasks.manage"})
+    assert daemon.calls[2] == {"type": "task_template_create", "name": "tpl",
+                               "prompt": "do x"}
+    _batch_b_dispatch(tmp_path, daemon,
+                      {"type": "tasks.template_update", "request_id": "r",
+                       "workspace_id": "ws", "name": "tpl",
+                       "template": {"prompt": "do y"}},
+                      {"tasks.manage"})
+    assert daemon.calls[3] == {"type": "task_template_update", "name": "tpl",
+                               "prompt": "do y"}
+
+
+def test_batch_b_scheduler_not_running_error_is_surfaced(tmp_path):
+    daemon = _BatchBFakeDaemon(tmp_path)
+    daemon.error_for = {"task_create": "scheduler not running",
+                        "trigger_task": "scheduler not running"}
+    result = _batch_b_dispatch(tmp_path, daemon,
+                               {"type": "tasks.create", "request_id": "r",
+                                "workspace_id": "ws", "task": {"name": "t1"}},
+                               {"tasks.manage"})
+    assert result["type"] == "error"
+    assert result["code"] == "daemon_error"
+    assert result["error"] == "scheduler not running"
+    result = _batch_b_dispatch(tmp_path, daemon,
+                               {"type": "tasks.trigger", "request_id": "r",
+                                "workspace_id": "ws", "name": "t1"},
+                               {"tasks.manage"})
+    assert result["type"] == "error"
+    assert result["error"] == "scheduler not running"
+
+
+def test_batch_b_rant_submit_handles_typeless_daemon_reply(tmp_path):
+    daemon = _BatchBFakeDaemon(tmp_path)
+    result = _batch_b_dispatch(tmp_path, daemon,
+                               {"type": "rant.submit", "request_id": "r",
+                                "workspace_id": "ws", "message": "slow"},
+                               {"rant.submit"})
+    assert result == {"type": "rant.submit.result", "request_id": "r",
+                      "workspace_id": "ws", "ok": True, "count": 3}
+    assert daemon.calls[0] == {"type": "rant", "message": "slow"}
+
+
+def test_batch_b_skills_install_update_pass_through(tmp_path):
+    daemon = _BatchBFakeDaemon(tmp_path)
+    result = _batch_b_dispatch(tmp_path, daemon,
+                               {"type": "skills.install", "request_id": "r",
+                                "workspace_id": "ws", "name": "s1", "confirmed": True},
+                               {"skills.manage"})
+    assert result == {"type": "skills.install.result", "request_id": "r",
+                      "workspace_id": "ws", "name": "s1", "ok": True}
+    assert daemon.calls[0] == {"type": "skills_install", "name": "s1", "confirmed": True}
+    result = _batch_b_dispatch(tmp_path, daemon,
+                               {"type": "skills.update", "request_id": "r",
+                                "workspace_id": "ws"},
+                               {"skills.manage"})
+    assert result["type"] == "skills.update.result"
+    assert result["ok"] is True and result["updated"] == []
+    assert daemon.calls[1] == {"type": "skills_update"}
+
+
+def test_batch_b_memory_and_skills_replies_relativize_paths(tmp_path):
+    daemon = _BatchBFakeDaemon(tmp_path)
+    result = _batch_b_dispatch(tmp_path, daemon,
+                               {"type": "memory.list", "request_id": "r",
+                                "workspace_id": "ws"},
+                               {"memory.read"})
+    assert result["type"] == "memory.list.result"
+    assert result["directory"] == "memory"
+    assert result["index_path"] == "memory/MEMORY.md"
+    result = _batch_b_dispatch(tmp_path, daemon,
+                               {"type": "memory.read", "request_id": "r",
+                                "workspace_id": "ws", "memory_id": "m-1"},
+                               {"memory.read"})
+    assert result["path"] == "memory/m-1.md"
+    result = _batch_b_dispatch(tmp_path, daemon,
+                               {"type": "skills.list", "request_id": "r",
+                                "workspace_id": "ws"},
+                               {"skills.manage"})
+    assert result["skills"][0]["path"] == "skills/s1"
+    # A skill outside the workspace never leaks its host path.
+    assert result["shadows"][0]["kept"]["path"] == "skills/s2"
+    assert result["shadows"][0]["dropped"]["path"] == "."
+
+
+def test_batch_b_mutating_ops_audit_log_without_payloads(tmp_path, caplog):
+    import logging
+    daemon = _BatchBFakeDaemon(tmp_path)
+    cases = [
+        ({"type": "models.set", "request_id": "r", "workspace_id": "ws",
+          "model": "m-a"}, {"models.manage"}),
+        ({"type": "rant.submit", "request_id": "r", "workspace_id": "ws",
+          "message": "secret rant text"}, {"rant.submit"}),
+        ({"type": "tasks.delete", "request_id": "r", "workspace_id": "ws",
+          "name": "t1"}, {"tasks.manage"}),
+        ({"type": "skills.install", "request_id": "r", "workspace_id": "ws",
+          "name": "s1"}, {"skills.manage"}),
+    ]
+    with caplog.at_level(logging.INFO, logger="emrg.server.companion_wss_listener"):
+        for frame, scopes in cases:
+            result = _batch_b_dispatch(tmp_path, daemon, frame, scopes)
+            assert result["type"] == f"{frame['type']}.result", result
+    assert caplog.text.count("companion batch-b allowed") == 4
+    for kind in ("models.set", "rant.submit", "tasks.delete", "skills.install"):
+        assert kind in caplog.text
+    assert "phone-1" in caplog.text
+    # Payload contents never reach the audit log.
+    assert "secret rant text" not in caplog.text
+    # Reads are not audit-logged.
+    with caplog.at_level(logging.INFO, logger="emrg.server.companion_wss_listener"):
+        caplog.clear()
+        _batch_b_dispatch(tmp_path, daemon,
+                          {"type": "tasks.list", "request_id": "r",
+                           "workspace_id": "ws"}, {"tasks.manage"})
+    assert "companion batch-b allowed" not in caplog.text
+
+
+def test_batch_b_dispatch_without_daemon_is_unavailable(tmp_path):
+    host = CompanionHostService(tmp_path / "registry.json")
+    config = CompanionListenerConfig.build("127.0.0.1", 8765)
+    listener = CompanionWssListener(host, config, tmp_path / "cert.pem", tmp_path / "key.pem")
+    identity = {"device_id": "phone-1", "workspace_id": "ws",
+                "cwd": str(tmp_path), "scopes": {"tasks.manage"}, "generation": 1}
+    result = asyncio.run(listener._dispatch(
+        {"type": "tasks.list", "request_id": "r", "workspace_id": "ws"},
+        identity, _BatchBDummySocket()))
+    assert result == {"type": "error", "request_id": "r", "code": "daemon_unavailable"}
+
+
+def test_batch_c_frames_still_answer_not_implemented(tmp_path):
+    daemon = _BatchBFakeDaemon(tmp_path)
+    for frame, scopes in [
+        ({"type": "hosts.list", "request_id": "r", "workspace_id": "ws"}, {"hosts.list"}),
+        ({"type": "logs.tail", "request_id": "r", "workspace_id": "ws"}, {"logs.read"}),
+        ({"type": "settings.set", "request_id": "r", "workspace_id": "ws",
+          "patch": {}}, {"settings.manage"}),
+    ]:
+        result = _batch_b_dispatch(tmp_path, daemon, frame, scopes)
+        assert result == {"type": "error", "request_id": "r", "code": "not_implemented"}
+    assert daemon.calls == []

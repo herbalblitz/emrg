@@ -57,11 +57,20 @@ _LOG = logging.getLogger(__name__)
 
 #: Daemon message types the companion listener may forward in-process.
 #: Anything else (notably ``shutdown`` and ``init_auto_evolve``) is never
-#: reachable from a remote companion.
+#: reachable from a remote companion. Batch B adds the memory / models /
+#: rant / evolution / tasks / skills operations; Batch C (hosts / logs /
+#: audit / devices / settings) needs companion-side handlers, not daemon
+#: forwarding, so nothing from it appears here.
 ALLOWED_DAEMON_TYPES: frozenset[str] = frozenset({
     "resume_session", "rename_session", "delete_session", "clear_session",
     "compact", "rewind_session", "list_history", "resolve_session_cwd",
     "list_files", "read_file", "set_sandbox", "set_sandbox_roots",
+    "list_memories", "read_memory", "list_models", "set_model",
+    "list_rants", "rant", "evolution_summary",
+    "list_tasks", "trigger_task", "task_create", "task_update",
+    "task_delete", "task_template_list", "task_template_create",
+    "task_template_update", "task_template_delete",
+    "list_skills", "skills_available", "skills_install", "skills_update",
 })
 
 #: Stream frames buffered per session for replay to late subscribers.
