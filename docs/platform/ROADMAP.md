@@ -348,3 +348,10 @@ The QR panel is now wired to the v2 controller, superseding earlier notes that t
 - Verified redeemed transactions disappear from the pending approval queue.
 - Companion security CI [#182](https://github.com/herbalblitz/emrg/actions/runs/44518718627): passed on code commit `cb7486fcacacb85565a290da47673c9da248efd7`.
 - This is host-side projection/security test coverage, not an Electron approval UI or Android ↔ Windows end-to-end test.
+
+### CI verification update (2026-11-20)
+
+- [x] Android Companion CI run [#326](https://github.com/herbalblitz/emrg/actions/runs/44659501296) passed on commit `44b4846cca04ccd05256228a7db089a3c29ed11a`: debug APK assembly, shared debug-keystore signature verification, JVM unit-test task, lint, and APK artifact upload all completed successfully. The uploaded artifact is a debug APK, not a signed production release.
+- [x] Companion security CI run [#228](https://github.com/herbalblitz/emrg/actions/runs/44659155014) passed on commit `92cc02c3f7a5f30e65cebaf338da75961830c333`: Ubuntu **251 passed**; Windows **247 passed, 4 skipped**. Windows skips are platform-specific test cases; no test failures were reported.
+- [x] All four platform dependency lockfiles contain `qrcode==8.2`, including Linux ARM64.
+- [ ] Physical Android Keystore/device validation, live Android ↔ Windows pairing, authenticated status/session-list UI, and Windows clean-machine install/lifecycle smoke tests remain release gates. These CI runs do not establish end-to-end device pairing or full EMRG feature parity.
