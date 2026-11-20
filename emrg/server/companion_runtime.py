@@ -92,7 +92,7 @@ class CompanionRuntime:
                 host_identity=identity.fingerprint_sha256,
                 workspace_id=workspace_id,
                 cwd=str(cwd),
-                scopes={"status"},
+                scopes={"status", "sessions.list"},
             )
             descriptor = create_pairing_descriptor(
                 identity, endpoint, pairing_id=transaction["pairing_id"],
