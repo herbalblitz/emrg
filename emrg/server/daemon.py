@@ -2987,6 +2987,8 @@ class EmrgServer:
                     result = await self._companion_runtime.stop()
                 else:
                     result = self._companion_local_control.dispatch(operation, payload)
+                    if operation == "status":
+                        result.update(self._companion_runtime.status())
             except (CompanionLocalControlError, CompanionRuntimeError) as exc:
                 await self._send(ws, {
                     "type": "companion_local_control_result",
