@@ -34,6 +34,19 @@ Required implementation sequence before enabling `SEND_CHAT`:
 
 Until all gates pass, keep remote chat disabled and preserve the explicit `not_implemented` response. Do not report the Android app as live-chat capable merely because WSS authentication and read-only status/session listing work.
 
+
+### Daemon task-path source audit (2026-11-20)
+
+A closer source pass confirms why a thin `_run_tool_loop_locked` call from WSS is not a safe implementation:
+
+- The canonical client path in `EmrgServer._handle_client` constructs `TaskRequest`, resolves the `Session` from the accepted cwd, appends input history, applies `resolve_client_tier`, and publishes `_session_cancel` / `_session_turn_task` handles before the tool loop starts.
+- `_run_tool_loop_locked` owns turn start/end timestamps, terminal-frame fallback, busy-lock release, cancel-handle cleanup, and pending-queue disposition. These are daemon invariants, not transport details.
+- Pending work is not an independent FIFO worker: `_session_pending` is injected at round boundaries by the running turn, while terminal cleanup emits `queued_requeue` only after a normal end and otherwise drops queued requests with `queued_cancelled`. A remote submission API must preserve that behavior rather than invent a second queue or silently strand queued turns.
+- `_broadcast` currently routes daemon events to session subscribers and filters them by the active task cwd. A remote adapter needs a bounded, request-scoped event sink with explicit subscription lifecycle; exposing the raw local broadcast stream would risk cross-request/session leakage and would not define remote backpressure.
+- The host credential supplies the authoritative `workspace_id` and `cwd`. The client frame parser normalizes `chat.send` to request ID, workspace, optional session ID and prompt; it deliberately does not accept remote cwd, tools, or sandbox values. The eventual daemon API must keep those exclusions and derive the session/tool/sandbox policy on the host.
+
+Implementation decision: do not enable or dispatch `chat.send` until the submission API and remote event sink are designed together. The current explicit `not_implemented` response is safer than invoking the loop without correct queue, cancellation, event, and disconnect semantics. This audit is documentation/source inspection only; no executable behavior changed.
+
 ## Principles
 1. Python runtime/provider/tools/memory/skills/subagents/scheduler/session/sandbox remains source of truth.
 2. Preserve Electron desktop; rebuild weak components only after evidence and parity review.
