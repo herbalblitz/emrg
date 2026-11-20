@@ -92,3 +92,29 @@ def test_descriptor_canonicalizes_hostname_case_and_trailing_dot(tmp_path):
         identity, "WSS://LOCALHOST.:8443/", now_epoch_seconds=10
     ))
     assert descriptor["endpoint"] == "wss://localhost:8443"
+
+
+
+def test_descriptor_v2_binds_the_short_lived_pairing_transaction(tmp_path):
+    identity = provision_host_identity(tmp_path / "tls", ["127.0.0.1"])
+    pairing_id = "A" * 43
+    descriptor = json.loads(create_pairing_descriptor(
+        identity, "wss://127.0.0.1:18476",
+        pairing_id=pairing_id, now_epoch_seconds=1000,
+    ))
+    assert descriptor == {
+        "version": 2,
+        "endpoint": "wss://127.0.0.1:18476",
+        "fingerprint_sha256": identity.fingerprint_sha256,
+        "expires_at": 1000 + MAX_DESCRIPTOR_TTL_SECONDS,
+        "pairing_id": pairing_id,
+    }
+
+
+@pytest.mark.parametrize("pairing_id", ["", "A" * 42, "A" * 44, "!" * 43, "A" * 42 + "B"])
+def test_descriptor_v2_rejects_noncanonical_pairing_id(tmp_path, pairing_id):
+    identity = provision_host_identity(tmp_path / "tls", ["localhost"])
+    with pytest.raises(CompanionTlsError, match="transaction"):
+        create_pairing_descriptor(
+            identity, "wss://localhost:8443", pairing_id=pairing_id,
+        )
