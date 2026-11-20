@@ -34,6 +34,8 @@ pygments==2.20.0
     # via rich
 pyyaml==6.0.3
     # via emrg (pyproject.toml)
+qrcode==8.2
+    # via emrg (pyproject.toml)
 rich==15.0.0
     # via emrg (pyproject.toml)
 websockets==17.0.1
