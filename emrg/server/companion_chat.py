@@ -339,6 +339,13 @@ async def start_task(
     busy[session_id] = True
     task = asyncio.create_task(
         daemon._run_tool_loop_locked(req, sink, session, cancel_event, allow_tools=True))
+    # Publish the workspace binding before yielding to the event loop.
+    # A second websocket can subscribe between create_task() and the first
+    # instruction of _run_tool_loop_locked(); without this eager binding it
+    # could attach the same session id from a different workspace.
+    task_cwds = getattr(daemon, "_session_task_cwds", None)
+    if isinstance(task_cwds, dict):
+        task_cwds[session_id] = str(session.cwd)
     daemon._session_cancel[session_id] = cancel_event
     daemon._session_turn_task[session_id] = task
     return {"started": True}
