@@ -383,7 +383,7 @@ internal fun SecurePairingPanel() {
                         Text(sessionsResultText!!, style = MaterialTheme.typography.bodySmall)
                     }
                     Button(
-                        enabled = remoteConnectionState == RemoteSocketState.AUTHENTICATED,
+                        enabled = canRefreshRemoteHost(remoteConnectionState),
                         onClick = {
                             statusRequestId = UUID.randomUUID().toString()
                             sessionsRequestId = UUID.randomUUID().toString()
@@ -395,10 +395,7 @@ internal fun SecurePairingPanel() {
                         },
                     ) { Text("Refresh host status and sessions") }
                     Button(
-                        enabled = remoteConnectionState != RemoteSocketState.CONNECTING &&
-                            remoteConnectionState != RemoteSocketState.TLS_IDENTITY_VERIFIED &&
-                            remoteConnectionState != RemoteSocketState.AUTHENTICATING &&
-                            remoteConnectionState != RemoteSocketState.AUTHENTICATED,
+                        enabled = canReconnectRemoteHost(remoteConnectionState),
                         onClick = {
                             state.pairedHost?.let(::connectRemoteHost)
                         },
@@ -446,6 +443,15 @@ internal fun SecurePairingPanel() {
         )
     }
 }
+
+internal fun canReconnectRemoteHost(state: RemoteSocketState): Boolean =
+    state != RemoteSocketState.CONNECTING &&
+        state != RemoteSocketState.TLS_IDENTITY_VERIFIED &&
+        state != RemoteSocketState.AUTHENTICATING &&
+        state != RemoteSocketState.AUTHENTICATED
+
+internal fun canRefreshRemoteHost(state: RemoteSocketState): Boolean =
+    state == RemoteSocketState.AUTHENTICATED
 
 private fun itStatePhase(controller: PairingV2SessionController): PairingPhase =
     // Controller intentionally exposes only operations; pre-credential state is fixed.
