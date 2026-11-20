@@ -43,6 +43,20 @@ describe("CompanionPanel", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Copied pairing descriptor.");
   });
 
+  it("surfaces clipboard failures without claiming the descriptor was copied", async () => {
+    setup();
+    await screen.findByTestId("companion-status");
+    fireEvent.click(screen.getByRole("button", { name: /start host/i }));
+    await screen.findByLabelText("Pairing descriptor");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error("Clipboard denied")) },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Copy pairing descriptor" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Clipboard denied");
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
   it("rejects ports outside the TCP range before calling the host", async () => {
     const api = setup();
     await screen.findByTestId("companion-status");
