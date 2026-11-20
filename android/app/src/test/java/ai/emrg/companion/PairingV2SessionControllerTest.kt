@@ -66,7 +66,9 @@ class PairingV2SessionControllerTest {
     private val endpoint = "wss://host.example/pair"
     private val fingerprint = "AA:".repeat(31) + "AA"
     private val pairingId = "A".repeat(43)
-    private val challenge = PairingV2Challenge(pairingId, "B".repeat(22), "C".repeat(100))
+    private val challenge = PairingV2Challenge(
+        pairingId, "B".repeat(22), "C".repeat(100), "workspace-1",
+    )
 
     private fun approvedCoordinator(store: Store): SecurePairingCoordinator {
         val coordinator = SecurePairingCoordinator(store)
@@ -104,6 +106,7 @@ class PairingV2SessionControllerTest {
         assertEquals(PairingPhase.PAIRED, coordinator.state.phase)
         assertEquals("a".repeat(64), store.values["host-credential"])
         assertEquals("host-credential", listener.paired?.credentialAlias)
+        assertEquals("workspace-1", listener.paired?.approvedWorkspaceId)
         assertTrue(listener.failure == null)
 
         // A duplicated transport callback must be harmless and must not demote PAIRED.
