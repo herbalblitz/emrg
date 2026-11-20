@@ -279,3 +279,66 @@ def test_chat_dispatch_via_listener(tmp_path, caplog):
         assert listener._hub.sessions_for(socket) == ["s-1"]
         await listener._hub.unsubscribe(socket, daemon=daemon)
     asyncio.run(run())
+
+
+
+def test_hub_rejects_same_session_id_from_different_workspaces(tmp_path):
+    async def run():
+        hub = CompanionStreamHub()
+        first, second = Socket(), Socket()
+        workspace_a = tmp_path / "workspace-a"
+        workspace_b = tmp_path / "workspace-b"
+        await hub.subscribe(first, session_id="collision",
+                            scopes=frozenset({"chat.send"}), device_id="phone-a",
+                            cwd=str(workspace_a))
+        with pytest.raises(Exception, match="another workspace"):
+            await hub.subscribe(second, session_id="collision",
+                                scopes=frozenset({"chat.send"}), device_id="phone-b",
+                                cwd=str(workspace_b))
+        assert hub.sessions_for(first) == ["collision"]
+        assert hub.sessions_for(second) == []
+    asyncio.run(run())
+
+
+def test_chat_cancel_cannot_target_unsubscribed_session(tmp_path):
+    async def run():
+        daemon = FakeDaemon(tmp_path)
+        host = CompanionHostService(tmp_path / "registry.json")
+        listener = CompanionWssListener(
+            host, CompanionListenerConfig.build("127.0.0.1", 8765),
+            tmp_path / "cert.pem", tmp_path / "key.pem",
+            daemon_accessor=lambda: daemon)
+        socket = Socket()
+        # The connection has not subscribed to "victim".
+        daemon._session_turn_task["victim"] = asyncio.create_task(asyncio.sleep(60))
+        daemon._session_cancel["victim"] = asyncio.Event()
+        identity = {"device_id": "phone-a", "workspace_id": "ws-a",
+                    "cwd": str(tmp_path), "scopes": {"chat.send"}}
+        result = await listener._dispatch(
+            {"type": "chat.cancel", "request_id": "cancel-1",
+             "workspace_id": "ws-a", "session_id": "victim"}, identity, socket)
+        assert result["code"] == "session_not_subscribed"
+        assert not daemon._session_cancel["victim"].is_set()
+        daemon._session_turn_task["victim"].cancel()
+    asyncio.run(run())
+
+
+def test_chat_approval_cannot_target_unsubscribed_session(tmp_path):
+    async def run():
+        daemon = FakeDaemon(tmp_path)
+        future = asyncio.get_running_loop().create_future()
+        daemon._pending_approvals["approval-victim"] = (future, "victim")
+        host = CompanionHostService(tmp_path / "registry.json")
+        listener = CompanionWssListener(
+            host, CompanionListenerConfig.build("127.0.0.1", 8765),
+            tmp_path / "cert.pem", tmp_path / "key.pem",
+            daemon_accessor=lambda: daemon)
+        identity = {"device_id": "phone-a", "workspace_id": "ws-a",
+                    "cwd": str(tmp_path), "scopes": {"chat.send"}}
+        result = await listener._dispatch(
+            {"type": "chat.approve", "request_id": "approve-1",
+             "workspace_id": "ws-a", "approval_request_id": "approval-victim",
+             "approved": True}, identity, Socket())
+        assert result["code"] == "approval_not_for_subscribed_session"
+        assert not future.done()
+    asyncio.run(run())
