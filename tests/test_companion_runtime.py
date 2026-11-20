@@ -41,6 +41,7 @@ def test_runtime_is_inert_until_explicit_start_and_stops_cleanly(tmp_path, monke
     started = asyncio.run(runtime.start({
         "bind_address": "127.0.0.1",
         "port": 18476,
+        "cwd": str(tmp_path),
     }))
     assert runtime.running is True
     assert host.enabled is True
@@ -50,6 +51,8 @@ def test_runtime_is_inert_until_explicit_start_and_stops_cleanly(tmp_path, monke
     descriptor = json.loads(started["descriptor"])
     assert descriptor["endpoint"] == started["endpoint"]
     assert descriptor["fingerprint_sha256"] == started["fingerprint_sha256"]
+    assert descriptor["version"] == 2
+    assert descriptor["pairing_id"] == started["pairing_id"]
     assert set(descriptor) == {
         "version", "endpoint", "fingerprint_sha256", "expires_at",
     }
@@ -65,9 +68,9 @@ def test_runtime_is_inert_until_explicit_start_and_stops_cleanly(tmp_path, monke
 @pytest.mark.parametrize("payload", [
     None,
     {},
-    {"bind_address": "0.0.0.0", "port": 18476},
-    {"bind_address": "127.0.0.1", "port": True},
-    {"bind_address": "127.0.0.1", "port": 18476, "workspace": "/tmp"},
+    {"bind_address": "0.0.0.0", "port": 18476, "cwd": "/tmp"},
+    {"bind_address": "127.0.0.1", "port": True, "cwd": "/tmp"},
+    {"bind_address": "127.0.0.1", "port": 18476, "cwd": "/tmp", "workspace": "/tmp"},
 ])
 def test_runtime_rejects_invalid_or_wildcard_start_payload(tmp_path, payload):
     host = CompanionHostService(tmp_path / "credentials.json")
