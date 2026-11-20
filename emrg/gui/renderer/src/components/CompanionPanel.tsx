@@ -37,6 +37,8 @@ export function CompanionPanel() {
   const [descriptor, setDescriptor] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const portNumber = Number(port);
+  const validPort = /^\\d+$/.test(port) && portNumber >= 1 && portNumber <= 65535;
 
   const refresh = useCallback(async () => {
     const api = emrg();
