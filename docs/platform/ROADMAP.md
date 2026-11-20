@@ -365,3 +365,11 @@ The QR panel is now wired to the v2 controller, superseding earlier notes that t
 - Verification: Android Companion workflow #329 passed (debug APK assemble, signature check, unit tests, lint, artifact upload). Companion Security workflow #229 passed on Windows, Ubuntu, and GUI (renderer tests, TypeScript check, production build).
 - Important integration gap: `SecurePairingPanel` currently completes pairing and stores the credential, but it does not yet instantiate the authenticated remote socket or render live status/session results. The new send methods are transport primitives, not an end-to-end UI feature. A paired host's approved workspace ID must be carried into the authenticated client state before `sessions.list` can be sent.
 - Physical Android Keystore validation and real Android-to-Windows pairing smoke tests remain release gates.
+
+
+### Android pairing workspace propagation (2026-11-20)
+
+- Android now extracts the workspace ID from the exact pinned-host pairing challenge payload and carries it into the host-scoped `PairedHost` record only after the host issues the credential.
+- Challenge parsing rejects missing, malformed, overlong, or non-canonical workspace identifiers; the pairing state reducer rejects `sessions.list` credentials without a valid approved workspace binding.
+- Added JVM regression coverage for workspace extraction, malformed workspace rejection, credential propagation, and session-list scope binding.
+- This resolves the missing workspace metadata needed by the existing authenticated `sessions.list` transport primitive. The authenticated WebSocket is still not instantiated by the pairing panel, and live status/session UI plus Android ↔ Windows end-to-end validation remain open.
