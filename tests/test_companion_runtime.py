@@ -40,6 +40,10 @@ def test_runtime_is_inert_until_explicit_start_and_stops_cleanly(tmp_path, monke
 
     assert runtime.running is False
     assert host.enabled is False
+    assert runtime.status() == {
+        "listener_running": False, "endpoint": None,
+        "fingerprint_sha256": None, "active_connections": 0,
+    }
 
     started = asyncio.run(runtime.start({
         "bind_address": "127.0.0.1",
@@ -48,6 +52,10 @@ def test_runtime_is_inert_until_explicit_start_and_stops_cleanly(tmp_path, monke
     }))
     assert runtime.running is True
     assert host.enabled is True
+    assert runtime.status() == {
+        "listener_running": True, "endpoint": "wss://127.0.0.1:18476",
+        "fingerprint_sha256": started["fingerprint_sha256"], "active_connections": 0,
+    }
     assert started["running"] is True
     assert started["endpoint"] == "wss://127.0.0.1:18476"
     assert started["fingerprint_sha256"]
@@ -82,6 +90,7 @@ def test_runtime_is_inert_until_explicit_start_and_stops_cleanly(tmp_path, monke
     assert host.pending_pairings_v2() == []
     assert runtime.running is False
     assert host.enabled is False
+    assert runtime.status()["listener_running"] is False
     assert _FakeListener.instances[0].closed is True
 
 
