@@ -110,6 +110,27 @@ class SecurePairingStateTest {
     }
 
     @Test
+    fun sessionListCredentialRequiresApprovedWorkspaceBinding() {
+        val candidate = reducePairingState(PairingState(), PairingAction.PairingQrReceived(endpoint, fingerprint))
+        val verified = reducePairingState(candidate, PairingAction.HostIdentityConfirmed(fingerprint))
+        val approved = reducePairingState(verified, PairingAction.HostApproved)
+        val unbound = PairedHost(
+            endpoint, fingerprint, "device-1", "alias",
+            setOf(PairingScope.READ_STATUS, PairingScope.LIST_SESSIONS),
+        )
+        val rejected = reducePairingState(approved, PairingAction.CredentialIssued(unbound))
+        assertEquals(PairingPhase.FAILED, rejected.phase)
+        assertNull(rejected.pairedHost)
+
+        val bound = reducePairingState(
+            approved,
+            PairingAction.CredentialIssued(unbound.copy(approvedWorkspaceId = "workspace-1")),
+        )
+        assertEquals(PairingPhase.PAIRED, bound.phase)
+        assertEquals("workspace-1", bound.pairedHost?.approvedWorkspaceId)
+    }
+
+    @Test
     fun revocationClearsAllPairedHostMetadata() {
         val paired = PairingState(phase = PairingPhase.PAIRED,
             pairedHost = PairedHost(endpoint, fingerprint, "device-1", "alias", setOf(PairingScope.SEND_CHAT)))
