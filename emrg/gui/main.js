@@ -987,12 +987,14 @@ vision = false
       assertCompanionRenderer(event);
       if (!payload || typeof payload.bindAddress !== "string" ||
           payload.bindAddress.length > 45 ||
-          !Number.isInteger(payload.port) || payload.port < 1024 || payload.port > 65535) {
+          !Number.isInteger(payload.port) || payload.port < 1024 || payload.port > 65535 ||
+          typeof payload.cwd !== "string" || payload.cwd.length < 1 || payload.cwd.length > 4096) {
         throw new Error("invalid Companion listener configuration");
       }
       return companionLocalControl("listener.start", {
         bind_address: payload.bindAddress,
         port: payload.port,
+        cwd: payload.cwd,
       });
     });
 
