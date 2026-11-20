@@ -16,6 +16,7 @@ on:
       - "tests/test_companion_*.py"
       - "pyproject.toml"
       - "uv.lock"
+      - "emrg/gui/renderer/**"
       - ".github/workflows/companion-security.yml"
   workflow_dispatch:
 
