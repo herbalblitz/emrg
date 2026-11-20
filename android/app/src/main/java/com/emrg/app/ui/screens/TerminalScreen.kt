@@ -11,10 +11,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.emrg.app.data.GatewayRepository
 import com.emrg.app.data.GatewayRequestException
 import kotlinx.coroutines.launch
@@ -26,25 +29,15 @@ fun TerminalScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __command = remember { mutableStateOf("") }
-    var command: String? = null
-        get() = __command.value
-        set(value) { __command.value = value }
+    var command by __command
     val __running = remember { mutableStateOf(false) }
-    var running: Boolean = false
-        get() = __running.value
-        set(value) { __running.value = value }
+    var running by __running
     val __output = remember { mutableStateOf("") }
-    var output: String? = null
-        get() = __output.value
-        set(value) { __output.value = value }
+    var output by __output
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
-        get() = __error.value
-        set(value) { __error.value = value }
+    var error by __error
     val __mode = remember { mutableStateOf("workspace-write") }
-    var mode: String? = null
-        get() = __mode.value
-        set(value) { __mode.value = value }
+    var mode by __mode
 
     fun run() {
         val cmd = command.trim()
@@ -69,9 +62,7 @@ fun TerminalScreen(
     }
 
     val __expanded = remember { mutableStateOf(false) }
-    var expanded: Boolean = false
-        get() = __expanded.value
-        set(value) { __expanded.value = value }
+    var expanded by __expanded
 
     androidx.compose.material3.Scaffold(
         topBar = { TopAppBar(title = { Text(text = "Terminal") }) },

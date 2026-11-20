@@ -8,9 +8,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,11 +28,11 @@ fun TasksScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __tasks = remember { mutableStateOf(emptyList<TaskInfo>()) }
-    var tasks: List<TaskInfo> by __tasks
+    var tasks by __tasks
     val __loading = remember { mutableStateOf(true) }
-    var loading: Boolean by __loading
+    var loading by __loading
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? by __error
+    var error by __error
 
     LaunchedEffect(Unit) {
         scope.launch {

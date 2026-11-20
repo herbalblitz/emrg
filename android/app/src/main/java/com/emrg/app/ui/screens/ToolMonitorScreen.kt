@@ -10,8 +10,10 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.emrg.app.data.GatewayRepository
@@ -25,21 +27,13 @@ fun ToolMonitorScreen(
 ) {
     val scope = rememberCoroutineScope()
     val __command = remember { mutableStateOf("") }
-    var command: String? = null
-        get() = __command.value
-        set(value) { __command.value = value }
+    var command by __command
     val __running = remember { mutableStateOf(false) }
-    var running: Boolean = false
-        get() = __running.value
-        set(value) { __running.value = value }
+    var running by __running
     val __result = remember { mutableStateOf<String?>(null) }
-    var result: String? = null
-        get() = __result.value
-        set(value) { __result.value = value }
+    var result by __result
     val __error = remember { mutableStateOf<String?>(null) }
-    var error: String? = null
-        get() = __error.value
-        set(value) { __error.value = value }
+    var error by __error
 
     fun run() {
         val cmd = command.trim()
