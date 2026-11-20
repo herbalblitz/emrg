@@ -72,6 +72,16 @@ from emrg.server.companion_exec import CompanionExecConfig
 from emrg.server.companion_listener_policy import CompanionListenerConfig
 from emrg.tools.base import non_regular_kind
 
+#: The config file holds a plaintext ``api_key``: every write this module
+#: makes must leave it owner-only. The write sites below apply the
+#: canonical constant imported from ``emrg.config``; the rule is stated
+#: here as a literal as well, so the config-file-mode census
+#: (``tests/test_config_file_mode_census.py``) can read the mode this
+#: carrier applies out of this file's own text — and so a drift of the
+#: canonical constant away from owner-only fails loudly at import
+#: instead of silently writing a group-readable key file.
+assert CONFIG_FILE_MODE == 0o600
+
 _LOG = logging.getLogger(__name__)
 
 #: Every engine key a remote device may write, with its domain test.

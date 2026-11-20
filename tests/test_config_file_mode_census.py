@@ -1,7 +1,7 @@
-"""`~/.emrg/config.toml` is private — one rule, four carriers, and nothing measured them together.
+"""`~/.emrg/config.toml` is private — one rule, five carriers, and nothing measured them together.
 
 The file holds `api_key` in plaintext, so every path that writes it must leave it owner-only.
-That rule is stated as code in four places:
+That rule is stated as code in five places:
 
 * ``emrg/config.py`` — :data:`emrg.config.CONFIG_FILE_MODE`, applied by ``_make_config_private``
   (the canonical definition, and the one every other carrier is described as matching);
@@ -12,6 +12,10 @@ That rule is stated as code in four places:
 * ``emrg/gui/config_mode.js`` — ``CONFIG_FILE_MODE``, the GUI's copy of the rule, the module
   #2149 adds because ``fs.writeFileSync``'s ``mode`` option applies only when the file is
   **created**.
+* ``emrg/server/companion_config.py`` — the companion settings writer applies the imported
+  canonical constant at its ``os.open``/``os.chmod`` write sites, and pins it with
+  ``assert CONFIG_FILE_MODE == 0o600`` at import so a drift fails loudly and the census can
+  read the rule out of this file's own text.
 
 Each of those has its own arms, and every one of them is relative to its own spelling: the Python
 arms compare the file's mode *against that same constant*, ``install.sh``'s arm asserts the
@@ -23,7 +27,7 @@ pinning the digit here would leave the two carriers free to drift apart one digi
 every test green".
 
 That objection is about a **runtime** constant, and this census is the instrument it does not
-apply to: at test time both statements are text, and one test can read all four. Measured
+apply to: at test time both statements are text, and one test can read all five. Measured
 2026-10-12 on master ``54aba67a``, one mutation arm each, everything else green:
 
 * ``emrg/config.py``: ``CONFIG_FILE_MODE = 0o600`` → ``0o700`` — **SURVIVED** against
@@ -99,6 +103,7 @@ _EXTRACTORS = {
     "emrg/config.py": r"^CONFIG_FILE_MODE = (0o[0-7]+)$",
     "emrg/gui/config_mode.js": r"^const CONFIG_FILE_MODE = (0o[0-7]+);$",
     "emrg/gui/main.js": r"writeFileSync\(configPath\(\),.*?,\s*\{\s*mode:\s*(0o[0-7]+)\s*\}\)",
+    "emrg/server/companion_config.py": r"CONFIG_FILE_MODE == (0o[0-7]+)",
     "install.sh": r'chmod ([0-7]{3,4}) "\$cfg"',
 }
 
