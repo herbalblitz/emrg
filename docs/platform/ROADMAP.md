@@ -17,6 +17,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - [x] Extract session command/reply payloads and inspect daemon event lifecycle; Windows packaging baseline documented separately.
 
 ### M1 — Protocol
+- [x] Enforce UTF-8-only decoding for byte-oriented v1 and pairing-v2 JSON frames; reject UTF-16/UTF-32 payloads before schema validation (regression tests added; CI verification pending).
 - [x] Document local authentication/task fields and source-verified session command/reply schemas.
 - [x] Record protocol/documentation transport mismatch.
 - [x] Correct protocol.py module documentation to state that it models JSON payloads, not transport framing.

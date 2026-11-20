@@ -38,9 +38,14 @@ def _require_fields(frame: dict[str, Any], allowed: set[str]) -> None:
 def _object(payload: str | bytes) -> dict[str, Any]:
     if isinstance(payload, bytes):
         raw = payload
-    elif isinstance(payload, str):
         try:
-            raw = payload.encode("utf-8")
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            raise CompanionProtocolError("invalid frame") from None
+    elif isinstance(payload, str):
+        text = payload
+        try:
+            raw = text.encode("utf-8")
         except UnicodeEncodeError:
             raise CompanionProtocolError("invalid frame") from None
     else:
@@ -48,7 +53,8 @@ def _object(payload: str | bytes) -> dict[str, Any]:
     if len(raw) > MAX_FRAME_BYTES:
         raise CompanionProtocolError("frame too large")
     try:
-        value = json.loads(raw, object_pairs_hook=_reject_duplicate_keys)
+        # The generic JSON byte decoder auto-detects UTF-16/32; the wire contract is UTF-8 only.
+        value = json.loads(text, object_pairs_hook=_reject_duplicate_keys)
     except (UnicodeDecodeError, json.JSONDecodeError, CompanionProtocolError):
         raise CompanionProtocolError("invalid frame") from None
     if not isinstance(value, dict):

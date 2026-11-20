@@ -64,6 +64,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 ## Companion security increment
 
 - [x] Host frame schema strictness: duplicate JSON keys, unknown fields and invalid Unicode fail closed; host parser tests added (CI execution pending).
+- [x] Host v1 and pairing-v2 validators enforce UTF-8-only byte payloads (UTF-16/32 rejected); regression tests added (CI pending).
 - [x] Registry same-instance thread serialization for credential issue/revoke/read; concurrent-issuance test added. Cross-process lock and Windows ACL hardening are open.
 - [x] Host TLS identity generation/persistence, protected TLS context loading, daemon-owned opt-in WSS lifecycle, and transaction-bound v2 QR descriptor creation are integrated in source; CI for the latest runtime changes is pending.
 - [ ] Trusted local React approval/QR UI and Android-to-Windows live pairing E2E remain open.

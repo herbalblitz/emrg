@@ -275,3 +275,8 @@ The listener also rejects a second concurrent `start()` while the first bind is 
 - The current QR descriptor contains only version, WSS endpoint, TLS fingerprint and expiry. It does **not** carry a pairing transaction ID/secret or another transaction binding. The Android parser likewise has no transaction binding fields. The descriptor must remain credential-free; do not put the device credential in QR.
 - The WSS listener currently accepts auth then dispatches only `status` and `sessions.list`. It has no unauthenticated pairing redemption route and no host-local UI adapter for pending pairing decisions.
 - Consequently, do not wire Android `CredentialIssued` or attempt a live pairing handshake yet. Next design step is a versioned, one-time pairing exchange that binds QR transaction, host identity, device identity, expiry and approved scopes; expose approve/reject only through trusted local host UI; redeem over pinned TLS; then deliver the issued device credential only to the requesting device. Add replay, expiry, wrong-device, cancellation, and credential persistence tests before enabling it.
+
+
+## JSON byte encoding regression
+
+The host protocol accepts JSON text encoded as UTF-8 only. When validators receive byte payloads, they decode strict UTF-8 before JSON parsing; UTF-16/UTF-32 payloads are rejected even though Python's generic JSON byte decoder can auto-detect those encodings. The existing frame-size limit is still measured against the original UTF-8 byte length. This applies to both the v1 authenticated client-frame validator and the separate v2 pairing-frame validator.

@@ -179,3 +179,26 @@ def test_pairing_v2_accepts_supported_device_id_characters(device_id):
              "pairing_id": enc(32), "device_id": device_id,
              "key_algorithm": "P-256", "public_key": enc(91), "requested_scopes": ["status"], "client_nonce": enc(32)}
     assert validate_pairing_v2_frame(json.dumps(frame))["device_id"] == device_id
+
+
+def test_protocol_accepts_utf8_encoded_byte_frames():
+    assert validate_client_frame(_auth().encode("utf-8"))["type"] == "auth"
+
+
+@pytest.mark.parametrize("encoding", ["utf-16", "utf-32"])
+def test_protocol_rejects_non_utf8_encoded_byte_frames(encoding):
+    from emrg.server.companion_protocol import validate_pairing_v2_frame
+
+    with pytest.raises(CompanionProtocolError):
+        validate_client_frame(_auth().encode(encoding))
+
+    import base64
+    encode = lambda size: base64.urlsafe_b64encode(bytes(size)).rstrip(b"=").decode()
+    pairing_request = {
+        "type": "pairing.request", "protocol": "2.0",
+        "pairing_id": encode(32), "device_id": "android-1",
+        "key_algorithm": "P-256", "public_key": encode(91),
+        "requested_scopes": ["status"], "client_nonce": encode(32),
+    }
+    with pytest.raises(CompanionProtocolError):
+        validate_pairing_v2_frame(json.dumps(pairing_request).encode(encoding))
