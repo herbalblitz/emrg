@@ -19,6 +19,7 @@ internal data class PairingV2Challenge(
     val pairingId: String,
     val challengeId: String,
     val encodedChallenge: String,
+    val workspaceId: String = "",
 )
 
 /**
@@ -93,8 +94,21 @@ internal class PairingV2Client(
         val challengeId = response.getString("challenge_id")
         requireCanonicalBase64Url(challengeId, 16, "challenge id")
         val encodedChallenge = response.getString("challenge")
-        decodeCanonicalBase64Url(encodedChallenge, 1, MAX_CHALLENGE_BYTES)
-        return PairingV2Challenge(pairingId, challengeId, encodedChallenge)
+        val rawChallenge = decodeCanonicalBase64Url(encodedChallenge, 1, MAX_CHALLENGE_BYTES)
+        val challengePayload = try {
+            val decoder = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+            JSONObject(decoder.decode(ByteBuffer.wrap(rawChallenge)).toString())
+        } catch (_: Exception) {
+            throw IllegalArgumentException("Pairing challenge payload is invalid")
+        }
+        val workspaceValue = challengePayload.opt("workspace_id")
+        require(workspaceValue is String &&
+            workspaceValue.matches(Regex("[A-Za-z0-9._:-]{1,128}"))) {
+            "Pairing workspace is invalid"
+        }
+        return PairingV2Challenge(pairingId, challengeId, encodedChallenge, workspaceValue)
     }
 
     /** Accept a credential only when the response is bound to this device and transaction. */
