@@ -99,7 +99,7 @@ describe("SettingsPanel", () => {
     fireEvent.click(screen.getByTestId("settings-tab-companion"));
     expect(await screen.findByTestId("settings-body-companion")).toBeTruthy();
     expect(await screen.findByTestId("companion-status")).toBeTruthy();
-    expect(screen.getByText("Host stopped")).toBeTruthy();
+    expect(screen.getByTestId("companion-status").textContent).toContain("Host stopped");
   });
 
   it("switches tabs", async () => {
