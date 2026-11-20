@@ -983,6 +983,14 @@ vision = false
       });
     });
 
+    ipcMain.handle("emrg:companionPairingQr", async (event, payload = {}) => {
+      assertCompanionRenderer(event);
+      if (!payload || typeof payload.descriptor !== "string" || payload.descriptor.length > 2048) {
+        throw new Error("invalid Companion pairing descriptor");
+      }
+      return companionLocalControl("pairing.qr", { descriptor: payload.descriptor });
+    });
+
     ipcMain.handle("emrg:companionListenerStart", async (event, payload = {}) => {
       assertCompanionRenderer(event);
       if (!payload || typeof payload.bindAddress !== "string" ||
