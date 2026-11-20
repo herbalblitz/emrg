@@ -59,7 +59,8 @@ private fun CompanionChatScreen() {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var activeRequestJob by remember { mutableStateOf<Job?>(null) }
-    val connectionState = remember { ReconnectionState() }
+    var hostPaired by remember { mutableStateOf(false) }
+    var remoteHostState by remember { mutableStateOf(RemoteSocketState.CLOSED) }
     val transport = remember { DemoTransport() }
 
     fun persistChat(state: ChatUiState) {
@@ -135,22 +136,35 @@ private fun CompanionChatScreen() {
                 Text("Android companion", style = MaterialTheme.typography.titleSmall)
             }
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                Text("DEMO · Offline", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                Text(
+                    when {
+                        hostPaired && remoteHostState == RemoteSocketState.AUTHENTICATED -> "HOST · Connected"
+                        hostPaired -> "Paired · Offline"
+                        else -> "DEMO · Offline"
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
             }
         }
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Text(
-                "Offline preview. Sessions are stored on this device; no host is connected or synchronized.",
+                if (hostPaired && remoteHostState == RemoteSocketState.AUTHENTICATED)
+                    "Windows host authenticated. Host status and read-only session metadata are available; chat and editable sessions remain local demo features."
+                else
+                    "Local demo mode. Sessions and chat are stored on this device; no live host chat or session synchronization is active.",
                 modifier = Modifier.padding(12.dp),
                 style = MaterialTheme.typography.bodySmall
             )
         }
 
 
-        ConnectionStatusPanel(connectionState)
+        ConnectionStatusPanel(hostPaired, remoteHostState)
 
-        SecurePairingPanel()
+        SecurePairingPanel { paired, remoteState ->
+            hostPaired = paired
+            remoteHostState = remoteState
+        }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Sessions", style = MaterialTheme.typography.titleMedium)
