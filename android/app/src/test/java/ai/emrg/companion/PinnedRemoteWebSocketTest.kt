@@ -62,6 +62,32 @@ class PinnedRemoteWebSocketTest {
         assertEquals(false, PinnedRemoteWebSocket.isValidAuthSuccess(missing, host))
     }
 
+    @Test fun statusAndSessionListFramesAreNarrowAndWorkspaceBound() {
+        val status = PinnedRemoteWebSocket.companionStatusFrame("status-1")
+        assertEquals("status", status.getString("type"))
+        assertEquals("status-1", status.getString("request_id"))
+        assertEquals(false, status.has("workspace_id"))
+        assertEquals(false, status.has("cwd"))
+
+        val sessions = PinnedRemoteWebSocket.companionSessionsListFrame("sessions-1", "workspace-1")
+        assertEquals("sessions.list", sessions.getString("type"))
+        assertEquals("sessions-1", sessions.getString("request_id"))
+        assertEquals("workspace-1", sessions.getString("workspace_id"))
+        assertEquals(false, sessions.has("cwd"))
+        assertEquals(false, sessions.has("path"))
+
+        for (badId in listOf("", "x".repeat(129))) {
+            try {
+                PinnedRemoteWebSocket.companionStatusFrame(badId)
+                throw AssertionError("invalid request ID should be rejected")
+            } catch (_: IllegalArgumentException) { }
+        }
+        try {
+            PinnedRemoteWebSocket.companionSessionsListFrame("r", "")
+            throw AssertionError("empty workspace should be rejected")
+        } catch (_: IllegalArgumentException) { }
+    }
+
     @Test fun chatFrameUsesCompanionAllowlistAndHostApprovedWorkspace() {
         val command = TaskCommand("request-9", "/approved/path", "hi", "session-2", listOf("shell"), "now")
         val frame = PinnedRemoteWebSocket.companionChatFrame(command, "workspace-3")
