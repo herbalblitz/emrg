@@ -44,7 +44,7 @@ describe("CompanionPanel", () => {
       public_key_sha256: "b".repeat(64), workspace_id: "workspace",
       cwd: "/workspace", scopes: ["status"], approved: false, expires_in: 60,
     };
-    const api = setup({ companionPendingPairings: vi.fn().mockResolvedValue([pairing]) });
+    const api = setup({ companionPendingPairings: vi.fn().mockResolvedValue({ items: [pairing] }) });
     await screen.findByTestId("companion-pairing");
     fireEvent.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => expect(api.companionDecidePairing).toHaveBeenCalledWith({
