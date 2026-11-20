@@ -5,8 +5,10 @@ credentials are issued after local host approval and never travel in the QR.
 """
 from __future__ import annotations
 
+import base64
 import ipaddress
 import json
+import re
 import time
 from urllib.parse import urlsplit
 
@@ -44,8 +46,21 @@ def _normalize_endpoint_host(endpoint: str) -> tuple[str, str]:
 
 def create_pairing_descriptor(identity: HostTlsIdentity, endpoint: str, *,
                               ttl_seconds: int = MAX_DESCRIPTOR_TTL_SECONDS,
-                              now_epoch_seconds: int | None = None) -> str:
-    """Build Android-compatible v1 QR JSON for a provisioned TLS identity."""
+                              now_epoch_seconds: int | None = None,
+                              pairing_id: str | None = None) -> str:
+    """Build a credential-free v1 descriptor or transaction-bound v2 QR JSON."""
+    if pairing_id is not None:
+        if not isinstance(pairing_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{43}", pairing_id):
+            raise CompanionTlsError("invalid pairing descriptor transaction")
+        try:
+            decoded_pairing_id = base64.urlsafe_b64decode(
+                pairing_id + "=" * (-len(pairing_id) % 4)
+            )
+        except (ValueError, TypeError):
+            raise CompanionTlsError("invalid pairing descriptor transaction") from None
+        if (len(decoded_pairing_id) != 32 or
+                base64.urlsafe_b64encode(decoded_pairing_id).rstrip(b"=").decode("ascii") != pairing_id):
+            raise CompanionTlsError("invalid pairing descriptor transaction")
     if isinstance(ttl_seconds, bool) or not isinstance(ttl_seconds, int):
         raise CompanionTlsError("invalid pairing descriptor lifetime")
     if not 1 <= ttl_seconds <= MAX_DESCRIPTOR_TTL_SECONDS:
@@ -65,9 +80,11 @@ def create_pairing_descriptor(identity: HostTlsIdentity, endpoint: str, *,
         raise CompanionTlsError("host TLS identity is expired")
     descriptor_expiry = min(now + ttl_seconds, certificate_expiry)
     descriptor = {
-        "version": DESCRIPTOR_VERSION,
+        "version": 2 if pairing_id is not None else DESCRIPTOR_VERSION,
         "endpoint": normalized_endpoint,
         "fingerprint_sha256": formatted_fingerprint,
         "expires_at": descriptor_expiry,
     }
+    if pairing_id is not None:
+        descriptor["pairing_id"] = pairing_id
     return json.dumps(descriptor, separators=(",", ":"), ensure_ascii=True)
