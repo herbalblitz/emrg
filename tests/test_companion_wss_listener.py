@@ -1034,3 +1034,51 @@ def test_wss_pairing_v2_does_not_reveal_unapproved_transaction_state(tmp_path):
 
     asyncio.run(run())
 
+
+
+def test_listener_loads_protected_identity_directory_before_binding(tmp_path, monkeypatch):
+    host = CompanionHostService(tmp_path / "registry.json")
+    host.enable()
+    identity_directory = tmp_path / "identity"
+    listener = CompanionWssListener(
+        host, CompanionListenerConfig.build("127.0.0.1", 8765),
+        identity_directory=identity_directory,
+    )
+    events = []
+
+    class FakeServer:
+        def close(self):
+            events.append("close")
+        async def wait_closed(self):
+            events.append("wait_closed")
+
+    def fake_context(directory):
+        events.append(("identity", directory))
+        return object()
+
+    async def fake_serve(handler, address, port, **kwargs):
+        events.append(("bind", address, port, kwargs["ssl"]))
+        return FakeServer()
+
+    monkeypatch.setattr(
+        "emrg.server.companion_wss_listener.create_identity_server_context",
+        fake_context,
+    )
+    monkeypatch.setattr("emrg.server.companion_wss_listener.serve", fake_serve)
+    asyncio.run(listener.start())
+
+    assert events[0] == ("identity", identity_directory)
+    assert events[1][:3] == ("bind", "127.0.0.1", 8765)
+    asyncio.run(listener.stop())
+
+
+def test_listener_rejects_ambiguous_tls_identity_arguments(tmp_path):
+    host = CompanionHostService(tmp_path / "registry.json")
+    config = CompanionListenerConfig.build("127.0.0.1", 8765)
+    with pytest.raises(ValueError, match="choose identity_directory"):
+        CompanionWssListener(
+            host, config, tmp_path / "cert.pem", tmp_path / "key.pem",
+            identity_directory=tmp_path / "identity",
+        )
+    with pytest.raises(ValueError, match="both certificate/key"):
+        CompanionWssListener(host, config, tmp_path / "cert.pem")
