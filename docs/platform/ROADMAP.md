@@ -373,4 +373,17 @@ The QR panel is now wired to the v2 controller, superseding earlier notes that t
 - Android now extracts the workspace ID from the exact pinned-host pairing challenge payload and carries it into the host-scoped `PairedHost` record only after the host issues the credential.
 - Challenge parsing rejects missing, malformed, overlong, or non-canonical workspace identifiers; the pairing state reducer rejects `sessions.list` credentials without a valid approved workspace binding.
 - Added JVM regression coverage for workspace extraction, malformed workspace rejection, credential propagation, and session-list scope binding.
-- This resolves the missing workspace metadata needed by the existing authenticated `sessions.list` transport primitive. The authenticated WebSocket is still not instantiated by the pairing panel, and live status/session UI plus Android ↔ Windows end-to-end validation remain open.
+- This resolves the missing workspace metadata needed by the authenticated `sessions.list` transport.
+- The follow-up Android panel integration is recorded below; this historical note's statement that the socket is not instantiated has been superseded.
+
+
+### Android authenticated read-only panel integration (2026-11-20)
+
+- [x] After host-issued pairing credential persistence, `SecurePairingPanel` now opens the pinned authenticated WSS client using the paired host record.
+- [x] On authentication, the panel requests host status and read-only session metadata; responses are accepted only for the current connection generation and matching request IDs.
+- [x] Added refresh, reconnect, and disconnect controls with state-based enablement; reset/disposal closes the socket and invalidates stale callbacks.
+- [x] Android Companion CI [#44679020775](https://github.com/herbalblitz/emrg/actions/runs/44679020775) passed on commit `5809f05729232ab1e8b560586b517f2c5c51f1ea`: debug APK assembly, signature check, JVM unit tests, lint, and artifact upload.
+- [ ] Validate the complete flow on physical Android and Windows devices, including local host approval, Keystore persistence, authenticated status/session listing, reconnect, and revocation.
+- [ ] Chat/tool execution remains unavailable; full Android/Windows EMRG feature parity and Windows clean-machine install/lifecycle checks remain open.
+
+The earlier note above saying the authenticated socket was not instantiated is historical and superseded by this integration update. CI validates build and JVM tests, not a live cross-device pairing session.
