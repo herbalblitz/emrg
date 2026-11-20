@@ -210,6 +210,15 @@ class CompanionStreamHub:
         bound_cwd = self._session_cwds.get(session_id)
         if bound_cwd is not None and canonical_cwd is not None and bound_cwd != canonical_cwd:
             raise CompanionDaemonError("session is already bound to another workspace")
+        # The hub binding disappears when the last websocket disconnects,
+        # but the daemon may still be running that session's turn. Its
+        # session-id keyed task state remains authoritative until turn end;
+        # do not let a different workspace attach to or queue against it.
+        running_cwds = getattr(daemon, "_session_task_cwds", {})
+        running_cwd = running_cwds.get(session_id) if isinstance(running_cwds, dict) else None
+        if running_cwd and canonical_cwd is not None:
+            if str(Path(running_cwd).resolve()) != canonical_cwd:
+                raise CompanionDaemonError("session is running in another workspace")
         if bound_cwd is None and canonical_cwd is not None:
             self._session_cwds[session_id] = canonical_cwd
         subscriber = _Subscriber(websocket, scopes, device_id)
