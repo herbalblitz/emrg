@@ -59,7 +59,7 @@ export function CompanionPanel() {
   async function start() {
     const api = emrg();
     if (!api || !validPort || !cwd.trim()) return;
-    setBusy(true); setError(""); setDescriptor("");
+    setBusy(true); setError(""); setDescriptor(""); setCopied(false);
     try {
       const result = await api.companionListenerStart({
         bindAddress, port: Number(port), cwd,
@@ -86,7 +86,7 @@ export function CompanionPanel() {
   async function stop() {
     const api = emrg();
     if (!api) return;
-    setBusy(true); setError("");
+    setBusy(true); setError(""); setCopied(false);
     try { await api.companionListenerStop(); setDescriptor(""); await refresh(); }
     catch (e) { setError((e as Error).message || "Could not stop listener."); }
     finally { setBusy(false); }
