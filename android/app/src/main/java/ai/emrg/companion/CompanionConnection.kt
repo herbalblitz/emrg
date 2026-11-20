@@ -2,6 +2,7 @@ package ai.emrg.companion
 
 import android.content.Context
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -107,7 +108,7 @@ internal class CompanionConnection(context: Context) {
         timeoutMs: Long = 30_000,
         send: () -> Boolean,
     ): ProtocolFrame? = coroutineScope {
-        val waiting = async {
+        val waiting = async(start = CoroutineStart.UNDISPATCHED) {
             withTimeoutOrNull(timeoutMs) {
                 frames.first {
                     it.requestId == requestId &&
