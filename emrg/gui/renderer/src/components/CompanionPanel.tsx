@@ -37,6 +37,7 @@ export function CompanionPanel() {
   const [descriptor, setDescriptor] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
   const portNumber = Number(port);
   const validPort = /^\d+$/.test(port) && portNumber >= 1 && portNumber <= 65535;
 
@@ -67,6 +68,19 @@ export function CompanionPanel() {
       await refresh();
     } catch (e) { setError((e as Error).message || "Could not start listener."); }
     finally { setBusy(false); }
+  }
+
+  async function copyDescriptor() {
+    if (!descriptor) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard access is unavailable in this window.");
+      await navigator.clipboard.writeText(descriptor);
+      setCopied(true);
+      setError("");
+    } catch (e) {
+      setCopied(false);
+      setError((e as Error).message || "Could not copy pairing descriptor.");
+    }
   }
 
   async function stop() {
@@ -102,7 +116,7 @@ export function CompanionPanel() {
           <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void refresh()}>Refresh</button>
         </div>
         {status && <p className="hint" data-testid="companion-status">{status.listener_running ? `Running at ${status.endpoint || "unknown endpoint"}` : "Host stopped"} · Active connections: {status.active_connections ?? 0}</p>}
-        {descriptor && <div><p>Scan/import this pairing descriptor on Android:</p><textarea aria-label="Pairing descriptor" readOnly value={descriptor} rows={4} style={{ width: "100%" }} /></div>}
+        {descriptor && <div><p>Import this pairing descriptor on Android:</p><textarea aria-label="Pairing descriptor" readOnly value={descriptor} rows={4} style={{ width: "100%" }} /><button type="button" className="btn btn-ghost" onClick={() => void copyDescriptor()}>Copy pairing descriptor</button>{copied && <span role="status">Copied pairing descriptor.</span>}</div>}
         {error && <p role="alert" className="settings-msg err" data-testid="companion-error">{error}</p>}
       </div>
       <div className="settings-group">
