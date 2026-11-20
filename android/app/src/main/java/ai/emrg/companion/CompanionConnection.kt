@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONObject
 
 /**
  * The single shared live-host connection for the whole app.
@@ -204,6 +205,23 @@ internal class CompanionConnection(context: Context) {
         name: String? = null,
         confirmed: Boolean? = null,
     ): Boolean = socket.sendSkills(requestId, type, name, confirmed)
+
+    fun sendHostsList(requestId: String): Boolean = socket.sendHostsList(requestId)
+
+    fun sendLogsTail(requestId: String, source: String, lines: Int): Boolean =
+        socket.sendLogsTail(requestId, source, lines)
+
+    fun sendAuditTail(requestId: String, limit: Int): Boolean = socket.sendAuditTail(requestId, limit)
+
+    fun sendDevicesList(requestId: String): Boolean = socket.sendDevicesList(requestId)
+
+    fun sendDevicesRevoke(requestId: String, deviceId: String): Boolean =
+        socket.sendDevicesRevoke(requestId, deviceId)
+
+    fun sendSettingsGet(requestId: String): Boolean = socket.sendSettingsGet(requestId)
+
+    fun sendSettingsSet(requestId: String, patch: JSONObject): Boolean =
+        socket.sendSettingsSet(requestId, patch)
 }
 
 /** A host error frame surfaced to the user without leaking raw payloads. */

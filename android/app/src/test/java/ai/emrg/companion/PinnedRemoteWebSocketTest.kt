@@ -233,6 +233,55 @@ class PinnedRemoteWebSocketTest {
         assertEquals(false, isRemoteFrameWithinLimit("é".repeat(MAX_REMOTE_FRAME_BYTES / 2 + 1)))
     }
 
+    @Test fun batchCFramesAreNarrowAndWorkspaceBound() {
+        val hosts = PinnedRemoteWebSocket.companionHostsListFrame("hosts-1", "workspace-1")
+        assertEquals("hosts.list", hosts.getString("type"))
+        assertEquals("hosts-1", hosts.getString("request_id"))
+        assertEquals("workspace-1", hosts.getString("workspace_id"))
+        assertEquals(false, hosts.has("cwd"))
+
+        val logs = PinnedRemoteWebSocket.companionLogsTailFrame("logs-1", "workspace-1", "daemon", 100)
+        assertEquals("logs.tail", logs.getString("type"))
+        assertEquals("daemon", logs.getString("source"))
+        assertEquals(100, logs.getInt("lines"))
+
+        val audit = PinnedRemoteWebSocket.companionAuditTailFrame("audit-1", "workspace-1", 400)
+        assertEquals("audit.tail", audit.getString("type"))
+        assertEquals(400, audit.getInt("limit"))
+
+        val devices = PinnedRemoteWebSocket.companionDevicesListFrame("devices-1", "workspace-1")
+        assertEquals("devices.list", devices.getString("type"))
+
+        val revoke = PinnedRemoteWebSocket.companionDevicesRevokeFrame("revoke-1", "workspace-1", "device-9")
+        assertEquals("devices.revoke", revoke.getString("type"))
+        assertEquals("device-9", revoke.getString("device_id"))
+
+        val settingsGet = PinnedRemoteWebSocket.companionSettingsGetFrame("settings-1", "workspace-1")
+        assertEquals("settings.get", settingsGet.getString("type"))
+
+        val patch = org.json.JSONObject().put("llm.model", "gemini-3.8-flash")
+        val settingsSet = PinnedRemoteWebSocket.companionSettingsSetFrame("settings-2", "workspace-1", patch)
+        assertEquals("settings.set", settingsSet.getString("type"))
+        assertEquals("gemini-3.8-flash", settingsSet.getJSONObject("patch").getString("llm.model"))
+    }
+
+    @Test fun batchCFramesRejectOutOfContractValues() {
+        for (bad in listOf(
+            { PinnedRemoteWebSocket.companionLogsTailFrame("r", "w", "gateway", 100) },
+            { PinnedRemoteWebSocket.companionLogsTailFrame("r", "w", "daemon", 0) },
+            { PinnedRemoteWebSocket.companionLogsTailFrame("r", "w", "daemon", 401) },
+            { PinnedRemoteWebSocket.companionAuditTailFrame("r", "w", 0) },
+            { PinnedRemoteWebSocket.companionAuditTailFrame("r", "w", 401) },
+            { PinnedRemoteWebSocket.companionDevicesRevokeFrame("r", "w", "") },
+            { PinnedRemoteWebSocket.companionSettingsSetFrame("r", "w", org.json.JSONObject()) },
+        )) {
+            try {
+                bad()
+                fail("out-of-contract Batch C frame should be rejected")
+            } catch (_: IllegalArgumentException) { }
+        }
+    }
+
     @Test fun missingFrameTypeIsRejectedInEveryAuthenticationState() {
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, null))
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, null))

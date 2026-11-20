@@ -446,6 +446,73 @@ internal class PinnedRemoteWebSocket(
         return socket?.send(companionSkillsFrame(requestId, workspaceId, type, name, confirmed).toString()) == true
     }
 
+    /** List the host's registered agents (workspaces). Gated by hosts.list. */
+    fun sendHostsList(requestId: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.LIST_HOSTS !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionHostsListFrame(requestId, workspaceId).toString()) == true
+    }
+
+    /** Tail one allowlisted log source. Gated by logs.read. */
+    fun sendLogsTail(requestId: String, source: String, lines: Int): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.READ_LOGS !in host.scopes) return false
+        if (source !in LOG_SOURCES || lines !in 1..MAX_LOG_TAIL_LINES) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionLogsTailFrame(requestId, workspaceId, source, lines).toString()) == true
+    }
+
+    /** Tail the audit log. Gated by audit.read. */
+    fun sendAuditTail(requestId: String, limit: Int): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.READ_AUDIT !in host.scopes) return false
+        if (limit !in 1..MAX_AUDIT_TAIL_LIMIT) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionAuditTailFrame(requestId, workspaceId, limit).toString()) == true
+    }
+
+    /** List paired devices. Gated by devices.manage. */
+    fun sendDevicesList(requestId: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_DEVICES !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionDevicesListFrame(requestId, workspaceId).toString()) == true
+    }
+
+    /**
+     * Revoke a paired device by id. Gated by devices.manage. The server
+     * blocks self-revocation; the Devices screen never offers it either.
+     */
+    fun sendDevicesRevoke(requestId: String, deviceId: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_DEVICES !in host.scopes) return false
+        if (deviceId.isBlank() || deviceId.toByteArray(Charsets.UTF_8).size > 128) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionDevicesRevokeFrame(requestId, workspaceId, deviceId).toString()) == true
+    }
+
+    /** Read the host settings snapshot. Gated by settings.manage. */
+    fun sendSettingsGet(requestId: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_SETTINGS !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionSettingsGetFrame(requestId, workspaceId).toString()) == true
+    }
+
+    /**
+     * Apply a settings patch. Gated by settings.manage. The patch holds only
+     * allowlisted engine keys (model, max tokens); the server rejects anything
+     * else, and this client never sends an API key or a danger toggle.
+     */
+    fun sendSettingsSet(requestId: String, patch: JSONObject): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_SETTINGS !in host.scopes) return false
+        if (patch.length() == 0) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionSettingsSetFrame(requestId, workspaceId, patch).toString()) == true
+    }
+
     /** True when this socket is authenticated and the paired host granted [scope]. */
     fun hasScope(scope: PairingScope): Boolean =
         authenticated && pairedHost?.scopes?.contains(scope) == true
@@ -865,6 +932,86 @@ internal class PinnedRemoteWebSocket(
                 }
         }
 
+        internal fun companionHostsListFrame(requestId: String, workspaceId: String): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            return JSONObject()
+                .put("type", "hosts.list")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+        }
+
+        internal fun companionLogsTailFrame(
+            requestId: String,
+            workspaceId: String,
+            source: String,
+            lines: Int,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(source in LOG_SOURCES) { "unsupported log source" }
+            require(lines in 1..MAX_LOG_TAIL_LINES) { "lines out of range" }
+            return JSONObject()
+                .put("type", "logs.tail")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("source", source)
+                .put("lines", lines)
+        }
+
+        internal fun companionAuditTailFrame(requestId: String, workspaceId: String, limit: Int): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(limit in 1..MAX_AUDIT_TAIL_LIMIT) { "limit out of range" }
+            return JSONObject()
+                .put("type", "audit.tail")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("limit", limit)
+        }
+
+        internal fun companionDevicesListFrame(requestId: String, workspaceId: String): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            return JSONObject()
+                .put("type", "devices.list")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+        }
+
+        internal fun companionDevicesRevokeFrame(requestId: String, workspaceId: String, deviceId: String): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(deviceId.isNotBlank() && deviceId.toByteArray(Charsets.UTF_8).size <= 128) {
+                "invalid device ID"
+            }
+            return JSONObject()
+                .put("type", "devices.revoke")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("device_id", deviceId)
+        }
+
+        internal fun companionSettingsGetFrame(requestId: String, workspaceId: String): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            return JSONObject()
+                .put("type", "settings.get")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+        }
+
+        internal fun companionSettingsSetFrame(requestId: String, workspaceId: String, patch: JSONObject): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(patch.length() > 0) { "settings patch must not be empty" }
+            return JSONObject()
+                .put("type", "settings.set")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("patch", patch)
+        }
+
         private fun requireValidRequestId(requestId: String) {
             require(requestId.isNotBlank() && requestId.toByteArray(Charsets.UTF_8).size <= 128) {
                 "invalid request ID"
@@ -908,6 +1055,15 @@ internal class PinnedRemoteWebSocket(
         internal val TERMINAL_MODES = setOf("read-only", "workspace-write", "danger-full-access")
         internal val SANDBOX_MODES = TERMINAL_MODES
         internal val SANDBOX_ROOT_OPS = setOf("list", "add", "remove")
+        /**
+         * Log sources the companion handler allowlists: engine-owned logs only.
+         * There is no gateway in this branch, so the gateway's own log is not
+         * a source here; the server rejects anything outside this set.
+         */
+        internal val LOG_SOURCES = setOf("daemon", "crash", "exit", "start", "gui")
+        /** Largest log/audit tail the client ever asks for (the server caps at 400). */
+        internal const val MAX_LOG_TAIL_LINES = 400
+        internal const val MAX_AUDIT_TAIL_LIMIT = 400
         internal const val MAX_FILE_WRITE_BYTES = 1024 * 1024
         internal const val MAX_TERMINAL_COMMAND_BYTES = 64 * 1024
 
