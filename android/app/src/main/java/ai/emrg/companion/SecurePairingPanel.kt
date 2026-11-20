@@ -58,6 +58,8 @@ internal fun SecurePairingPanel() {
     var busy by remember { mutableStateOf(false) }
     // Ignore callbacks queued by an older QR transaction after reset or rescan.
     var transactionGeneration by remember { mutableStateOf(0) }
+    // Ignore callbacks from a superseded live socket, even within the same pairing transaction.
+    var remoteConnectionGeneration by remember { mutableStateOf(0) }
 
     fun cancelActiveExchange() {
         activeHandle?.cancel()
@@ -67,6 +69,7 @@ internal fun SecurePairingPanel() {
 
     fun clearTransaction() {
         transactionGeneration += 1
+        remoteConnectionGeneration += 1
         cancelActiveExchange()
         controller = null
         challenge = null
@@ -169,11 +172,14 @@ internal fun SecurePairingPanel() {
                 sessionsResultText = null
                 statusRequestId = UUID.randomUUID().toString()
                 sessionsRequestId = UUID.randomUUID().toString()
+                remoteConnectionGeneration += 1
+                val callbackRemoteGeneration = remoteConnectionGeneration
                 val socket = PinnedRemoteWebSocket(
                     credentialStore = AndroidKeystoreCredentialStore(context),
                     listener = object : RemoteSocketListener {
                         override fun onState(state: RemoteSocketState, safeMessage: String?) {
                             mainHandler.post {
+                                if (!isCurrentTransaction() || callbackRemoteGeneration != remoteConnectionGeneration) return@post
                                 remoteStateText = safeMessage ?: state.name
                                 if (state == RemoteSocketState.AUTHENTICATED) {
                                     val current = remoteSocket
@@ -196,6 +202,7 @@ internal fun SecurePairingPanel() {
 
                         override fun onFrame(frame: ProtocolFrame) {
                             mainHandler.post {
+                                if (!isCurrentTransaction() || callbackRemoteGeneration != remoteConnectionGeneration) return@post
                                 when (frame.type) {
                                     "status.result" -> {
                                         if (frame.requestId == statusRequestId) {
