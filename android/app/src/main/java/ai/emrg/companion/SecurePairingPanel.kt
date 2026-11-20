@@ -382,6 +382,8 @@ internal fun SecurePairingPanel() {
                     Button(
                         enabled = remoteSocket != null,
                         onClick = {
+                            // Invalidate queued close/frame callbacks before closing the user-disconnected socket.
+                            remoteConnectionGeneration += 1
                             remoteSocket?.close()
                             remoteSocket = null
                             remoteStateText = "Disconnected"
