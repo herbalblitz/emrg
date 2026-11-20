@@ -21,6 +21,8 @@ test("Companion IPC is restricted to the primary top-level local renderer", () =
     "emrg:companionStatus",
     "emrg:companionPendingPairings",
     "emrg:companionDecidePairing",
+    "emrg:companionListenerStart",
+    "emrg:companionListenerStop",
   ]) {
     const at = block.indexOf(`ipcMain.handle("${channel}"`);
     assert.ok(at >= 0, `missing fixed handler ${channel}`);
