@@ -36,6 +36,11 @@ describe("CompanionPanel", () => {
       bindAddress: "127.0.0.1", port: 18476, cwd: ".",
     }));
     expect(await screen.findByLabelText("Pairing descriptor")).toBeTruthy();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    fireEvent.click(screen.getByRole("button", { name: "Copy pairing descriptor" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('{"version":2}'));
+    expect(await screen.findByRole("status")).toHaveTextContent("Copied pairing descriptor.");
   });
 
   it("rejects ports outside the TCP range before calling the host", async () => {
