@@ -51,6 +51,7 @@ from emrg.connect import EMRGD_PORT, cleanup_server, is_server_running_sync
 from emrg.server.abort_runs import AbortRuns
 from emrg.server.companion_host_service import CompanionHostService
 from emrg.server.companion_local_control import CompanionLocalControl, CompanionLocalControlError
+from emrg.server.companion_runtime import CompanionRuntime, CompanionRuntimeError
 from emrg.server.agents import AgentRegistry
 from emrg.server.atomic import atomic_write_bytes
 from emrg.server.config_reload import (
@@ -849,6 +850,9 @@ class EmrgServer:
             config_dir() / "companion" / "credentials.json"
         )
         self._companion_local_control = CompanionLocalControl(self._companion_host_service)
+        self._companion_runtime = CompanionRuntime(
+            self._companion_host_service, config_dir() / "companion" / "tls"
+        )
         # The `[update]` object the UpgradeManager's tick loop runs on (issue
         # #1356). Constructed **here**, not inside `_upgrade_tick_loop`, so the
         # reloader below and the manager share one object: a reload assigns to
@@ -1252,13 +1256,22 @@ class EmrgServer:
         except Exception:
             logger.warning("scheduler stop failed", exc_info=True)
             steps.append(("stopped scheduler", False))
-        # 3. LLM client
+        # 3. Companion listener — stop before the daemon IPC endpoint disappears.
+        try:
+            runtime = getattr(self, "_companion_runtime", None)
+            if runtime is not None:
+                await runtime.close()
+            steps.append(("stopped Companion listener", True))
+        except Exception:
+            logger.warning("Companion listener stop failed", exc_info=True)
+            steps.append(("stopped Companion listener", False))
+        # 4. LLM client
         try:
             await self.llm.close()
             steps.append(("closed llm client", True))
         except Exception:
             steps.append(("closed llm client", False))
-        # 4. Port file
+        # 5. Port file
         try:
             cleanup_server()
             steps.append(("removed port file", True))
@@ -2966,8 +2979,15 @@ class EmrgServer:
             operation = msg.get("operation")
             payload = msg.get("payload", {})
             try:
-                result = self._companion_local_control.dispatch(operation, payload)
-            except CompanionLocalControlError as exc:
+                if operation == "listener.start":
+                    result = await self._companion_runtime.start(payload)
+                elif operation == "listener.stop":
+                    if payload != {}:
+                        raise CompanionRuntimeError("invalid listener stop request")
+                    result = await self._companion_runtime.stop()
+                else:
+                    result = self._companion_local_control.dispatch(operation, payload)
+            except (CompanionLocalControlError, CompanionRuntimeError) as exc:
                 await self._send(ws, {
                     "type": "companion_local_control_result",
                     "ok": False,
