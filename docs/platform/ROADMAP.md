@@ -432,3 +432,16 @@ The QR panel is now wired to the v2 controller, superseding earlier notes that t
 - [ ] Chat/tool execution remains unavailable; full Android/Windows EMRG feature parity and Windows clean-machine install/lifecycle checks remain open.
 
 The earlier note above saying the authenticated socket was not instantiated is historical and superseded by this integration update. CI validates build and JVM tests, not a live cross-device pairing session.
+
+
+## Companion Android Batch B screens and host dispatch audit (2026-11-20)
+
+- [x] Android now has routed screens for Memory, Models, Rant, Evolution, Tasks, and Skills, replacing the prior unavailable-screen stubs for those destinations.
+- [x] The Android connection layer exposes typed request helpers for these operations; the pinned WSS client checks the corresponding approved scope before sending. The screens are scope-gated and use explicit confirmation for global model changes and skill installation.
+- [x] The Windows WSS listener maps the Batch B frames to the daemon's in-process message handler. Memory operations are bound to the credential-approved workspace; task create/update fields are flattened through a server-side allowlist; daemon replies are returned as request-scoped results.
+- [x] Android Companion workflow [#44708005492](https://github.com/herbalblitz/emrg/actions/runs/44708005492) passed on commit `c2b25d2a0c24d4fbc5f7358b618beeac78f4bd11`. Companion Security workflow [#44708005635](https://github.com/herbalblitz/emrg/actions/runs/44708005635) passed on the same commit on Ubuntu, Windows, and GUI.
+- [ ] Batch C destinations Logs, Audit, Devices, and Settings remain unavailable-screen stubs; their WSS frames are validated but not dispatched.
+- [ ] CI does not establish live Android-to-Windows behavior. Physical pairing/Keystore tests, operation-by-operation host smoke tests, and Windows clean-machine install/upgrade/uninstall checks remain release gates.
+- [ ] This increment does not establish full EMRG parity. In particular, host lifecycle operations remain intentionally unavailable remotely, and every remote mutation must continue to be reviewed against the approved scope, workspace boundary, audit, and cancellation policy.
+
+The older daemon task-path note and earlier statements that remote chat is unavailable describe a previous source snapshot. The current `companion_wss_listener.py` includes chat dispatch and per-session stream subscription; its behavior must be validated against current tests and real-host smoke tests rather than inferred from those historical notes.
