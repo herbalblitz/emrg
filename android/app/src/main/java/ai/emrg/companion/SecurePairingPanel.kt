@@ -175,6 +175,15 @@ internal fun SecurePairingPanel() {
                         override fun onState(state: RemoteSocketState, safeMessage: String?) {
                             mainHandler.post {
                                 remoteStateText = safeMessage ?: state.name
+                                if (state == RemoteSocketState.AUTHENTICATED) {
+                                    val current = remoteSocket
+                                    val statusId = statusRequestId
+                                    val sessionsId = sessionsRequestId
+                                    if (current != null && statusId != null && sessionsId != null) {
+                                        current.sendStatus(statusId)
+                                        current.sendSessionsList(sessionsId)
+                                    }
+                                }
                                 if (state == RemoteSocketState.CLOSED ||
                                     state == RemoteSocketState.FAILED ||
                                     state == RemoteSocketState.AUTH_REJECTED ||
