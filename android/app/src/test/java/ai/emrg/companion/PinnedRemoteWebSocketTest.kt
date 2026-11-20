@@ -226,6 +226,13 @@ class PinnedRemoteWebSocketTest {
         assertEquals(false, canRefreshRemoteHost(RemoteSocketState.FAILED))
     }
 
+    @Test fun inboundRemoteFramesRespectTheHostMessageByteLimit() {
+        assertEquals(true, isRemoteFrameWithinLimit("x".repeat(MAX_REMOTE_FRAME_BYTES)))
+        assertEquals(false, isRemoteFrameWithinLimit("x".repeat(MAX_REMOTE_FRAME_BYTES + 1)))
+        // The limit is in UTF-8 bytes, not Kotlin character count.
+        assertEquals(false, isRemoteFrameWithinLimit("é".repeat(MAX_REMOTE_FRAME_BYTES / 2 + 1)))
+    }
+
     @Test fun missingFrameTypeIsRejectedInEveryAuthenticationState() {
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, null))
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, null))
