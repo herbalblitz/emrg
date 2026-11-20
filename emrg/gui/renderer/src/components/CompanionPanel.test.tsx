@@ -41,6 +41,9 @@ describe("CompanionPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Copy pairing descriptor" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('{"version":2}'));
     expect(await screen.findByRole("status")).toHaveTextContent("Copied pairing descriptor.");
+    fireEvent.click(screen.getByRole("button", { name: /start host/i }));
+    await waitFor(() => expect(api.companionListenerStart).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("surfaces clipboard failures without claiming the descriptor was copied", async () => {
