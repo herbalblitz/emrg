@@ -14,6 +14,12 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 import java.util.concurrent.TimeUnit
 
+/** Keep inbound authenticated WSS text frames within the host's 256 KiB protocol limit. */
+internal const val MAX_REMOTE_FRAME_BYTES = 256 * 1024
+
+internal fun isRemoteFrameWithinLimit(text: String): Boolean =
+    text.toByteArray(Charsets.UTF_8).size <= MAX_REMOTE_FRAME_BYTES
+
 /** Trust only the exact certificate approved by QR/user confirmation. */
 internal class ExactPinTrustManager(expectedFingerprint: String) : X509TrustManager {
     private val expected = normalizePin(expectedFingerprint)
@@ -122,6 +128,12 @@ internal class PinnedRemoteWebSocket(
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 if (attemptGeneration != generation) return
+                if (!isRemoteFrameWithinLimit(text)) {
+                    terminalState = RemoteSocketState.FAILED
+                    listener.onState(RemoteSocketState.FAILED, "Host frame exceeds the allowed size")
+                    webSocket.close(1009, "frame too large")
+                    return
+                }
                 val frame = try { ProtocolFrame.parse(text) } catch (_: Exception) {
                     terminalState = RemoteSocketState.FAILED
                     listener.onState(RemoteSocketState.FAILED, "Invalid host frame")
