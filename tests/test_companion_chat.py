@@ -301,6 +301,32 @@ def test_hub_rejects_same_session_id_from_different_workspaces(tmp_path):
     asyncio.run(run())
 
 
+def test_chat_turn_publishes_workspace_before_task_first_runs(tmp_path):
+    async def run():
+        daemon = FakeDaemon(tmp_path)
+        hub = CompanionStreamHub()
+        workspace_a = tmp_path / "workspace-a"
+        workspace_b = tmp_path / "workspace-b"
+
+        outcome = await start_task(
+            daemon, session_id="early-bind", cwd=str(workspace_a),
+            prompt="hello", request_id="early-1", device_id="phone-a")
+        assert outcome == {"started": True}
+        # create_task() has not yet yielded to _run_tool_loop_locked().
+        assert daemon._session_task_cwds["early-bind"] == str(workspace_a)
+
+        with pytest.raises(CompanionDaemonError, match="running in another workspace"):
+            await hub.subscribe(
+                Socket(), session_id="early-bind",
+                scopes=frozenset({"chat.send"}), device_id="phone-b",
+                daemon=daemon, cwd=str(workspace_b))
+
+        daemon.turn_gate.set()
+        await asyncio.wait_for(daemon._session_turn_task["early-bind"], timeout=5)
+
+    asyncio.run(run())
+
+
 def test_hub_rejects_cross_workspace_when_disconnected_session_is_still_running(tmp_path):
     async def run():
         hub = CompanionStreamHub()
