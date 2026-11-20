@@ -44,3 +44,44 @@ internal fun ConnectionStatusPanel(state: ReconnectionState) {
         }
     }
 }
+
+/** Main-screen connection status backed by the real paired-host WSS lifecycle. */
+@Composable
+internal fun ConnectionStatusPanel(paired: Boolean, state: RemoteSocketState) {
+    val label = when {
+        !paired -> "Disconnected"
+        state == RemoteSocketState.AUTHENTICATED -> "Connected"
+        state == RemoteSocketState.CONNECTING -> "Connecting"
+        state == RemoteSocketState.TLS_IDENTITY_VERIFIED -> "Verifying host"
+        state == RemoteSocketState.AUTHENTICATING -> "Authenticating"
+        state == RemoteSocketState.AUTH_REJECTED -> "Authentication failed"
+        state == RemoteSocketState.IDENTITY_REJECTED -> "Host identity mismatch"
+        state == RemoteSocketState.FAILED -> "Connection failed"
+        else -> "Disconnected"
+    }
+    val description = when {
+        !paired -> "No paired Windows host. Scan or paste its QR descriptor to begin secure pairing."
+        state == RemoteSocketState.AUTHENTICATED ->
+            "Windows host is authenticated over pinned WSS. Host status and read-only session metadata are available; chat is still local demo."
+        state == RemoteSocketState.CONNECTING -> "Opening the pinned secure connection to the paired Windows host."
+        state == RemoteSocketState.TLS_IDENTITY_VERIFIED -> "The Windows host certificate matches the QR-pinned identity."
+        state == RemoteSocketState.AUTHENTICATING -> "Secure transport is open; validating the device credential with Windows."
+        state == RemoteSocketState.AUTH_REJECTED -> "Windows rejected the paired-device credential. Re-pairing may be required."
+        state == RemoteSocketState.IDENTITY_REJECTED -> "The host certificate no longer matches the saved QR identity. Do not continue; verify and pair again."
+        state == RemoteSocketState.FAILED -> "The secure host connection failed. Check that the Windows companion listener is running, then reconnect."
+        else -> "Pairing is saved on this device, but no live Windows connection is open."
+    }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text("Host connection · $label", style = MaterialTheme.typography.titleSmall)
+            Text(description, style = MaterialTheme.typography.bodySmall)
+            Text(
+                if (paired && state == RemoteSocketState.AUTHENTICATED)
+                    "Live WSS transport · read-only host access"
+                else
+                    "No authenticated live transport",
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
