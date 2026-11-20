@@ -55,6 +55,7 @@ class PinnedRemoteWebSocketTest {
             deviceId = "phone",
             credentialAlias = "cred",
             scopes = setOf(PairingScope.READ_STATUS, PairingScope.LIST_SESSIONS),
+            approvedWorkspaceId = "workspace-read",
         )
         val valid = ProtocolFrame.parse("""{"type":"auth.ok","protocol":"1.0","workspace_id":"workspace-read","scopes":["status","sessions.list"]}""")
         val missing = ProtocolFrame.parse("""{"type":"auth.ok","protocol":"1.0","workspace_id":"workspace-read","scopes":["status"]}""")
