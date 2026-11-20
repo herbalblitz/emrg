@@ -132,10 +132,23 @@ class ExecManager:
         prefix = f"{device_id}:"
         return [key.split(":", 1)[1] for key in self._tasks if key.startswith(prefix)]
 
-    async def run_exec(self, *, device_id: str, **kwargs: object) -> ExecResult:
-        """Run one command as a tracked task, so it can be cancelled."""
+    async def run_exec(self, *, device_id: str, command: str, cwd: str,
+                       session_id: str | None, timeout: float | None,
+                       requested_mode: str | None, confirm_danger: bool,
+                       confirm_risky: bool,
+                       config: CompanionExecConfig) -> ExecResult:
+        """Run one command as a tracked task, so it can be cancelled.
+
+        Parameters are explicit (no ``**kwargs`` forwarding): the
+        repo's script-decode guard refuses opaque splats into a call
+        named ``run``, and explicit parameters keep the call readable.
+        """
         exec_id = uuid.uuid4().hex[:16]
-        task = asyncio.create_task(run(exec_id=exec_id, device_id=device_id, **kwargs))  # type: ignore[arg-type]
+        task = asyncio.create_task(run(
+            exec_id=exec_id, device_id=device_id, command=command, cwd=cwd,
+            session_id=session_id, timeout=timeout,
+            requested_mode=requested_mode, confirm_danger=confirm_danger,
+            confirm_risky=confirm_risky, config=config))
         self._tasks[f"{device_id}:{exec_id}"] = task
         try:
             return await task
