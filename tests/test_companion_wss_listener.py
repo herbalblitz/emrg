@@ -1092,3 +1092,38 @@ def test_listener_rejects_ambiguous_tls_identity_arguments(tmp_path):
         )
     with pytest.raises(ValueError, match="both certificate/key"):
         CompanionWssListener(host, config, tmp_path / "cert.pem")
+
+def test_host_disable_during_async_bind_prevents_listener_start(tmp_path, monkeypatch):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry.json")
+        host.enable()
+        listener = _listener(tmp_path, host)
+        events = []
+
+        class FakeServer:
+            def close(self):
+                events.append("close")
+            async def wait_closed(self):
+                events.append("wait_closed")
+
+        monkeypatch.setattr(
+            "emrg.server.companion_wss_listener.create_server_context",
+            lambda cert, key: object(),
+        )
+
+        async def fake_serve(handler, address, port, **kwargs):
+            # Model a policy change while the real server is awaiting bind.
+            host.disable()
+            return FakeServer()
+
+        monkeypatch.setattr("emrg.server.companion_wss_listener.serve", fake_serve)
+        with pytest.raises(CompanionTlsError, match="disabled during listener startup"):
+            await listener.start()
+
+        # The listener must not publish a bound server after opt-out wins the race.
+        assert listener.running is False
+        assert events == ["close", "wait_closed"]
+        await listener.stop()
+
+    asyncio.run(run())
+
