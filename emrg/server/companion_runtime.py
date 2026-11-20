@@ -35,11 +35,21 @@ class CompanionRuntime:
         self._identity_directory = Path(identity_directory)
         self._listener: CompanionWssListener | None = None
         self._endpoint: str | None = None
+        self._fingerprint: str | None = None
         self._lock = asyncio.Lock()
 
     @property
     def running(self) -> bool:
         return self._listener is not None and self._listener.running
+
+    def status(self) -> dict[str, Any]:
+        listener = self._listener if self.running else None
+        return {
+            "listener_running": listener is not None,
+            "endpoint": self._endpoint if listener is not None else None,
+            "fingerprint_sha256": self._fingerprint if listener is not None else None,
+            "active_connections": listener.active_connections if listener is not None else 0,
+        }
 
     async def start(self, payload: object) -> dict[str, Any]:
         """Serialize the complete startup against stop and concurrent starts."""
@@ -93,6 +103,7 @@ class CompanionRuntime:
             raise CompanionRuntimeError("listener or pairing transaction could not be started") from None
         self._listener = listener
         self._endpoint = endpoint
+        self._fingerprint = identity.fingerprint_sha256
         return {
             "running": True,
             "endpoint": endpoint,
@@ -108,6 +119,7 @@ class CompanionRuntime:
         async with self._lock:
             listener, self._listener = self._listener, None
             self._endpoint = None
+            self._fingerprint = None
             self._host.disable()
             if listener is not None:
                 await listener.close()
