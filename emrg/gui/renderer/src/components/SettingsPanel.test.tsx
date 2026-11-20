@@ -88,6 +88,20 @@ describe("SettingsPanel", () => {
     expect(screen.queryByTestId("settings-body-about")).toBeNull();
   });
 
+  it("opens the Companion settings panel through its tab", async () => {
+    setup({
+      companionStatus: vi.fn().mockResolvedValue({
+        enabled: false, pending_count: 0, listener_running: false,
+        endpoint: null, fingerprint_sha256: null, active_connections: 0,
+      }),
+      companionPendingPairings: vi.fn().mockResolvedValue({ items: [] }),
+    });
+    fireEvent.click(screen.getByTestId("settings-tab-companion"));
+    expect(await screen.findByTestId("settings-body-companion")).toBeTruthy();
+    expect(await screen.findByTestId("companion-status")).toBeTruthy();
+    expect(screen.getByText("Host stopped")).toBeTruthy();
+  });
+
   it("switches tabs", async () => {
     setup();
     await screen.findByTestId("settings-body-model");
