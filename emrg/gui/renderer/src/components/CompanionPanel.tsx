@@ -17,7 +17,7 @@ type Status = {
 };
 type Bridge = {
   companionStatus(): Promise<Status>;
-  companionPendingPairings(): Promise<Pairing[]>;
+  companionPendingPairings(): Promise<{ items?: Pairing[] }>;
   companionDecidePairing(p: { pairingId: string; approved: boolean }): Promise<unknown>;
   companionListenerStart(p: { bindAddress: string; port: number; cwd: string }): Promise<{ descriptor?: string; endpoint?: string; fingerprint_sha256?: string }>;
   companionListenerStop(): Promise<unknown>;
@@ -46,7 +46,7 @@ export function CompanionPanel() {
         api.companionStatus(), api.companionPendingPairings(),
       ]);
       setStatus(nextStatus);
-      setPairings(Array.isArray(nextPairings) ? nextPairings : []);
+      setPairings(Array.isArray(nextPairings?.items) ? nextPairings.items : []);
       setError("");
     } catch (e) { setError((e as Error).message || "Could not load Companion status."); }
   }, []);
