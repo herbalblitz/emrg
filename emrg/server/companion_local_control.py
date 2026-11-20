@@ -5,8 +5,13 @@ separate integration step; callers must not expose it to remote clients.
 """
 from __future__ import annotations
 
+import base64
+import io
+import json
 import re
+import time
 from typing import Any
+from urllib.parse import urlsplit
 
 from emrg.server.companion_host_service import CompanionHostService
 
@@ -52,6 +57,51 @@ class CompanionLocalControl:
         """Execute one exact local operation and return only bounded metadata."""
         if not isinstance(operation, str):
             raise CompanionLocalControlError("unknown local control operation")
+
+        if operation == "pairing.qr":
+            data = self._object(payload, {"descriptor"})
+            descriptor = data["descriptor"]
+            if not isinstance(descriptor, str) or not 1 <= len(descriptor.encode("utf-8")) <= 2048:
+                raise CompanionLocalControlError("invalid pairing descriptor")
+            try:
+                parsed = json.loads(descriptor)
+                if (not isinstance(parsed, dict) or
+                        set(parsed) != {"version", "endpoint", "fingerprint_sha256", "expires_at", "pairing_id"} or
+                        parsed.get("version") != 2 or
+                        isinstance(parsed.get("expires_at"), bool) or
+                        not isinstance(parsed.get("expires_at"), int) or
+                        parsed["expires_at"] <= int(time.time()) or
+                        not isinstance(parsed.get("pairing_id"), str) or
+                        not _PAIRING_ID.fullmatch(parsed["pairing_id"]) or
+                        not isinstance(parsed.get("fingerprint_sha256"), str) or
+                        not re.fullmatch(r"(?:[A-Fa-f0-9]{2}:){31}[A-Fa-f0-9]{2}", parsed["fingerprint_sha256"])):
+                    raise ValueError("invalid descriptor fields")
+                endpoint = urlsplit(parsed.get("endpoint", ""))
+                if (endpoint.scheme != "wss" or not endpoint.hostname or
+                        endpoint.username is not None or endpoint.password is not None or
+                        endpoint.query or endpoint.fragment or endpoint.path not in ("", "/")):
+                    raise ValueError("invalid descriptor endpoint")
+                if endpoint.port is not None and not 1 <= endpoint.port <= 65535:
+                    raise ValueError("invalid descriptor port")
+                import qrcode
+                from qrcode.image.svg import SvgPathImage
+                qr = qrcode.QRCode(
+                    version=None, error_correction=qrcode.constants.ERROR_CORRECT_M,
+                    box_size=8, border=4,
+                )
+                qr.add_data(descriptor)
+                qr.make(fit=True)
+                image = qr.make_image(image_factory=SvgPathImage)
+                buffer = io.BytesIO()
+                image.save(buffer)
+                svg = buffer.getvalue()
+                if not svg or len(svg) > 512 * 1024:
+                    raise ValueError("QR image exceeds size limit")
+                return {"data_uri": "data:image/svg+xml;base64," + base64.b64encode(svg).decode("ascii")}
+            except CompanionLocalControlError:
+                raise
+            except Exception:
+                raise CompanionLocalControlError("could not create pairing QR") from None
 
         if operation == "status":
             self._object({} if payload is None else payload, set())
