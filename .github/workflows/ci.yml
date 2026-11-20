@@ -57,7 +57,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
       - name: Debug APK
-        run: ./gradlew :app:assembleDebug
+        run: ./gradlew :app:assembleDebug --stacktrace --info
         working-directory: android
       - name: Release APK / AAB
         env:
