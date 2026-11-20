@@ -129,18 +129,21 @@ internal class PinnedRemoteWebSocket(
             override fun onMessage(webSocket: WebSocket, text: String) {
                 if (attemptGeneration != generation) return
                 if (!isRemoteFrameWithinLimit(text)) {
+                    authenticated = false
                     terminalState = RemoteSocketState.FAILED
                     listener.onState(RemoteSocketState.FAILED, "Host frame exceeds the allowed size")
                     webSocket.close(1009, "frame too large")
                     return
                 }
                 val frame = try { ProtocolFrame.parse(text) } catch (_: Exception) {
+                    authenticated = false
                     terminalState = RemoteSocketState.FAILED
                     listener.onState(RemoteSocketState.FAILED, "Invalid host frame")
                     webSocket.close(1007, "invalid frame")
                     return
                 }
                 if (!isAllowedFrameInAuthState(authenticated, frame.type)) {
+                    authenticated = false
                     terminalState = RemoteSocketState.AUTH_REJECTED
                     listener.onState(
                         RemoteSocketState.AUTH_REJECTED,
@@ -175,6 +178,7 @@ internal class PinnedRemoteWebSocket(
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
                 if (attemptGeneration != generation) return
+                authenticated = false
                 terminalState = RemoteSocketState.FAILED
                 listener.onState(RemoteSocketState.FAILED, "Binary frames are unsupported")
                 webSocket.close(1003, "text frames only")
