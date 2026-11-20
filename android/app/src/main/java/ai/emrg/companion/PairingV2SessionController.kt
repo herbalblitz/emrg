@@ -9,8 +9,10 @@ internal interface PairingV2SessionListener {
 
 /**
  * Binds the QR transaction, Pairing v2 transport, state reducer, and encrypted credential
- * store. Only status and session-list scopes are enabled here; chat execution remains
- * disabled until its workspace/cwd authorization contract is implemented.
+ * store. Any of the 20 frozen-contract scopes may be requested; the exact-match check
+ * against the signed request still applies, so the host cannot silently change the set.
+ * The two legacy placeholder values (CONTINUE_SESSIONS, VIEW_TOOL_ACTIVITY) are never
+ * requestable: they have no wire name and the host rejects them.
  */
 internal class PairingV2SessionController(
     private val coordinator: SecurePairingCoordinator,
@@ -35,16 +37,10 @@ internal class PairingV2SessionController(
             pairingId == transport.pairingId &&
             deviceId == transport.deviceId
         ) { "Session metadata must match the pinned pairing transport identity" }
-        require(this.scopes.isNotEmpty() && this.scopes.all {
-            it == PairingScope.READ_STATUS || it == PairingScope.LIST_SESSIONS
-        }) { "Requested pairing scopes are not enabled for this client" }
-        val protocolScopes = this.scopes.mapTo(mutableSetOf()) {
-            when (it) {
-                PairingScope.READ_STATUS -> "status"
-                PairingScope.LIST_SESSIONS -> "sessions.list"
-                else -> error("Unsupported pairing scope")
-            }
-        }
+        require(this.scopes.isNotEmpty() && this.scopes.size <= PairingScope.REQUESTABLE.size &&
+            this.scopes.all { it.wireName != null }
+        ) { "Requested pairing scopes are not enabled for this client" }
+        val protocolScopes = this.scopes.mapTo(mutableSetOf()) { it.wireName!! }
         require(protocolScopes == transport.requestedScopes) {
             "Stored host scopes must exactly match the signed pairing request"
         }

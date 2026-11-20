@@ -13,12 +13,113 @@ internal data class PairedHost(
     val approvedCwd: String? = null,
 )
 
-internal enum class PairingScope {
-    READ_STATUS,
-    LIST_SESSIONS,
-    CONTINUE_SESSIONS,
-    SEND_CHAT,
-    VIEW_TOOL_ACTIVITY,
+/** The 20 companion scopes (frozen wire contract). Each value carries its exact wire name. */
+internal enum class PairingScope(val wireName: String?, val description: String) {
+    READ_STATUS(
+        "status",
+        "Host status — read-only status snapshot.",
+    ),
+    LIST_SESSIONS(
+        "sessions.list",
+        "List sessions — read-only session metadata.",
+    ),
+    MANAGE_SESSIONS(
+        "sessions.manage",
+        "Manage sessions — resume, rename, delete, clear, compact, rewind, history.",
+    ),
+    SEND_CHAT(
+        "chat.send",
+        "Chat — send prompts, cancel turns, answer tool-approval requests.",
+    ),
+    MONITOR_TOOLS(
+        "tools.monitor",
+        "Tool monitor — receive tool-activity stream frames. Read-only; never executes.",
+    ),
+    READ_FILES(
+        "files.read",
+        "Read files — list and read files inside the approved workspace.",
+    ),
+    WRITE_FILES(
+        "files.write",
+        "Write files — create, overwrite and delete files inside the approved workspace.",
+    ),
+    EXEC_TERMINAL(
+        "terminal.exec",
+        "Terminal — run commands inside the approved workspace. Dangerous tiers need a per-run confirmation.",
+    ),
+    MANAGE_SANDBOX(
+        "sandbox.manage",
+        "Sandbox — change the sandbox mode and its roots (roots stay inside the approved workspace).",
+    ),
+    LIST_HOSTS(
+        "hosts.list",
+        "List hosts — read-only host/agent list.",
+    ),
+    READ_MEMORY(
+        "memory.read",
+        "Read memory — read-only agent memories.",
+    ),
+    MANAGE_MODELS(
+        "models.manage",
+        "Manage models — list models and switch the engine model (global engine state).",
+    ),
+    SUBMIT_RANT(
+        "rant.submit",
+        "Rants — read the rants log and submit a rant.",
+    ),
+    READ_EVOLUTION(
+        "evolution.read",
+        "Evolution — read-only evolution summary.",
+    ),
+    MANAGE_TASKS(
+        "tasks.manage",
+        "Manage tasks — list, trigger, create, update and delete scheduled tasks and templates.",
+    ),
+    MANAGE_SKILLS(
+        "skills.manage",
+        "Manage skills — list, install and update skills (install fetches code).",
+    ),
+    READ_LOGS(
+        "logs.read",
+        "Read logs — read-only log tail.",
+    ),
+    READ_AUDIT(
+        "audit.read",
+        "Read audit — read-only audit log tail.",
+    ),
+    MANAGE_DEVICES(
+        "devices.manage",
+        "Manage devices — list paired devices and revoke them.",
+    ),
+    MANAGE_SETTINGS(
+        "settings.manage",
+        "Manage settings — read and change host settings.",
+    ),
+    /** Sketched in the first pairing draft, never wired to the host. Kept so old stored state still parses; never requestable. */
+    CONTINUE_SESSIONS(
+        null,
+        "Legacy placeholder — never granted.",
+    ),
+    /** Sketched in the first pairing draft, never wired to the host. Kept so old stored state still parses; never requestable. */
+    VIEW_TOOL_ACTIVITY(
+        null,
+        "Legacy placeholder — never granted.",
+    );
+
+    companion object {
+        /** The 20 requestable scopes, in the order the scope picker shows them. */
+        val REQUESTABLE: List<PairingScope> = entries.filter { it.wireName != null }
+
+        /** The 3 scopes requested by default at pair time. */
+        val DEFAULT_REQUESTED: Set<PairingScope> =
+            setOf(READ_STATUS, LIST_SESSIONS, SEND_CHAT)
+
+        /** All 20 wire names, the single client-side allowlist. */
+        val ALL_WIRE_NAMES: Set<String> = REQUESTABLE.mapNotNull { it.wireName }.toSet()
+
+        fun fromWireName(wireName: String): PairingScope? =
+            entries.firstOrNull { it.wireName == wireName }
+    }
 }
 
 internal enum class PairingPhase {
@@ -109,10 +210,11 @@ internal fun reducePairingState(state: PairingState, action: PairingAction): Pai
                 action.host.deviceId.isBlank() ||
                 action.host.credentialAlias.isBlank() ||
                 action.host.scopes.isEmpty() ||
-                (PairingScope.LIST_SESSIONS in action.host.scopes &&
-                    action.host.approvedWorkspaceId?.matches(Regex("[A-Za-z0-9._:-]{1,128}")) != true) ||
-                (PairingScope.SEND_CHAT in action.host.scopes &&
-                    (action.host.approvedWorkspaceId.isNullOrBlank() || action.host.approvedCwd.isNullOrBlank()))
+                // Every scope except plain status is bound to the approved workspace.
+                // The host cwd is deliberately never sent to the client (the server
+                // supplies it from the pairing record), so no scope may require it.
+                (action.host.scopes.any { it != PairingScope.READ_STATUS } &&
+                    action.host.approvedWorkspaceId?.matches(Regex("[A-Za-z0-9._:-]{1,128}")) != true)
             ) state.copy(phase = PairingPhase.FAILED, errorCode = "INVALID_DEVICE_CREDENTIAL")
             else state.copy(phase = PairingPhase.PAIRED, pairedHost = action.host, errorCode = null)
         PairingAction.Revoked -> PairingState(phase = PairingPhase.REVOKED)

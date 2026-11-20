@@ -62,7 +62,7 @@ internal fun ConnectionStatusPanel(paired: Boolean, state: RemoteSocketState) {
     val description = when {
         !paired -> "No paired Windows host. Scan or paste its QR descriptor to begin secure pairing."
         state == RemoteSocketState.AUTHENTICATED ->
-            "Windows host is authenticated over pinned WSS. Host status and read-only session metadata are available; chat is still local demo."
+            "Windows host is authenticated over pinned WSS. Screens may use only the scopes granted at pair time."
         state == RemoteSocketState.CONNECTING -> "Opening the pinned secure connection to the paired Windows host."
         state == RemoteSocketState.TLS_IDENTITY_VERIFIED -> "The Windows host certificate matches the QR-pinned identity."
         state == RemoteSocketState.AUTHENTICATING -> "Secure transport is open; validating the device credential with Windows."
@@ -77,7 +77,7 @@ internal fun ConnectionStatusPanel(paired: Boolean, state: RemoteSocketState) {
             Text(description, style = MaterialTheme.typography.bodySmall)
             Text(
                 if (paired && state == RemoteSocketState.AUTHENTICATED)
-                    "Live WSS transport · read-only host access"
+                    "Live WSS transport · scope-gated host access"
                 else
                     "No authenticated live transport",
                 style = MaterialTheme.typography.labelSmall

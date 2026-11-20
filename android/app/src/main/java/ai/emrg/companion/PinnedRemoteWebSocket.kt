@@ -69,8 +69,8 @@ internal enum class RemoteSocketState {
  * before any credential frame can be sent. No reconnect or command replay is implemented.
  *
  * The host listener implements pinned Pairing v2 exchange and device-scoped authentication.
- * Its authenticated dispatch is currently limited to status and read-only session listing;
- * chat execution is deliberately not wired.
+ * Its authenticated dispatch covers the 20 frozen-contract scopes; every send method below
+ * enforces its scope client-side before a frame leaves the device.
  */
 internal class PinnedRemoteWebSocket(
     private val credentialStore: CredentialStore,
@@ -215,16 +215,135 @@ internal class PinnedRemoteWebSocket(
         return socket?.send(companionSessionsListFrame(requestId, workspaceId).toString()) == true
     }
 
-    /** Only chat-task payloads are exposed here; arbitrary daemon commands are not. */
+    /**
+     * Only chat-task payloads are exposed here; arbitrary daemon commands are not.
+     * The host cwd is never sent by the client: the server supplies it from the
+     * pairing record, so this method no longer gates on any client-side cwd.
+     */
     fun sendTask(command: TaskCommand): Boolean {
         val host = pairedHost ?: return false
         if (!authenticated || PairingScope.SEND_CHAT !in host.scopes) return false
-        val approvedCwd = host.approvedCwd ?: return false
-        if (command.cwd != approvedCwd) return false
-        if (command.cwd.isBlank() || command.prompt.isBlank() || command.id.isBlank()) return false
+        if (command.prompt.isBlank() || command.id.isBlank()) return false
         val workspaceId = host.approvedWorkspaceId ?: return false
         return socket?.send(companionChatFrame(command, workspaceId).toString()) == true
     }
+
+    /** Cancel the running turn in a session. Gated by the chat.send scope. */
+    fun sendChatCancel(requestId: String, sessionId: String?): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.SEND_CHAT !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionChatCancelFrame(requestId, workspaceId, sessionId).toString()) == true
+    }
+
+    /** Answer a tool-approval question raised during a chat turn. Gated by chat.send. */
+    fun sendChatApprove(requestId: String, approvalRequestId: String, sessionId: String?, approved: Boolean): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.SEND_CHAT !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionChatApproveFrame(requestId, workspaceId, approvalRequestId, sessionId, approved).toString()) == true
+    }
+
+    /**
+     * One sessions.* management frame (resume/rename/delete/clear/compact/rewind/
+     * history/resolve_cwd). Gated by sessions.manage; sessions.list stays read-only.
+     */
+    fun sendSessionsManage(
+        requestId: String,
+        type: String,
+        sessionId: String? = null,
+        title: String? = null,
+        recordIndex: Int? = null,
+        limit: Int? = null,
+    ): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_SESSIONS !in host.scopes) return false
+        if (type !in SESSION_MANAGE_TYPES) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(
+            companionSessionsManageFrame(requestId, workspaceId, type, sessionId, title, recordIndex, limit).toString()
+        ) == true
+    }
+
+    /** List files under a workspace-relative path. Gated by files.read. */
+    fun sendFilesList(requestId: String, path: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.READ_FILES !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionFilesListFrame(requestId, workspaceId, path).toString()) == true
+    }
+
+    /** Read a file at a workspace-relative path. Gated by files.read. */
+    fun sendFilesRead(requestId: String, path: String, startLine: Int? = null, lineLimit: Int? = null): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.READ_FILES !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionFilesReadFrame(requestId, workspaceId, path, startLine, lineLimit).toString()) == true
+    }
+
+    /** Write (create/overwrite) a file at a workspace-relative path. Gated by files.write. */
+    fun sendFilesWrite(requestId: String, path: String, content: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.WRITE_FILES !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionFilesWriteFrame(requestId, workspaceId, path, content).toString()) == true
+    }
+
+    /** Delete a file at a workspace-relative path. Gated by files.write. */
+    fun sendFilesDelete(requestId: String, path: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.WRITE_FILES !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionFilesDeleteFrame(requestId, workspaceId, path).toString()) == true
+    }
+
+    /** Run a command in the approved workspace. Gated by terminal.exec. */
+    fun sendTerminalExec(
+        requestId: String,
+        command: String,
+        mode: String,
+        timeoutSeconds: Int,
+        confirmDanger: Boolean,
+    ): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.EXEC_TERMINAL !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(
+            companionTerminalExecFrame(requestId, workspaceId, command, mode, timeoutSeconds, confirmDanger).toString()
+        ) == true
+    }
+
+    /** Cancel a running exec by its exec_id. Gated by terminal.exec. */
+    fun sendTerminalExecCancel(requestId: String, execId: String): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.EXEC_TERMINAL !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionTerminalExecCancelFrame(requestId, workspaceId, execId).toString()) == true
+    }
+
+    /** Set the sandbox mode for a session. Gated by sandbox.manage. */
+    fun sendSandboxSet(requestId: String, mode: String, sessionId: String? = null): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_SANDBOX !in host.scopes) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionSandboxSetFrame(requestId, workspaceId, mode, sessionId).toString()) == true
+    }
+
+    /** List, add or remove a sandbox root (workspace-relative). Gated by sandbox.manage. */
+    fun sendSandboxRoots(requestId: String, op: String, path: String? = null, sessionId: String? = null): Boolean {
+        val host = pairedHost ?: return false
+        if (!authenticated || PairingScope.MANAGE_SANDBOX !in host.scopes) return false
+        if (op !in SANDBOX_ROOT_OPS) return false
+        val workspaceId = host.approvedWorkspaceId ?: return false
+        return socket?.send(companionSandboxRootsFrame(requestId, workspaceId, op, path, sessionId).toString()) == true
+    }
+
+    /** True when this socket is authenticated and the paired host granted [scope]. */
+    fun hasScope(scope: PairingScope): Boolean =
+        authenticated && pairedHost?.scopes?.contains(scope) == true
+
+    /** The approved workspace id, or null when unpaired/unauthenticated. */
+    fun approvedWorkspaceId(): String? = if (authenticated) pairedHost?.approvedWorkspaceId else null
 
     @Synchronized
     fun close() {
@@ -260,14 +379,9 @@ internal class PinnedRemoteWebSocket(
 
             val expectedScopes = mutableSetOf<String>()
             for (scope in host.scopes) {
-                val wireScope = when (scope) {
-                    PairingScope.READ_STATUS -> "status"
-                    PairingScope.LIST_SESSIONS -> "sessions.list"
-                    PairingScope.SEND_CHAT -> "chat.send"
-                    PairingScope.CONTINUE_SESSIONS,
-                    PairingScope.VIEW_TOOL_ACTIVITY -> return false
-                }
-                expectedScopes.add(wireScope)
+                // The two legacy placeholder values have no wire name and can never
+                // be granted: a host echoing them fails authentication.
+                expectedScopes.add(scope.wireName ?: return false)
             }
             val returnedScopeArray = frame.raw.optJSONArray("scopes") ?: return false
             if (returnedScopeArray.length() != expectedScopes.size) return false
@@ -312,7 +426,219 @@ internal class PinnedRemoteWebSocket(
                 .put("session_id", command.sessionId)
         }
 
-        internal fun createAuthFrame(deviceId: String, credential: String): JSONObject =
+        internal fun companionChatCancelFrame(requestId: String, workspaceId: String, sessionId: String?): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            return JSONObject()
+                .put("type", "chat.cancel")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .apply { sessionId?.takeIf { it.isNotBlank() }?.let { put("session_id", it) } }
+        }
+
+        internal fun companionChatApproveFrame(
+            requestId: String,
+            workspaceId: String,
+            approvalRequestId: String,
+            sessionId: String?,
+            approved: Boolean,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(approvalRequestId.isNotBlank() && approvalRequestId.toByteArray(Charsets.UTF_8).size <= 128) {
+                "invalid approval request ID"
+            }
+            return JSONObject()
+                .put("type", "chat.approve")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("approval_request_id", approvalRequestId)
+                .put("approved", approved)
+                .apply { sessionId?.takeIf { it.isNotBlank() }?.let { put("session_id", it) } }
+        }
+
+        internal fun companionSessionsManageFrame(
+            requestId: String,
+            workspaceId: String,
+            type: String,
+            sessionId: String?,
+            title: String?,
+            recordIndex: Int?,
+            limit: Int?,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(type in SESSION_MANAGE_TYPES) { "unsupported sessions management frame" }
+            return JSONObject()
+                .put("type", type)
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .apply {
+                    sessionId?.takeIf { it.isNotBlank() }?.let { put("session_id", it) }
+                    title?.let { put("title", it) }
+                    recordIndex?.let { require(it >= 0) { "record_index must be non-negative" }; put("record_index", it) }
+                    limit?.let { require(it in 1..500) { "limit out of range" }; put("limit", it) }
+                }
+        }
+
+        internal fun companionFilesListFrame(requestId: String, workspaceId: String, path: String): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            return JSONObject()
+                .put("type", "files.list")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("path", requireWorkspaceRelativePath(path))
+        }
+
+        internal fun companionFilesReadFrame(
+            requestId: String,
+            workspaceId: String,
+            path: String,
+            startLine: Int?,
+            lineLimit: Int?,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            return JSONObject()
+                .put("type", "files.read")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("path", requireWorkspaceRelativePath(path))
+                .apply {
+                    startLine?.let { require(it >= 0) { "start_line must be non-negative" }; put("start_line", it) }
+                    lineLimit?.let { require(it in 1..5000) { "line_limit out of range" }; put("line_limit", it) }
+                }
+        }
+
+        internal fun companionFilesWriteFrame(requestId: String, workspaceId: String, path: String, content: String): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(content.toByteArray(Charsets.UTF_8).size <= MAX_FILE_WRITE_BYTES) { "file content too large" }
+            return JSONObject()
+                .put("type", "files.write")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("path", requireWorkspaceRelativePath(path))
+                .put("content", content)
+        }
+
+        internal fun companionFilesDeleteFrame(requestId: String, workspaceId: String, path: String): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            return JSONObject()
+                .put("type", "files.delete")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("path", requireWorkspaceRelativePath(path))
+        }
+
+        internal fun companionTerminalExecFrame(
+            requestId: String,
+            workspaceId: String,
+            command: String,
+            mode: String,
+            timeoutSeconds: Int,
+            confirmDanger: Boolean,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(command.isNotBlank() && command.toByteArray(Charsets.UTF_8).size <= MAX_TERMINAL_COMMAND_BYTES) {
+                "invalid command"
+            }
+            require(mode in TERMINAL_MODES) { "unsupported terminal mode" }
+            require(timeoutSeconds in 1..600) { "timeout out of range" }
+            return JSONObject()
+                .put("type", "terminal.exec")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("command", command)
+                .put("mode", mode)
+                .put("timeout_seconds", timeoutSeconds)
+                .put("confirm_danger", confirmDanger)
+        }
+
+        internal fun companionTerminalExecCancelFrame(requestId: String, workspaceId: String, execId: String): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(execId.isNotBlank() && execId.toByteArray(Charsets.UTF_8).size <= 128) { "invalid exec ID" }
+            return JSONObject()
+                .put("type", "terminal.exec_cancel")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("exec_id", execId)
+        }
+
+        internal fun companionSandboxSetFrame(requestId: String, workspaceId: String, mode: String, sessionId: String?): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(mode in SANDBOX_MODES) { "unsupported sandbox mode" }
+            return JSONObject()
+                .put("type", "sandbox.set")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("mode", mode)
+                .apply { sessionId?.takeIf { it.isNotBlank() }?.let { put("session_id", it) } }
+        }
+
+        internal fun companionSandboxRootsFrame(
+            requestId: String,
+            workspaceId: String,
+            op: String,
+            path: String?,
+            sessionId: String?,
+        ): JSONObject {
+            requireValidRequestId(requestId)
+            requireValidWorkspaceId(workspaceId)
+            require(op in SANDBOX_ROOT_OPS) { "unsupported sandbox roots operation" }
+            return JSONObject()
+                .put("type", "sandbox.roots")
+                .put("request_id", requestId)
+                .put("workspace_id", workspaceId)
+                .put("op", op)
+                .apply {
+                    path?.let { put("path", requireWorkspaceRelativePath(it)) }
+                    sessionId?.takeIf { it.isNotBlank() }?.let { put("session_id", it) }
+                }
+        }
+
+        private fun requireValidRequestId(requestId: String) {
+            require(requestId.isNotBlank() && requestId.toByteArray(Charsets.UTF_8).size <= 128) {
+                "invalid request ID"
+            }
+        }
+
+        private fun requireValidWorkspaceId(workspaceId: String) {
+            require(workspaceId.isNotBlank() && workspaceId.toByteArray(Charsets.UTF_8).size <= 128) {
+                "approved workspace is invalid"
+            }
+        }
+
+        /**
+         * Paths are workspace-relative only. Absolute paths, `..` escapes and empty
+         * paths are rejected client-side; the server joins the path to the bound cwd
+         * and enforces containment again.
+         */
+        internal fun requireWorkspaceRelativePath(path: String): String {
+            val normalized = path.trim().replace('\\', '/').trimStart('/')
+            require(normalized.isNotEmpty()) { "path must not be empty" }
+            require(normalized.toByteArray(Charsets.UTF_8).size <= 4096) { "path too long" }
+            val segments = normalized.split("/").filter { it.isNotEmpty() && it != "." }
+            require(segments.isNotEmpty() && segments.none { it == ".." }) {
+                "path must stay inside the approved workspace"
+            }
+            return segments.joinToString("/")
+        }
+
+        internal val SESSION_MANAGE_TYPES = setOf(
+            "sessions.resume", "sessions.rename", "sessions.delete", "sessions.clear",
+            "sessions.compact", "sessions.rewind", "sessions.history", "sessions.resolve_cwd",
+        )
+        internal val TERMINAL_MODES = setOf("read-only", "workspace-write", "danger-full-access")
+        internal val SANDBOX_MODES = TERMINAL_MODES
+        internal val SANDBOX_ROOT_OPS = setOf("list", "add", "remove")
+        internal const val MAX_FILE_WRITE_BYTES = 1024 * 1024
+        internal const val MAX_TERMINAL_COMMAND_BYTES = 64 * 1024
             JSONObject()
                 .put("type", "auth")
                 .put("protocol", "1.0")

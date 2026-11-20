@@ -60,7 +60,7 @@ internal class PairingV2Client(
         require(parsedPublicKey != null && isP256(parsedPublicKey.params)) {
             "Device public key is not P-256"
         }
-        require(requestedScopes.isNotEmpty() && requestedScopes.size <= 3 &&
+        require(requestedScopes.isNotEmpty() && requestedScopes.size <= MAX_REQUESTED_SCOPES &&
             requestedScopes.all { it in ALLOWED_SCOPES }) { "Requested scopes are invalid" }
         val nonceBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val clientNonce = Base64.getUrlEncoder().withoutPadding().encodeToString(nonceBytes)
@@ -192,7 +192,7 @@ internal class PairingV2Client(
         val nonce = nonceValue
         requireCanonicalBase64Url(nonce, 32, "challenge nonce")
         val scopes = challenge.optJSONArray("scopes") ?: throw IllegalArgumentException("Pairing scopes are missing")
-        require(scopes.length() in 1..3) { "Pairing scopes are invalid" }
+        require(scopes.length() in 1..MAX_REQUESTED_SCOPES) { "Pairing scopes are invalid" }
         val allowedScopes = ALLOWED_SCOPES
         val seenScopes = HashSet<String>()
         for (index in 0 until scopes.length()) {
@@ -268,8 +268,10 @@ internal class PairingV2Client(
         const val MAX_SIGNATURE_BYTES = 80
         const val MAX_CHALLENGE_BYTES = 8192
         const val MAX_CHALLENGE_LIFETIME_SECONDS = 180
+        /** Frozen wire contract: 20 scopes, cap 1..20 (was 1..3). */
+        const val MAX_REQUESTED_SCOPES = 20
         val DEVICE_ID_PATTERN = Regex("[A-Za-z0-9._:-]{1,128}")
         val BASE64URL_PATTERN = Regex("[A-Za-z0-9_-]+")
-        val ALLOWED_SCOPES = setOf("status", "sessions.list", "chat.send")
+        val ALLOWED_SCOPES: Set<String> = PairingScope.ALL_WIRE_NAMES
     }
 }

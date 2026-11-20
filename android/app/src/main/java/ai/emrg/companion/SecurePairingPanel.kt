@@ -10,16 +10,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -32,10 +36,18 @@ import java.util.UUID
 /**
  * Pairing v2 UI. Host approval remains authoritative; this panel only submits
  * the signed device proof and stores a credential after the controller validates it.
+ *
+ * The live socket is owned by the shared [CompanionConnection] passed in, so every
+ * screen sees the same connection. Pairing v2, TLS pinning, the 180 s QR expiry and
+ * the auth envelope/nonce are untouched by the scope picker: the picker only
+ * changes which of the 20 frozen-contract scopes the signed request asks for.
  */
 @Suppress("UnsafeOptInUsageError")
 @Composable
-internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: RemoteSocketState) -> Unit = { _, _ -> }) {
+internal fun SecurePairingPanel(
+    connection: CompanionConnection,
+    onConnectionChanged: (paired: Boolean, state: RemoteSocketState) -> Unit = { _, _ -> },
+) {
     val context = LocalContext.current
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
     var qrPayload by remember { mutableStateOf("") }
@@ -48,19 +60,19 @@ internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: Re
     var controller by remember { mutableStateOf<PairingV2SessionController?>(null) }
     var challenge by remember { mutableStateOf<PairingV2Challenge?>(null) }
     var activeHandle by remember { mutableStateOf<PairingV2ExchangeHandle?>(null) }
-    var remoteSocket by remember { mutableStateOf<PinnedRemoteWebSocket?>(null) }
     var remoteStateText by remember { mutableStateOf("Not connected") }
-    var remoteConnectionState by remember { mutableStateOf(RemoteSocketState.CLOSED) }
-    var statusResultText by remember { mutableStateOf<String?>(null) }
-    var sessionsResultText by remember { mutableStateOf<String?>(null) }
-    var statusRequestId by remember { mutableStateOf<String?>(null) }
-    var sessionsRequestId by remember { mutableStateOf<String?>(null) }
     var statusText by remember { mutableStateOf("Scan or paste a host pairing v2 QR descriptor.") }
     var busy by remember { mutableStateOf(false) }
+    // Scopes this device asks the host for. Default: the 3 original scopes.
+    // The host grants only what it has enabled; asking for an ungranted scope
+    // fails pairing, so the host must enable a scope before it is ticked here.
+    var selectedScopes by remember { mutableStateOf(PairingScope.DEFAULT_REQUESTED) }
     // Ignore callbacks queued by an older QR transaction after reset or rescan.
     var transactionGeneration by remember { mutableStateOf(0) }
-    // Ignore callbacks from a superseded live socket, even within the same pairing transaction.
-    var remoteConnectionGeneration by remember { mutableStateOf(0) }
+
+    val remoteConnectionState by connection.state.collectAsState()
+    val statusResultText by connection.lastStatusResult.collectAsState()
+    val sessionsResultText by connection.lastSessionsResult.collectAsState()
 
     fun cancelActiveExchange() {
         activeHandle?.cancel()
@@ -70,29 +82,36 @@ internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: Re
 
     fun clearTransaction() {
         transactionGeneration += 1
-        remoteConnectionGeneration += 1
         cancelActiveExchange()
         controller = null
         challenge = null
-        remoteSocket?.close()
-        remoteSocket = null
+        connection.disconnect()
         remoteStateText = "Not connected"
-        remoteConnectionState = RemoteSocketState.CLOSED
         onConnectionChanged(false, RemoteSocketState.CLOSED)
-        statusResultText = null
-        sessionsResultText = null
-        statusRequestId = null
-        sessionsRequestId = null
         state = PairingState()
         statusText = "Pairing transaction cleared."
     }
 
     val latestHandle by rememberUpdatedState(activeHandle)
-    val latestRemoteSocket by rememberUpdatedState(remoteSocket)
     DisposableEffect(Unit) {
         onDispose {
             latestHandle?.cancel()
-            latestRemoteSocket?.close()
+        }
+    }
+
+    // Publish the shared socket state to the shell and keep the status line honest.
+    // Only report a lost connection once a pairing exists; on first composition
+    // the socket is simply not open yet.
+    LaunchedEffect(remoteConnectionState) {
+        remoteStateText = remoteConnectionState.name
+        onConnectionChanged(state.phase == PairingPhase.PAIRED, remoteConnectionState)
+        if (state.phase == PairingPhase.PAIRED &&
+            (remoteConnectionState == RemoteSocketState.CLOSED ||
+                remoteConnectionState == RemoteSocketState.FAILED ||
+                remoteConnectionState == RemoteSocketState.AUTH_REJECTED ||
+                remoteConnectionState == RemoteSocketState.IDENTITY_REJECTED)
+        ) {
+            statusText = "Pairing is stored; live host connection is ${remoteConnectionState.name.lowercase()}."
         }
     }
 
@@ -108,8 +127,8 @@ internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: Re
             val credentialAlias = "host_" + MessageDigest.getInstance("SHA-256")
                 .digest((endpoint + "|" + fingerprint + "|" + id).toByteArray(Charsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }.take(48)
-            val scopes = setOf(PairingScope.READ_STATUS, PairingScope.LIST_SESSIONS)
-            val protocolScopes = setOf("status", "sessions.list")
+            val scopes = selectedScopes
+            val protocolScopes = scopes.mapNotNull { it.wireName }.toSet()
             val client = PairingV2Client(
                 keys = AndroidKeystoreDeviceKeyManager(),
                 deviceId = deviceId,
@@ -143,74 +162,10 @@ internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: Re
     }
 
     fun connectRemoteHost(host: PairedHost) {
-        // Each reconnect gets fresh callback generations and request IDs.
-        remoteConnectionGeneration += 1
-        val callbackRemoteGeneration = remoteConnectionGeneration
-        val callbackTransactionGeneration = transactionGeneration
-        statusRequestId = UUID.randomUUID().toString()
-        sessionsRequestId = UUID.randomUUID().toString()
-        statusResultText = null
-        sessionsResultText = null
-        remoteStateText = RemoteSocketState.CONNECTING.name
-        remoteConnectionState = RemoteSocketState.CONNECTING
-        onConnectionChanged(true, RemoteSocketState.CONNECTING)
-
-        val socket = PinnedRemoteWebSocket(
-            credentialStore = AndroidKeystoreCredentialStore(context),
-            listener = object : RemoteSocketListener {
-                override fun onState(state: RemoteSocketState, safeMessage: String?) {
-                    mainHandler.post {
-                        if (callbackTransactionGeneration != transactionGeneration ||
-                            callbackRemoteGeneration != remoteConnectionGeneration
-                        ) return@post
-                        remoteConnectionState = state
-                        remoteStateText = safeMessage ?: state.name
-                        onConnectionChanged(true, state)
-                        if (state == RemoteSocketState.AUTHENTICATED) {
-                            val current = remoteSocket
-                            val statusId = statusRequestId
-                            val sessionsId = sessionsRequestId
-                            if (current != null && statusId != null && sessionsId != null) {
-                                current.sendStatus(statusId)
-                                current.sendSessionsList(sessionsId)
-                            }
-                        }
-                        if (state == RemoteSocketState.CLOSED ||
-                            state == RemoteSocketState.FAILED ||
-                            state == RemoteSocketState.AUTH_REJECTED ||
-                            state == RemoteSocketState.IDENTITY_REJECTED
-                        ) {
-                            statusText = "Pairing is stored; live host connection is ${state.name.lowercase()}."
-                        }
-                    }
-                }
-
-                override fun onFrame(frame: ProtocolFrame) {
-                    mainHandler.post {
-                        if (callbackTransactionGeneration != transactionGeneration ||
-                            callbackRemoteGeneration != remoteConnectionGeneration
-                        ) return@post
-                        when (frame.type) {
-                            "status.result" -> if (frame.requestId == statusRequestId) {
-                                statusResultText = frame.raw.toString().take(4096)
-                            }
-                            "sessions.result" -> if (frame.requestId == sessionsRequestId) {
-                                sessionsResultText = frame.raw.toString().take(16 * 1024)
-                            }
-                        }
-                    }
-                }
-            },
-        )
-        remoteSocket?.close()
-        remoteSocket = socket
         try {
-            socket.connect(host)
-            statusText = "Pairing saved. Establishing pinned, authenticated read-only connection…"
+            connection.connect(host)
+            statusText = "Pairing saved. Establishing pinned, authenticated connection…"
         } catch (_: Exception) {
-            remoteConnectionState = RemoteSocketState.FAILED
-            remoteStateText = "Connection could not be started"
-            onConnectionChanged(true, RemoteSocketState.FAILED)
             statusText = "Pairing is saved, but the live host connection could not be started."
         }
     }
@@ -244,8 +199,6 @@ internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: Re
                 busy = false
                 state = PairingState(phase = PairingPhase.PAIRED, pairedHost = host)
                 statusText = "Paired securely. Credential stored in Android Keystore-backed storage."
-                statusResultText = null
-                sessionsResultText = null
                 connectRemoteHost(host)
             }
         }
@@ -327,6 +280,38 @@ internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: Re
             if (descriptorVersion == 2 && pairingId != null) {
                 Text("Pairing v2 transaction is ready.", style = MaterialTheme.typography.bodySmall)
             }
+            if (descriptorVersion == 2 && pairingId != null && state.phase == PairingPhase.AWAITING_HOST_VERIFICATION) {
+                Text("Scopes to request", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "The host must have enabled each scope first — requesting a scope " +
+                        "the host has not granted fails pairing. Default: status, sessions.list, chat.send.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                PairingScope.REQUESTABLE.forEach { scope ->
+                    val checked = scope in selectedScopes
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = checked,
+                            // At least one scope must stay selected.
+                            enabled = !busy && (!checked || selectedScopes.size > 1),
+                            onCheckedChange = { want ->
+                                selectedScopes = if (want) selectedScopes + scope
+                                else if (selectedScopes.size > 1) selectedScopes - scope else selectedScopes
+                            },
+                        )
+                        Column {
+                            Text(scope.wireName ?: scope.name, style = MaterialTheme.typography.bodyMedium)
+                            Text(scope.description, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+            if (state.phase == PairingPhase.AWAITING_HOST_APPROVAL || state.phase == PairingPhase.PAIRED) {
+                Text(
+                    "Requested scopes: " + selectedScopes.mapNotNull { it.wireName }.sorted().joinToString(", "),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             when (state.phase) {
                 PairingPhase.AWAITING_HOST_VERIFICATION -> {
                     Text("Verify this fingerprint against the host's trusted display:", style = MaterialTheme.typography.titleSmall)
@@ -387,33 +372,16 @@ internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: Re
                         Text(sessionsResultText!!, style = MaterialTheme.typography.bodySmall)
                     }
                     Button(
-                        enabled = canRefreshRemoteHost(remoteConnectionState),
-                        onClick = {
-                            statusRequestId = UUID.randomUUID().toString()
-                            sessionsRequestId = UUID.randomUUID().toString()
-                            statusResultText = null
-                            sessionsResultText = null
-                            val current = remoteSocket ?: return@Button
-                            current.sendStatus(statusRequestId!!)
-                            current.sendSessionsList(sessionsRequestId!!)
-                        },
-                    ) { Text("Refresh host status and sessions") }
-                    Button(
                         enabled = canReconnectRemoteHost(remoteConnectionState),
                         onClick = {
                             state.pairedHost?.let(::connectRemoteHost)
                         },
                     ) { Text("Reconnect") }
                     Button(
-                        enabled = remoteSocket != null,
                         onClick = {
-                            // Invalidate queued close/frame callbacks before closing the user-disconnected socket.
-                            remoteConnectionGeneration += 1
-                            remoteSocket?.close()
-                            remoteSocket = null
-                            remoteConnectionState = RemoteSocketState.CLOSED
-                            onConnectionChanged(true, RemoteSocketState.CLOSED)
+                            connection.disconnect()
                             remoteStateText = "Disconnected"
+                            onConnectionChanged(true, RemoteSocketState.CLOSED)
                         },
                     ) { Text("Disconnect") }
                 }
@@ -429,6 +397,7 @@ internal fun SecurePairingPanel(onConnectionChanged: (paired: Boolean, state: Re
                     fingerprint = ""
                     pairingId = null
                     descriptorVersion = null
+                    selectedScopes = PairingScope.DEFAULT_REQUESTED
                 }, enabled = !busy) { Text("Reset") }
             }
         }
