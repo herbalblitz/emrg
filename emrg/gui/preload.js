@@ -61,6 +61,7 @@ const api = {
   companionStatus: () => ipcRenderer.invoke("emrg:companionStatus"),
   companionPendingPairings: () => ipcRenderer.invoke("emrg:companionPendingPairings"),
   companionDecidePairing: (payload) => ipcRenderer.invoke("emrg:companionDecidePairing", payload),
+  companionPairingQr: (payload) => ipcRenderer.invoke("emrg:companionPairingQr", payload),
   companionListenerStart: (payload) => ipcRenderer.invoke("emrg:companionListenerStart", payload),
   companionListenerStop: () => ipcRenderer.invoke("emrg:companionListenerStop"),
   // 间隔下限由 daemon 上报（issue #2490）——渲染层不留第二份数字
