@@ -852,7 +852,13 @@ class EmrgServer:
         )
         self._companion_local_control = CompanionLocalControl(self._companion_host_service)
         self._companion_runtime = CompanionRuntime(
-            self._companion_host_service, config_dir() / "companion" / "tls"
+            self._companion_host_service,
+            config_dir() / "companion" / "tls",
+            # In-process daemon accessor so companion frames can reach
+            # daemon-native ops without a loopback socket (the accessor is
+            # the only daemon.py addition for the 20-screen expansion;
+            # scope checks still happen in the companion layer first).
+            daemon_accessor=lambda: self,
         )
         # The `[update]` object the UpgradeManager's tick loop runs on (issue
         # #1356). Constructed **here**, not inside `_upgrade_tick_loop`, so the
