@@ -210,6 +210,22 @@ class PinnedRemoteWebSocketTest {
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, "auth_rejected"))
     }
 
+    @Test fun reconnectAndRefreshActionsFollowSocketStateNotDisplayText() {
+        assertEquals(false, canReconnectRemoteHost(RemoteSocketState.CONNECTING))
+        assertEquals(false, canReconnectRemoteHost(RemoteSocketState.TLS_IDENTITY_VERIFIED))
+        assertEquals(false, canReconnectRemoteHost(RemoteSocketState.AUTHENTICATING))
+        assertEquals(false, canReconnectRemoteHost(RemoteSocketState.AUTHENTICATED))
+        assertEquals(true, canReconnectRemoteHost(RemoteSocketState.CLOSED))
+        assertEquals(true, canReconnectRemoteHost(RemoteSocketState.FAILED))
+        assertEquals(true, canReconnectRemoteHost(RemoteSocketState.AUTH_REJECTED))
+        assertEquals(true, canReconnectRemoteHost(RemoteSocketState.IDENTITY_REJECTED))
+
+        assertEquals(true, canRefreshRemoteHost(RemoteSocketState.AUTHENTICATED))
+        assertEquals(false, canRefreshRemoteHost(RemoteSocketState.CONNECTING))
+        assertEquals(false, canRefreshRemoteHost(RemoteSocketState.CLOSED))
+        assertEquals(false, canRefreshRemoteHost(RemoteSocketState.FAILED))
+    }
+
     @Test fun missingFrameTypeIsRejectedInEveryAuthenticationState() {
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(false, null))
         assertEquals(false, PinnedRemoteWebSocket.isAllowedFrameInAuthState(true, null))
