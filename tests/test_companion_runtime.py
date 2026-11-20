@@ -54,7 +54,7 @@ def test_runtime_is_inert_until_explicit_start_and_stops_cleanly(tmp_path, monke
     assert descriptor["version"] == 2
     assert descriptor["pairing_id"] == started["pairing_id"]
     assert set(descriptor) == {
-        "version", "endpoint", "fingerprint_sha256", "expires_at",
+        "version", "endpoint", "fingerprint_sha256", "expires_at", "pairing_id",
     }
     assert _FakeListener.instances[0].config.bind_address == "127.0.0.1"
     assert _FakeListener.instances[0].identity_directory == tmp_path / "tls-identity"
@@ -93,7 +93,7 @@ def test_runtime_does_not_leave_host_enabled_when_listener_start_fails(tmp_path,
     runtime = CompanionRuntime(host, tmp_path / "tls-identity")
     with pytest.raises(CompanionRuntimeError, match="could not be started"):
         asyncio.run(runtime.start({
-            "bind_address": "127.0.0.1", "port": 18476,
+            "bind_address": "127.0.0.1", "port": 18476, "cwd": str(tmp_path),
         }))
     assert host.enabled is False
     assert runtime.running is False
