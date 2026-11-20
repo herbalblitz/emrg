@@ -139,6 +139,73 @@ internal fun SecurePairingPanel() {
         }
     }
 
+    fun connectRemoteHost(host: PairedHost) {
+        // Each reconnect gets fresh callback generations and request IDs.
+        remoteConnectionGeneration += 1
+        val callbackRemoteGeneration = remoteConnectionGeneration
+        val callbackTransactionGeneration = transactionGeneration
+        statusRequestId = UUID.randomUUID().toString()
+        sessionsRequestId = UUID.randomUUID().toString()
+        statusResultText = null
+        sessionsResultText = null
+        remoteStateText = RemoteSocketState.CONNECTING.name
+
+        val socket = PinnedRemoteWebSocket(
+            credentialStore = AndroidKeystoreCredentialStore(context),
+            listener = object : RemoteSocketListener {
+                override fun onState(state: RemoteSocketState, safeMessage: String?) {
+                    mainHandler.post {
+                        if (callbackTransactionGeneration != transactionGeneration ||
+                            callbackRemoteGeneration != remoteConnectionGeneration
+                        ) return@post
+                        remoteStateText = safeMessage ?: state.name
+                        if (state == RemoteSocketState.AUTHENTICATED) {
+                            val current = remoteSocket
+                            val statusId = statusRequestId
+                            val sessionsId = sessionsRequestId
+                            if (current != null && statusId != null && sessionsId != null) {
+                                current.sendStatus(statusId)
+                                current.sendSessionsList(sessionsId)
+                            }
+                        }
+                        if (state == RemoteSocketState.CLOSED ||
+                            state == RemoteSocketState.FAILED ||
+                            state == RemoteSocketState.AUTH_REJECTED ||
+                            state == RemoteSocketState.IDENTITY_REJECTED
+                        ) {
+                            statusText = "Pairing is stored; live host connection is ${state.name.lowercase()}."
+                        }
+                    }
+                }
+
+                override fun onFrame(frame: ProtocolFrame) {
+                    mainHandler.post {
+                        if (callbackTransactionGeneration != transactionGeneration ||
+                            callbackRemoteGeneration != remoteConnectionGeneration
+                        ) return@post
+                        when (frame.type) {
+                            "status.result" -> if (frame.requestId == statusRequestId) {
+                                statusResultText = frame.raw.toString().take(4096)
+                            }
+                            "sessions.result" -> if (frame.requestId == sessionsRequestId) {
+                                sessionsResultText = frame.raw.toString().take(16 * 1024)
+                            }
+                        }
+                    }
+                }
+            },
+        )
+        remoteSocket?.close()
+        remoteSocket = socket
+        try {
+            socket.connect(host)
+            statusText = "Pairing saved. Establishing pinned, authenticated read-only connection…"
+        } catch (_: Exception) {
+            remoteStateText = "Connection could not be started"
+            statusText = "Pairing is saved, but the live host connection could not be started."
+        }
+    }
+
     fun sessionListener(): PairingV2SessionListener {
         val callbackGeneration = transactionGeneration
         return object : PairingV2SessionListener {
@@ -170,64 +237,7 @@ internal fun SecurePairingPanel() {
                 statusText = "Paired securely. Credential stored in Android Keystore-backed storage."
                 statusResultText = null
                 sessionsResultText = null
-                statusRequestId = UUID.randomUUID().toString()
-                sessionsRequestId = UUID.randomUUID().toString()
-                remoteConnectionGeneration += 1
-                val callbackRemoteGeneration = remoteConnectionGeneration
-                val socket = PinnedRemoteWebSocket(
-                    credentialStore = AndroidKeystoreCredentialStore(context),
-                    listener = object : RemoteSocketListener {
-                        override fun onState(state: RemoteSocketState, safeMessage: String?) {
-                            mainHandler.post {
-                                if (!isCurrentTransaction() || callbackRemoteGeneration != remoteConnectionGeneration) return@post
-                                remoteStateText = safeMessage ?: state.name
-                                if (state == RemoteSocketState.AUTHENTICATED) {
-                                    val current = remoteSocket
-                                    val statusId = statusRequestId
-                                    val sessionsId = sessionsRequestId
-                                    if (current != null && statusId != null && sessionsId != null) {
-                                        current.sendStatus(statusId)
-                                        current.sendSessionsList(sessionsId)
-                                    }
-                                }
-                                if (state == RemoteSocketState.CLOSED ||
-                                    state == RemoteSocketState.FAILED ||
-                                    state == RemoteSocketState.AUTH_REJECTED ||
-                                    state == RemoteSocketState.IDENTITY_REJECTED
-                                ) {
-                                    statusText = "Pairing is stored; live host connection is ${state.name.lowercase()}."
-                                }
-                            }
-                        }
-
-                        override fun onFrame(frame: ProtocolFrame) {
-                            mainHandler.post {
-                                if (!isCurrentTransaction() || callbackRemoteGeneration != remoteConnectionGeneration) return@post
-                                when (frame.type) {
-                                    "status.result" -> {
-                                        if (frame.requestId == statusRequestId) {
-                                            statusResultText = frame.raw.toString().take(4096)
-                                        }
-                                    }
-                                    "sessions.result" -> {
-                                        if (frame.requestId == sessionsRequestId) {
-                                            sessionsResultText = frame.raw.toString().take(16 * 1024)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                )
-                remoteSocket?.close()
-                remoteSocket = socket
-                try {
-                    socket.connect(host)
-                    statusText = "Pairing saved. Establishing pinned, authenticated read-only connection…"
-                } catch (_: Exception) {
-                    remoteStateText = "Connection could not be started"
-                    statusText = "Pairing is saved, but the live host connection could not be started."
-                }
+                connectRemoteHost(host)
             }
         }
 
@@ -379,6 +389,15 @@ internal fun SecurePairingPanel() {
                             current.sendSessionsList(sessionsRequestId!!)
                         },
                     ) { Text("Refresh host status and sessions") }
+                    Button(
+                        enabled = remoteStateText != RemoteSocketState.CONNECTING.name &&
+                            remoteStateText != RemoteSocketState.TLS_IDENTITY_VERIFIED.name &&
+                            remoteStateText != RemoteSocketState.AUTHENTICATING.name &&
+                            remoteStateText != RemoteSocketState.AUTHENTICATED.name,
+                        onClick = {
+                            state.pairedHost?.let(::connectRemoteHost)
+                        },
+                    ) { Text("Reconnect") }
                     Button(
                         enabled = remoteSocket != null,
                         onClick = {
