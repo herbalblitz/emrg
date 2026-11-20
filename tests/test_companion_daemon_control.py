@@ -2,6 +2,7 @@
 import asyncio
 import base64
 import json
+import logging
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -14,6 +15,9 @@ from emrg.server.daemon import EmrgServer
 class _Writer:
     def __init__(self):
         self.frames = []
+        # Models a local peer: the daemon binds 127.0.0.1, so a real
+        # companion connection always carries a loopback address.
+        self.remote_address = ("127.0.0.1", 1234)
 
     async def send(self, payload):
         self.frames.append(json.loads(payload))
@@ -97,6 +101,42 @@ def test_daemon_companion_local_approval_routes_to_host_service(tmp_path):
     assert host.pending_pairings_v2()[0]["approved"] is True
 
 
+def test_daemon_companion_control_rejects_non_local_peer(tmp_path):
+    server, host = _server(tmp_path)
+    host.enable()
+    pairing_id = _create_pending(host)
+    writer = _Writer()
+    writer.remote_address = ("192.0.2.10", 1234)
+    asyncio.run(server._process_message({
+        "type": "companion_local_control",
+        "operation": "pairing.decide",
+        "payload": {"pairing_id": pairing_id, "approved": True},
+    }, writer))
+    assert writer.frames == [{
+        "type": "companion_local_control_result",
+        "ok": False,
+        "error": "local Companion control unavailable",
+    }]
+    # Nothing was dispatched: the pending pairing is still undecided.
+    assert host.pending_pairings_v2()[0]["approved"] is None
+
+
+def test_daemon_companion_control_rejects_peer_without_address(tmp_path):
+    server, _host = _server(tmp_path)
+    writer = _Writer()
+    del writer.remote_address
+    asyncio.run(server._process_message({
+        "type": "companion_local_control",
+        "operation": "status",
+        "payload": {},
+    }, writer))
+    assert writer.frames == [{
+        "type": "companion_local_control_result",
+        "ok": False,
+        "error": "local Companion control unavailable",
+    }]
+
+
 def test_daemon_companion_control_rejects_unlisted_operation(tmp_path):
     server, _host = _server(tmp_path)
     writer = _Writer()
@@ -171,3 +211,105 @@ def test_daemon_listener_stop_rejects_unexpected_payload(tmp_path):
         "ok": False,
         "error": "invalid listener stop request",
     }]
+
+
+def test_daemon_companion_control_refuses_unsafe_session_id_first(tmp_path):
+    # The per-message session-id guard runs before the companion branch:
+    # a path-escaping session id never reaches the control handler.
+    server, host = _server(tmp_path)
+    host.enable()
+    writer = _Writer()
+    asyncio.run(server._process_message({
+        "type": "companion_local_control",
+        "operation": "status",
+        "payload": {},
+        "session_id": "../..",
+    }, writer))
+    assert len(writer.frames) == 1
+    assert writer.frames[0]["error"].startswith("invalid session id")
+    assert "type" not in writer.frames[0] or writer.frames[0].get("type") != "companion_local_control_result"
+
+
+def test_daemon_companion_decide_on_unknown_pairing_decides_nothing(tmp_path):
+    server, host = _server(tmp_path)
+    host.enable()
+    writer = _Writer()
+    asyncio.run(server._process_message({
+        "type": "companion_local_control",
+        "operation": "pairing.decide",
+        "payload": {"pairing_id": "A" * 43, "approved": True},
+    }, writer))
+    assert writer.frames == [{
+        "type": "companion_local_control_result",
+        "ok": True,
+        "result": {"decided": False},
+    }]
+
+
+def test_daemon_companion_decide_twice_decides_only_once(tmp_path):
+    server, host = _server(tmp_path)
+    host.enable()
+    pairing_id = _create_pending(host)
+    writer = _Writer()
+    for _ in range(2):
+        asyncio.run(server._process_message({
+            "type": "companion_local_control",
+            "operation": "pairing.decide",
+            "payload": {"pairing_id": pairing_id, "approved": True},
+        }, writer))
+    assert writer.frames == [
+        {"type": "companion_local_control_result", "ok": True, "result": {"decided": True}},
+        {"type": "companion_local_control_result", "ok": True, "result": {"decided": False}},
+    ]
+
+
+def test_daemon_companion_cancel_on_unknown_pairing_cancels_nothing(tmp_path):
+    server, host = _server(tmp_path)
+    host.enable()
+    writer = _Writer()
+    asyncio.run(server._process_message({
+        "type": "companion_local_control",
+        "operation": "pairing.cancel",
+        "payload": {"pairing_id": "A" * 43},
+    }, writer))
+    assert writer.frames == [{
+        "type": "companion_local_control_result",
+        "ok": True,
+        "result": {"cancelled": False},
+    }]
+
+
+def test_daemon_companion_decide_with_malformed_payload_is_rejected(tmp_path):
+    server, _host = _server(tmp_path)
+    writer = _Writer()
+    asyncio.run(server._process_message({
+        "type": "companion_local_control",
+        "operation": "pairing.decide",
+        "payload": {"pairing_id": "A" * 43},
+    }, writer))
+    assert writer.frames == [{
+        "type": "companion_local_control_result",
+        "ok": False,
+        "error": "invalid local control request",
+    }]
+
+
+def test_daemon_companion_control_logs_allowed_and_denied_actions(tmp_path, caplog):
+    server, _host = _server(tmp_path)
+    writer = _Writer()
+    with caplog.at_level(logging.INFO, logger="emrg.server.daemon"):
+        asyncio.run(server._process_message({
+            "type": "companion_local_control",
+            "operation": "status",
+            "payload": {},
+        }, writer))
+    assert "companion local control allowed: operation='status'" in caplog.text
+    writer.remote_address = ("192.0.2.10", 1234)
+    with caplog.at_level(logging.WARNING, logger="emrg.server.daemon"):
+        asyncio.run(server._process_message({
+            "type": "companion_local_control",
+            "operation": "status",
+            "payload": {},
+        }, writer))
+    assert "companion local control denied" in caplog.text
+    assert "192.0.2.10" in caplog.text

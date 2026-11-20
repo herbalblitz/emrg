@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import errno
+import ipaddress
 import json
 import logging
 import os
@@ -2962,6 +2963,21 @@ class EmrgServer:
         })
         return True
 
+    @staticmethod
+    def _is_local_peer(ws) -> bool:
+        """True only when the peer address is a loopback address.
+
+        Fail-closed: a connection with no readable peer address, or with
+        an address that does not parse, is not local.
+        """
+        address = getattr(ws, "remote_address", None)
+        if not isinstance(address, tuple) or not address:
+            return False
+        try:
+            return ipaddress.ip_address(str(address[0])).is_loopback
+        except ValueError:
+            return False
+
     async def _process_message(
         self, msg: dict, ws
     ) -> None:
@@ -2976,8 +2992,35 @@ class EmrgServer:
             return
 
         if msg_type == "companion_local_control":
+            # Companion controls are host-local only. The daemon binds
+            # 127.0.0.1, but the handler must not trust that alone: a peer
+            # that is not loopback is rejected here, fail-closed, before
+            # anything is dispatched. A connection with no readable peer
+            # address is treated the same way.
+            #
+            # Audit: every control action is logged, allowed and denied,
+            # with operation + session + pairing id. The frame carries no
+            # device id, so the pairing id is the closest device-level
+            # identifier when the action names one. Payload contents are
+            # never logged: a pairing descriptor carries the host
+            # fingerprint and endpoint.
             operation = msg.get("operation")
             payload = msg.get("payload", {})
+            session_id = msg.get("session_id")
+            pairing_id = payload.get("pairing_id") if isinstance(payload, dict) else None
+            if not self._is_local_peer(ws):
+                logger.warning(
+                    "companion local control denied: operation=%r "
+                    "session=%r pairing=%r peer=%s",
+                    operation, session_id, pairing_id,
+                    getattr(ws, "remote_address", None),
+                )
+                await self._send(ws, {
+                    "type": "companion_local_control_result",
+                    "ok": False,
+                    "error": "local Companion control unavailable",
+                })
+                return
             try:
                 if operation == "listener.start":
                     result = await self._companion_runtime.start(payload)
@@ -2990,6 +3033,13 @@ class EmrgServer:
                     if operation == "status":
                         result.update(self._companion_runtime.status())
             except (CompanionLocalControlError, CompanionRuntimeError) as exc:
+                # These messages are fixed safe strings by construction;
+                # nothing caller-supplied is ever interpolated into them.
+                logger.warning(
+                    "companion local control denied: operation=%r "
+                    "session=%r pairing=%r error=%s",
+                    operation, session_id, pairing_id, str(exc)[:160],
+                )
                 await self._send(ws, {
                     "type": "companion_local_control_result",
                     "ok": False,
@@ -2998,13 +3048,22 @@ class EmrgServer:
                 return
             except Exception:
                 # Never leak registry contents, credentials, or filesystem details.
-                logger.warning("local Companion control request failed")
+                logger.warning(
+                    "local Companion control request failed: operation=%r "
+                    "session=%r pairing=%r",
+                    operation, session_id, pairing_id,
+                )
                 await self._send(ws, {
                     "type": "companion_local_control_result",
                     "ok": False,
                     "error": "local Companion control unavailable",
                 })
                 return
+            logger.info(
+                "companion local control allowed: operation=%r "
+                "session=%r pairing=%r",
+                operation, session_id, pairing_id,
+            )
             await self._send(ws, {
                 "type": "companion_local_control_result",
                 "ok": True,
