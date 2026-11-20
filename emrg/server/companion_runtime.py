@@ -69,17 +69,11 @@ class CompanionRuntime:
 
         host_text = f"[{address}]" if address.version == 6 else str(address)
         endpoint = f"wss://{host_text}:{config.port}"
-        try:
-            descriptor = create_pairing_descriptor(identity, endpoint)
-        except CompanionTlsError:
-            raise CompanionRuntimeError("could not create pairing descriptor") from None
-
         if self.running:
             raise CompanionRuntimeError("listener already running")
         listener = CompanionWssListener(
             self._host, config, identity_directory=self._identity_directory,
         )
-        self._host.enable()
         self._host.enable()
         try:
             await listener.start()
