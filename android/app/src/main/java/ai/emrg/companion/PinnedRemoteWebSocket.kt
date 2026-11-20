@@ -206,19 +206,23 @@ internal class PinnedRemoteWebSocket(
 
     companion object {
         internal fun isAllowedFrameInAuthState(authenticated: Boolean, frameType: String?): Boolean {
-            // Exact host wire type from CompanionWssListener; do not accept the
-            // desktop daemon's separate auth_ok spelling as an alias.
-            val authFrames = setOf("auth.ok")
+            // Only the host's exact auth.ok frame may complete authentication. Once
+            // authenticated, reject all known auth-control spellings rather than
+            // accidentally forwarding a desktop-protocol alias as an application event.
+            val authControlFrames = setOf(
+                "auth.ok", "auth_ok", "auth.error", "auth_error", "auth.rejected", "auth_rejected",
+            )
             return frameType?.let {
-                if (authenticated) it !in authFrames else it in authFrames
+                if (authenticated) it !in authControlFrames else it == "auth.ok"
             } == true
         }
 
         internal fun isValidAuthSuccess(frame: ProtocolFrame, host: PairedHost): Boolean {
-            if (frame.type != "auth.ok" || frame.raw.optString("protocol") != "1.0") return false
+            if (frame.type != "auth.ok" || frame.raw.opt("protocol") != "1.0") return false
 
-            val returnedWorkspace = frame.raw.optString("workspace_id").takeIf { it.isNotBlank() }
+            val returnedWorkspace = frame.raw.opt("workspace_id") as? String
                 ?: return false
+            if (returnedWorkspace.isBlank()) return false
             if (!host.approvedWorkspaceId.isNullOrBlank() &&
                 returnedWorkspace != host.approvedWorkspaceId
             ) return false
