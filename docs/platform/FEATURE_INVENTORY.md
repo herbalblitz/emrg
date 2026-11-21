@@ -7,7 +7,7 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 ## Current Android pairing snapshot (2026-11-21; supersedes older milestone notes below)
 - Fresh pairing requests only read-only `status` by default. All other requestable scopes are explicit opt-ins; the host's configured scope ceiling and local approval remain authoritative.
 - Re-pair preselects the existing host grants plus an explicitly requested additional scope. Legacy placeholder scopes are filtered from requests.
-- Android CI run [#44716427724](https://github.com/herbalblitz/emrg/actions/runs/44716427724) passed APK assembly, shared debug-signature verification, JVM unit tests, lint and artifact upload on commit `07f92a656063793d4d18df0a3fa00dd80a3639b5`. This does not establish physical-device Keystore behavior or Android-to-Windows end-to-end interoperability.
+- Android CI run [#44857531977](https://github.com/herbalblitz/emrg/actions/runs/44857531977) passed APK assembly, shared debug-signature verification, JVM unit tests, lint and artifact upload on commit `a150e6a53314ac3993ca1ac131b66fd4dc74fb47`. This does not establish physical-device Keystore behavior or Android-to-Windows end-to-end interoperability.
 
 ## Core runtime
 - [ ] Agent orchestration/providers

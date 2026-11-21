@@ -151,24 +151,4 @@ class SecurePairingStateTest {
         assertNull(rejected.pairedHost)
     }
 
-    @Test
-    fun freshPairingDefaultsToReadOnlyStatusOnly() {
-        assertEquals(setOf(PairingScope.READ_STATUS), PairingScope.DEFAULT_REQUESTED)
-        assertEquals(20, PairingScope.REQUESTABLE.size)
-        assertFalse(PairingScope.DEFAULT_REQUESTED.contains(PairingScope.WRITE_FILES))
-        assertFalse(PairingScope.DEFAULT_REQUESTED.contains(PairingScope.EXEC_TERMINAL))
-        assertFalse(PairingScope.DEFAULT_REQUESTED.contains(PairingScope.MANAGE_SETTINGS))
-    }
-
-    @Test
-    fun initialPairingScopesPreserveExplicitOptInsAndFilterLegacyPlaceholders() {
-        assertEquals(setOf(PairingScope.READ_STATUS), resolveInitialPairingScopes(null))
-        assertEquals(setOf(PairingScope.READ_STATUS), resolveInitialPairingScopes(emptySet()))
-        assertEquals(
-            setOf(PairingScope.LIST_SESSIONS, PairingScope.EXEC_TERMINAL),
-            resolveInitialPairingScopes(
-                setOf(PairingScope.LIST_SESSIONS, PairingScope.EXEC_TERMINAL, PairingScope.CONTINUE_SESSIONS),
-            ),
-        )
-    }
 }

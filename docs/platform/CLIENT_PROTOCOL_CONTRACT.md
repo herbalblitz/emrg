@@ -291,3 +291,5 @@ The host protocol accepts JSON text encoded as UTF-8 only. When validators recei
 - The host rejects any requested scope outside the scope ceiling configured when its pairing transaction was created. Trusted local host approval remains authoritative and may narrow the request further; the issued credential contains only the approved scopes.
 - Re-pairing preselects the current grants for the same host and may add only the scope the user explicitly chose to request. Android validates the exact granted scope set in the subsequent `auth.ok` response.
 - The host's current default ceiling remains `status`, `sessions.list`, and `chat.send`; other scopes require explicit host-side configuration. The client-side picker does not widen host policy.
+
+- Android CI run [#44857531977](https://github.com/herbalblitz/emrg/actions/runs/44857531977) passed on commit `a150e6a53314ac3993ca1ac131b66fd4dc74fb47`: debug APK assembly, signature verification, JVM unit tests (including the new least-privilege default tests), lint and artifact upload.

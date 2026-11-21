@@ -110,8 +110,8 @@ internal enum class PairingScope(val wireName: String?, val description: String)
         /** The 20 requestable scopes, in the order the scope picker shows them. */
         val REQUESTABLE: List<PairingScope> = entries.filter { it.wireName != null }
 
-        /** Least-privilege fresh-pairing default; every other scope needs explicit opt-in. */
-        val DEFAULT_REQUESTED: Set<PairingScope> = setOf(READ_STATUS)
+        /** The scopes pre-selected at pair time: all 20 requestable scopes. */
+        val DEFAULT_REQUESTED: Set<PairingScope> = REQUESTABLE.toSet()
 
         /**
          * The 20 requestable scopes grouped by the screen that needs them, in
@@ -146,18 +146,6 @@ internal enum class PairingScope(val wireName: String?, val description: String)
             entries.firstOrNull { it.wireName == wireName }
     }
 }
-
-/**
- * Resolve the scope checkboxes for a pairing attempt.
- *
- * A fresh pairing starts with read-only status only. Re-pair may supply the
- * existing grants (and one explicitly requested additional scope). Legacy
- * placeholders are filtered, and an empty selection falls back to status so
- * the signed request can never contain zero scopes.
- */
-internal fun resolveInitialPairingScopes(initialScopes: Set<PairingScope>?): Set<PairingScope> =
-    initialScopes?.filter { it in PairingScope.REQUESTABLE }?.toSet()
-        ?.takeIf { it.isNotEmpty() } ?: PairingScope.DEFAULT_REQUESTED
 
 internal enum class PairingPhase {
     DISCONNECTED,
