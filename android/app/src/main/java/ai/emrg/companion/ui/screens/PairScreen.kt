@@ -29,7 +29,7 @@ import androidx.navigation.NavHostController
  * host's endpoint/fingerprint and pre-ticks the scopes it already granted
  * (plus [requestedScope] when the user came from a scope gate); the fresh
  * QR still supplies the new pairing transaction, and the existing pairing
- * stays live until the new one succeeds. A fresh pairing pre-ticks all 20.
+ * stays live until the new one succeeds. A fresh pairing pre-ticks read-only status only.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +44,7 @@ internal fun PairScreen(
     val isRePair = !prefillEndpoint.isNullOrBlank()
     // Pre-tick the known host's granted scopes (plus the scope the user came
     // to add) only when the prefill really is the paired host; otherwise the
-    // panel default (all 20) applies.
+    // panel default (read-only status) applies.
     val initialScopes: Set<PairingScope>? =
         if (isRePair && pairedHost != null && pairedHost!!.endpoint == prefillEndpoint) {
             val extra = requestedScope?.let { PairingScope.fromWireName(it) }

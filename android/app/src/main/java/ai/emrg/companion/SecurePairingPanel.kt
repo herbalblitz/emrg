@@ -54,7 +54,7 @@ internal fun SecurePairingPanel(
      */
     prefillEndpoint: String? = null,
     prefillFingerprint: String? = null,
-    /** Scopes pre-ticked when the panel opens; null = all 20 (DEFAULT_REQUESTED). */
+    /** Scopes pre-ticked when the panel opens; null = least-privilege status-only default. */
     initialScopes: Set<PairingScope>? = null,
     /**
      * True when re-pairing a host that is already connected: clearing a
@@ -78,15 +78,11 @@ internal fun SecurePairingPanel(
     var remoteStateText by remember { mutableStateOf("Not connected") }
     var statusText by remember { mutableStateOf("Scan or paste a host pairing v2 QR descriptor.") }
     var busy by remember { mutableStateOf(false) }
-    // Scopes this device asks the host for. Default: all 20 requestable scopes.
-    // The host grants only what it has enabled; asking for an ungranted scope
-    // fails pairing, so the host must enable a scope before it is ticked here.
-    // A re-pair may pass the host's currently granted scopes instead.
+    // Fresh pairing requests read-only status only. Additional capabilities are
+    // explicit opt-ins and must also fit within the host's configured scope grant.
+    // Re-pair can preselect the existing grants plus a scope the user chose to add.
     var selectedScopes by remember {
-        mutableStateOf(
-            initialScopes?.filter { it in PairingScope.REQUESTABLE }?.toSet()
-                ?.takeIf { it.isNotEmpty() } ?: PairingScope.DEFAULT_REQUESTED
-        )
+        mutableStateOf(resolveInitialPairingScopes(initialScopes))
     }
     // Ignore callbacks queued by an older QR transaction after reset or rescan.
     var transactionGeneration by remember { mutableStateOf(0) }
@@ -326,8 +322,9 @@ internal fun SecurePairingPanel(
             if (descriptorVersion == 2 && pairingId != null && state.phase == PairingPhase.AWAITING_HOST_VERIFICATION) {
                 Text("Scopes to request", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "The host must have enabled each scope first — requesting a scope " +
-                        "the host has not granted fails pairing. Default: all 20 scopes.",
+                    "Default: read-only status. Select only the capabilities this device needs. " +
+                        "The host must have enabled each selected scope; requesting a scope " +
+                        "outside its configured grant fails pairing.",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

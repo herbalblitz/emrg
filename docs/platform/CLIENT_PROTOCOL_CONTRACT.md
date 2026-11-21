@@ -282,3 +282,12 @@ The host serializes bounded JSON with `encode_server_frame`, which returns UTF-8
 ## JSON byte encoding regression
 
 The host protocol accepts JSON text encoded as UTF-8 only. When validators receive byte payloads, they decode strict UTF-8 before JSON parsing; UTF-16/UTF-32 payloads are rejected even though Python's generic JSON byte decoder can auto-detect those encodings. The existing frame-size limit is still measured against the original UTF-8 byte length. This applies to both the v1 authenticated client-frame validator and the separate v2 pairing-frame validator. Regression tests passed in Companion security CI run #44659155014 on Ubuntu and Windows.
+
+
+## Pairing scope-selection policy (2026-11-21)
+
+- A fresh Android pairing request defaults to the single read-only `status` scope. Other capabilities are explicit user opt-ins; terminal execution, file writes, settings, task/skill management and device administration are never preselected.
+- The Android client filters legacy placeholder scopes and never sends an empty scope set.
+- The host rejects any requested scope outside the scope ceiling configured when its pairing transaction was created. Trusted local host approval remains authoritative and may narrow the request further; the issued credential contains only the approved scopes.
+- Re-pairing preselects the current grants for the same host and may add only the scope the user explicitly chose to request. Android validates the exact granted scope set in the subsequent `auth.ok` response.
+- The host's current default ceiling remains `status`, `sessions.list`, and `chat.send`; other scopes require explicit host-side configuration. The client-side picker does not widen host policy.
