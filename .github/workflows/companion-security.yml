@@ -6,6 +6,11 @@ on:
     paths:
       - "emrg/server/companion_*.py"
       - "tests/test_companion_*.py"
+      - "emrg/gui/main.js"
+      - "emrg/gui/preload.js"
+      - "emrg/gui/test/**"
+      - "emrg/gui/package.json"
+      - "emrg/gui/package-lock.json"
       - "pyproject.toml"
       - "uv.lock"
       - "emrg/gui/renderer/**"
@@ -14,6 +19,11 @@ on:
     paths:
       - "emrg/server/companion_*.py"
       - "tests/test_companion_*.py"
+      - "emrg/gui/main.js"
+      - "emrg/gui/preload.js"
+      - "emrg/gui/test/**"
+      - "emrg/gui/package.json"
+      - "emrg/gui/package-lock.json"
       - "pyproject.toml"
       - "uv.lock"
       - "emrg/gui/renderer/**"
@@ -72,14 +82,18 @@ jobs:
 
   companion-gui:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: emrg/gui/renderer/package-lock.json
+      - name: Install Electron main-process test dependencies
+        working-directory: emrg/gui
+        run: npm ci --omit=dev
+      - name: Electron main/preload IPC tests
+        working-directory: emrg/gui
+        run: npm test
       - name: Install renderer dependencies
         working-directory: emrg/gui/renderer
         run: npm ci

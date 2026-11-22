@@ -4,17 +4,24 @@ Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-
 
 Target: preserve all original EMRG features while delivering robust Android and Windows experiences.
 
-## Verified implementation status (2026-11-20; supersedes older historical notes below)
+## Verified implementation status (2026-11-22; supersedes older historical notes below)
 - Android has a native Compose companion UI, QR/manual pairing descriptor flow, Android Keystore-backed device credentials, pinned WSS host authentication, and reconnect/refresh/disconnect state handling.
 - The Windows daemon has an opt-in dedicated WSS companion listener, local pairing approval UI/IPC, TLS identity provisioning, and QR descriptor display.
 - The currently implemented remote WSS operations are scope-gated per paired device: status, session listing/management, live chat (with approval round-trip), tool-activity monitoring, files read/write, terminal exec (capped at workspace-write unless the host opts a device into danger), and sandbox management. Pairing approval remains local to Windows.
 - The Android chat/session UI now talks to the live companion transport when paired with the granted scopes; DemoTransport remains only for previews/tests.
 - Fresh Android pairing defaults to the read-only `status` scope; additional capabilities require explicit selection, and the host-configured scope ceiling plus host-local approval remain authoritative. Re-pair preselects existing grants and any explicitly requested additional scope.
-- The current Electron CompanionPanel does not expose a scope-ceiling picker or per-request narrowing controls. Its runtime default ceiling remains `status`, `sessions.list`, and `chat.send`; other requestable scopes are not available through that UI until host-side configuration is added.
+- Electron CompanionPanel now exposes a host-selected scope ceiling for new pairings (the existing default remains `status`, `sessions.list`, and `chat.send`) and per-device approval narrowing. A new request defaults to `status` when requested, otherwise its first requested scope; the host must explicitly approve a non-empty subset. The Python runtime/local-control validators remain authoritative for canonical scopes and requested-set containment.
 - Latest verified Android workflow: [#44857531977](https://github.com/herbalblitz/emrg/actions/runs/44857531977) passed on commit `a150e6a53314ac3993ca1ac131b66fd4dc74fb47` (APK assembly, shared debug-signature verification, JVM unit tests, lint and artifact upload). This is CI evidence only, not physical-device or Android-to-Windows end-to-end validation.
 - Remaining release gates include physical Android↔Windows pairing/reconnect validation, Android Keystore device validation, Windows clean-machine install/upgrade/uninstall and lifecycle smoke tests, Gradle wrapper/reproducible builds, and parity work for chat/tools/providers/settings/memory/skills/scheduling/evolution/diagnostics.
 - Older notes later in this file describe earlier milestones and may say that the listener or transport was not yet implemented. Treat those statements as historical snapshots, not the current state.
 
+
+## Host scope configuration and approval UI (2026-11-22; CI verification pending)
+
+- The Electron host UI passes a bounded, explicit scope ceiling to `CompanionRuntime.start`; omission still preserves the prior three-scope default for older callers.
+- Each pending device request can be approved for a non-empty subset only. The UI preselects `status` when present (otherwise one requested scope), and the host service rejects any subset outside the signed request.
+- Main-process IPC accepts only the named fields and bounded unique scope arrays; the daemon's canonical 20-scope registry remains the allowlist authority.
+- Renderer and main/preload IPC regression tests were added. CI has not yet run for this commit.
 
 ## Companion remote-chat integration gate (verified 2026-11-20)
 

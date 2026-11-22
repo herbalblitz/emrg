@@ -972,15 +972,22 @@ vision = false
 
     ipcMain.handle("emrg:companionDecidePairing", async (event, payload = {}) => {
       assertCompanionRenderer(event);
-      if (!payload || typeof payload.pairingId !== "string" ||
+      if (!payload || typeof payload !== "object" || Array.isArray(payload) ||
+          Object.keys(payload).some(key => !["pairingId", "approved", "scopes"].includes(key)) ||
+          typeof payload.pairingId !== "string" ||
           !/^[A-Za-z0-9_-]{43}$/.test(payload.pairingId) ||
           typeof payload.approved !== "boolean") {
         throw new Error("invalid Companion approval decision");
       }
-      return companionLocalControl("pairing.decide", {
-        pairing_id: payload.pairingId,
-        approved: payload.approved,
-      });
+      if (payload.scopes !== undefined &&
+          (!Array.isArray(payload.scopes) || payload.scopes.length < 1 || payload.scopes.length > 20 ||
+           payload.scopes.some(scope => typeof scope !== "string" || scope.length > 64) ||
+           new Set(payload.scopes).size !== payload.scopes.length)) {
+        throw new Error("invalid Companion approval scopes");
+      }
+      const decision = { pairing_id: payload.pairingId, approved: payload.approved };
+      if (payload.scopes !== undefined) decision.scopes = payload.scopes;
+      return companionLocalControl("pairing.decide", decision);
     });
 
     ipcMain.handle("emrg:companionPairingQr", async (event, payload = {}) => {
@@ -993,17 +1000,29 @@ vision = false
 
     ipcMain.handle("emrg:companionListenerStart", async (event, payload = {}) => {
       assertCompanionRenderer(event);
-      if (!payload || typeof payload.bindAddress !== "string" ||
+      if (!payload || typeof payload !== "object" || Array.isArray(payload) ||
+          Object.keys(payload).some(key => !["bindAddress", "port", "cwd", "scopes"].includes(key)) ||
+          typeof payload.bindAddress !== "string" ||
           payload.bindAddress.length > 45 ||
           !Number.isInteger(payload.port) || payload.port < 1024 || payload.port > 65535 ||
           typeof payload.cwd !== "string" || payload.cwd.length < 1 || payload.cwd.length > 4096) {
         throw new Error("invalid Companion listener configuration");
       }
-      return companionLocalControl("listener.start", {
+      if (payload.scopes !== undefined &&
+          (!Array.isArray(payload.scopes) || payload.scopes.length < 1 || payload.scopes.length > 20 ||
+           payload.scopes.some(scope => typeof scope !== "string" || scope.length > 64) ||
+           new Set(payload.scopes).size !== payload.scopes.length)) {
+        throw new Error("invalid Companion listener scopes");
+      }
+      const request = {
         bind_address: payload.bindAddress,
         port: payload.port,
         cwd: payload.cwd,
-      });
+      };
+      // The daemon's canonical scope registry performs the authoritative
+      // allowlist check; this IPC layer enforces only a bounded array shape.
+      if (payload.scopes !== undefined) request.scopes = payload.scopes;
+      return companionLocalControl("listener.start", request);
     });
 
     ipcMain.handle("emrg:companionListenerStop", async (event) => {

@@ -4,11 +4,16 @@ Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-
 
 Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 
-## Current Android pairing snapshot (2026-11-21; supersedes older milestone notes below)
+## Current Android/Windows pairing snapshot (2026-11-22; supersedes older milestone notes below)
 - Fresh pairing requests only read-only `status` by default. All other requestable scopes are explicit opt-ins; the host's configured scope ceiling and local approval remain authoritative.
 - Re-pair preselects the existing host grants plus an explicitly requested additional scope. Legacy placeholder scopes are filtered from requests.
-- The current Electron CompanionPanel does not expose host scope-ceiling selection or per-request narrowing. Its default ceiling is `status`, `sessions.list`, and `chat.send`; other scopes are not available through that UI yet.
+- Electron CompanionPanel now exposes host scope-ceiling selection (default unchanged: `status`, `sessions.list`, `chat.send`) and per-request narrowing. Pending approvals default to `status` when requested, otherwise one requested scope; the host approves only a non-empty subset. Main-process IPC bounds the shape, while Python validates the canonical allowlist and requested-set containment.
 - Android CI run [#44857531977](https://github.com/herbalblitz/emrg/actions/runs/44857531977) passed APK assembly, shared debug-signature verification, JVM unit tests, lint and artifact upload on commit `a150e6a53314ac3993ca1ac131b66fd4dc74fb47`. This does not establish physical-device Keystore behavior or Android-to-Windows end-to-end interoperability.
+
+## Windows Companion scope controls (2026-11-22; CI verification pending)
+- [x] Host scope ceiling selection is wired from Electron UI through fixed IPC to the existing `CompanionRuntime.start(scopes=...)` contract; Python remains the canonical validator.
+- [x] Per-device approval UI sends a non-empty selected subset through `pairing.decide`; backend rejects scopes not requested by that device.
+- [x] Regression tests added for host ceiling forwarding, least-privilege per-device defaults, empty-selection rejection, and bounded named IPC payloads. GitHub Actions verification pending.
 
 ## Core runtime
 - [ ] Agent orchestration/providers

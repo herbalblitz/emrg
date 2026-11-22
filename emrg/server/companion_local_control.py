@@ -32,9 +32,10 @@ class CompanionLocalControlError(ValueError):
 class CompanionLocalControl:
     """Allow-listed, bounded operations over a host-owned pairing service.
 
-    No operation accepts a path, public key, credential, scope override, or
-    arbitrary method name. Approval decisions refer only to an immutable
-    pairing transaction already held by the host service.
+    No operation accepts a remote path, public key, credential, or arbitrary
+    method name. The sole scope selection is a host-local non-empty subset for
+    an existing pairing transaction; the canonical registry and requested-set
+    checks remain authoritative.
     """
 
     def __init__(self, host: CompanionHostService):

@@ -42,3 +42,17 @@ test("Companion preload has named methods only, no generic IPC bridge", () => {
   assert.match(PRELOAD, /companionListenerStop:\s*\(\) => ipcRenderer\.invoke\("emrg:companionListenerStop"\)/);
   assert.doesNotMatch(PRELOAD, /invoke:\s*\([^)]*channel/);
 });
+
+test("Companion IPC forwards only bounded explicit host and device scope selections", () => {
+  const start = MAIN.indexOf('ipcMain.handle("emrg:companionDecidePairing"');
+  const end = MAIN.indexOf('ipcMain.handle("emrg:listTasks"', start);
+  const block = MAIN.slice(start, end);
+  assert.match(block, /Object\.keys\(payload\)\.some\(key => !\["pairingId", "approved", "scopes"\]\.includes\(key\)\)/);
+  assert.match(block, /Object\.keys\(payload\)\.some\(key => !\["bindAddress", "port", "cwd", "scopes"\]\.includes\(key\)\)/);
+  assert.match(block, /payload\.scopes\.length > 20/);
+  assert.match(block, /new Set\(payload\.scopes\)\.size !== payload\.scopes\.length/);
+  assert.match(block, /decision\.scopes = payload\.scopes/);
+  assert.match(block, /request\.scopes = payload\.scopes/);
+  assert.match(block, /companionLocalControl\("pairing\.decide", decision\)/);
+  assert.match(block, /companionLocalControl\("listener\.start", request\)/);
+});
