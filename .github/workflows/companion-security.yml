@@ -93,6 +93,8 @@ jobs:
         run: npm ci --omit=dev
       - name: Electron main/preload IPC tests
         working-directory: emrg/gui
+        env:
+          EMRG_SKIP_INTEGRATION: "1"
         run: npm test
       - name: Install renderer dependencies
         working-directory: emrg/gui/renderer
@@ -106,3 +108,5 @@ jobs:
       - name: Renderer production build
         working-directory: emrg/gui/renderer
         run: npm run build
+      - name: Verify documented Node suite counts
+        run: python scripts/check-node-test-count.py

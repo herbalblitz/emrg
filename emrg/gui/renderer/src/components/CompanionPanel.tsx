@@ -206,8 +206,8 @@ export function CompanionPanel() {
           <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void refresh()}>Refresh</button>
         </div>
         <fieldset disabled={busy || Boolean(status?.listener_running)} style={{ marginTop: 12 }}>
-          <legend>Maximum scopes available to new pairings</legend>
-          <p className="hint">This is only the host ceiling, not an automatic grant. Each device must request scopes, and you approve a non-empty subset below.</p>
+          <legend>Scope ceiling for this pairing code</legend>
+          <p className="hint">This ceiling applies only to the pairing code created by this start action; it is not an automatic grant. The device must request scopes, and you approve a non-empty subset below.</p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             {SCOPE_OPTIONS.map(option => (
               <label key={option.id} style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>

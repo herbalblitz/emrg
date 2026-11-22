@@ -64,6 +64,7 @@ const EXPECTED_INVOKE_METHODS = [
   "companionStatus",
   "companionPendingPairings",
   "companionDecidePairing",
+  "companionPairingQr",
   "companionListenerStart",
   "companionListenerStop",
   "taskLimits",
