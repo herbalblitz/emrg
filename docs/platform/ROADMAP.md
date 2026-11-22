@@ -16,12 +16,12 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - Older notes later in this file describe earlier milestones and may say that the listener or transport was not yet implemented. Treat those statements as historical snapshots, not the current state.
 
 
-## Host scope configuration and approval UI (2026-11-22; CI verification pending)
+## Host scope configuration and approval UI (2026-11-22; CI #44979031932 passed)
 
 - The Electron host UI passes a bounded, explicit scope ceiling for the one-time pairing code returned by `CompanionRuntime.start`; omission still preserves the prior three-scope default for older callers.
 - Each pending device request can be approved for a non-empty subset only. The UI preselects `status` when present (otherwise one requested scope), and the host service rejects any subset outside the signed request.
 - Main-process IPC accepts only the named fields and bounded unique scope arrays; the daemon's canonical 20-scope registry remains the allowlist authority.
-- Renderer and main/preload IPC regression tests were added. CI has not yet run for this commit.
+- GitHub Actions #44979031932 passed: host security tests 427/427 on Ubuntu and 420 passed with 7 skipped on Windows; Electron main/preload suite 189 passed with 9 intentional skips; renderer 785/785 passed; TypeScript check, production build, and measured Node test-count guard passed.
 
 ## Companion remote-chat integration gate (verified 2026-11-20)
 

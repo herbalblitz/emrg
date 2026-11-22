@@ -10,10 +10,10 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 - Electron CompanionPanel now exposes host scope-ceiling selection for the one-time pairing code (default unchanged: `status`, `sessions.list`, `chat.send`) and per-request narrowing. Pending approvals default to `status` when requested, otherwise one requested scope; the host approves only a non-empty subset. Main-process IPC bounds the shape, while Python validates the canonical allowlist and requested-set containment.
 - Android CI run [#44857531977](https://github.com/herbalblitz/emrg/actions/runs/44857531977) passed APK assembly, shared debug-signature verification, JVM unit tests, lint and artifact upload on commit `a150e6a53314ac3993ca1ac131b66fd4dc74fb47`. This does not establish physical-device Keystore behavior or Android-to-Windows end-to-end interoperability.
 
-## Windows Companion scope controls (2026-11-22; CI verification pending)
+## Windows Companion scope controls (2026-11-22; CI #44979031932 passed)
 - [x] Host scope ceiling selection is wired from Electron UI through fixed IPC to the existing `CompanionRuntime.start(scopes=...)` contract; Python remains the canonical validator.
 - [x] Per-device approval UI sends a non-empty selected subset through `pairing.decide`; backend rejects scopes not requested by that device.
-- [x] Regression tests added for host ceiling forwarding, least-privilege per-device defaults, empty-selection rejection, and bounded named IPC payloads. GitHub Actions verification pending.
+- [x] Regression tests passed for host ceiling forwarding, least-privilege per-device defaults, empty-selection rejection, and bounded named IPC payloads. CI #44979031932: Ubuntu host 427 passed; Windows host 420 passed, 7 skipped; Electron main/preload 189 passed, 9 skipped; renderer 785 passed; TypeScript, production build and Node-count guard passed.
 
 ## Core runtime
 - [ ] Agent orchestration/providers
