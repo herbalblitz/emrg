@@ -4,10 +4,10 @@ Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-
 
 Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 
-## Current Android/Windows pairing snapshot (2026-11-22; supersedes older milestone notes below)
+## Current Android/Windows pairing snapshot (2026-11-23; supersedes older milestone notes below)
 - Fresh pairing requests only read-only `status` by default. All other requestable scopes are explicit opt-ins; the host's configured scope ceiling and local approval remain authoritative.
 - Re-pair preselects the existing host grants plus an explicitly requested additional scope. Legacy placeholder scopes are filtered from requests.
-- Electron CompanionPanel now exposes host scope-ceiling selection for the one-time pairing code (default unchanged: `status`, `sessions.list`, `chat.send`) and per-request narrowing. Pending approvals default to `status` when requested, otherwise one requested scope; the host approves only a non-empty subset. Main-process IPC bounds the shape, while Python validates the canonical allowlist and requested-set containment.
+- Electron CompanionPanel exposes host scope-ceiling selection for the one-time pairing code (default unchanged: `status`, `sessions.list`, `chat.send`) and per-request narrowing. Pending approvals default to `status` when requested, otherwise one requested scope; the host approves only a non-empty subset. Main-process IPC bounds the shape, while Python validates the canonical allowlist and requested-set containment.
 - Android CI run [#44857531977](https://github.com/herbalblitz/emrg/actions/runs/44857531977) passed APK assembly, shared debug-signature verification, JVM unit tests, lint and artifact upload on commit `a150e6a53314ac3993ca1ac131b66fd4dc74fb47`. This does not establish physical-device Keystore behavior or Android-to-Windows end-to-end interoperability.
 
 ## Windows Companion scope controls (2026-11-22; CI #44979031932 passed)
@@ -40,20 +40,21 @@ Source-tree audit inventory. Source-inspected does not mean runtime-tested.
 
 ## Android
 - [x] Native Kotlin/Compose scaffold with interactive mock chat, send/receive and demo/offline state (no real host connection).
-- [x] Transport interface includes stream callback; demo mock emits cancellable chunks; Compose renders interim text and Stop cancels request coroutine (CI passed in run `44239121243`). 
+- [x] Transport interface includes stream callback; demo mock emits cancellable chunks; Compose renders interim text and Stop cancels request coroutine (CI passed in run `44239121243`).
 - [x] Mock transport extracted with tests for demo response and transport failure fallback (CI passed)
 - [x] Chat state reducer tests include partial deltas, completion, cancellation preserving partial text and stale-response guards (CI passed in run `44239121243`).
 - [x] Activity saved-state snapshot restores chat messages/draft, caps saved history to 60, clears transient sending state.
 - [x] Device-local private SharedPreferences snapshot persists chat history/draft across app restarts; malformed snapshot falls back to fresh preview state (CI passed).
 - [x] Safe chat error fallback preserves coroutine cancellation (tests added; CI passed)
 - [x] CI workflow committed; debug APK build, lint, and unit tests passed in Actions for streaming integration run `44239121243` (`bc1d3bf2`); markdown renderer CI pending
-- [x] WSS client primitive with system TLS + pinned host certificate fingerprint, auth-envelope send, protocol/workspace-bound auth-success validation, chat-only scoped frame construction and connection generation guards; dedicated opt-in host WSS listener implements device authentication, scoped status and bounded read-only session metadata dispatch.
+- [x] WSS client primitive with system TLS + pinned host certificate fingerprint, auth-envelope send, protocol/workspace-bound auth-success validation, chat-only scoped frame construction and connection generation guards; dedicated opt-in host WSS listener implements device authentication and bounded scope-gated dispatch.
 - [x] Credential-safe QR descriptor parsing: WSS-only, strict allowlist, mandatory <=180-second expiry; endpoint query/user-info/fragment and invalid ports rejected.
 - [x] Electron CompanionPanel exposes explicit listener start/stop, QR display/copy, pending device approvals and approve/reject through guarded named IPC (renderer tests, TypeScript check and production build passed in CI #44659155014).
-- [ ] Registered-device revocation/management UI, Android authenticated status/session-list UI operations, physical-device Keystore validation and cross-platform end-to-end validation remain open.
-- [x] Android authenticated WSS client matches the host's `auth.ok` response and requires exact approved workspace/scopes (regression tests added; CI pending).
+- [x] Android Devices route lists registered devices and revokes other devices through `devices.list` / `devices.revoke` under `devices.manage`; self-revocation is hidden in the UI and rejected by the host. Request exceptions now map to a safe recoverable state, while coroutine cancellation is rethrown (JVM regression tests added; CI verification pending).
+- [ ] Windows-side registered-device registry UI, physical-device Keystore validation and Android-to-Windows end-to-end validation remain open.
+- [x] Android authenticated WSS client validates the host's `auth.ok` response and exact approved workspace/scopes (regression tests added; earlier Android CI passed; physical host interoperability remains unverified).
 - [x] Compose offline session UI: list/select/create/rename/delete, isolated per-session messages/drafts (CI passed).
-- [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI passed in run `44239121243`); no real daemon transport yet.
+- [x] Protocol frame parsing + request-stream state reducer for streaming/tool lifecycle/cancel/error/connection-loss (CI passed in run `44239121243`).
 - [x] Offline UI integration for response streaming, partial text display and Stop/cancel action (no live transport; CI passed in run `44239121243`).
 - [x] Tool Activity component wired into transient chat state and Compose rendering; lifecycle reducer tests added (CI pending; protocol events not yet connected to live transport).
 - [ ] Daemon session synchronization; tool approval UI
@@ -81,136 +82,62 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] WSS listener emits JSON text frames for auth/status/session/pairing responses; mock transport tests reject accidental binary frames (CI #44659155014: passed on Ubuntu and Windows).
 - [x] Registry same-instance thread serialization for credential issue/revoke/read; concurrent-issuance test added. Cross-process lock and Windows ACL hardening are open.
 - [x] Host TLS identity generation/persistence, protected TLS context loading, daemon-owned opt-in WSS lifecycle, and transaction-bound v2 QR descriptor creation are integrated in source; latest host security CI #44659155014: passed on Ubuntu and Windows.
-- [x] Trusted local React CompanionPanel approval/QR UI is wired through named IPC (renderer CI #44659155014: passed); [ ] registered-device management UI and Android-to-Windows live pairing E2E remain open.
+- [x] Trusted local React CompanionPanel approval/QR UI is wired through named IPC (renderer CI #44659155014: passed); [ ] Windows-side device-registry management UI and Android-to-Windows live pairing E2E remain open.
 
 ## Host TLS identity (implementation status)
-
 - [x] P-256 self-signed certificate generation, exact SAN host binding, SHA-256 fingerprint, bounded validity and certificate-purpose validation.
 - [x] Stable identity persistence; no silent regeneration on missing/corrupt state; explicit reset/rotation.
 - [x] Windows DPAPI-protected private key and POSIX restrictive file modes; atomic writes.
 - [x] TLS context loader, TLS 1.2 minimum, no socket creation; process-local provisioning/context lock.
 - [x] Python TLS identity tests cover persistence, corruption, SAN mismatch, key mismatch, atomicity, and DPAPI-backed key file selection (cross-platform CI previously passed).
-- [ ] Latest daemon runtime + QR v2 tests/CI and Windows DPAPI/ACL review remain open.
-- [ ] Android trust strategy for self-signed pins, local host UI confirmation, QR generation and live listener integration.
+- [ ] Windows DPAPI/ACL hardening review and physical-device Android Keystore validation remain open.
 
 ## Authentication replay defense
-
 - [x] Require client auth nonce minimum length 16 bytes.
 - [x] Add process-local per-device replay cache with 10-minute expiry, capacity bound and thread-safe atomic consume.
 - [x] Duplicate nonce and cache exhaustion reject authentication.
 - [ ] Decide restart persistence or challenge-response requirements and implement transport handshake before production listener.
 
 ## Companion TLS trust and auth nonce guard
-
 - [x] Android per-connection exact leaf SHA-256 pin trust manager supports pinned self-signed host certificates; validity dates are enforced during TLS handshake and default hostname verification remains active.
 - [x] Host fingerprint string is colon-delimited uppercase bytes for Android QR/parser compatibility.
 - [x] Host auth nonce is minimum 16 bytes and consumed once per device with bounded 10-minute process-local replay cache; capacity exhaustion fails closed.
-- [x] Android pinned-certificate trust and pairing transport build/JVM tests are covered by Android CI; [ ] trusted-local host approval UI, physical-device Keystore validation, and real host pairing E2E remain open.
+- [x] Android pinned-certificate trust and pairing transport build/JVM tests are covered by Android CI; [ ] physical-device Keystore validation and live host pairing E2E remain open.
 
 ## Host QR descriptor generation
-
 - [x] Generate Android-compatible, credential-free v1 pairing descriptor with WSS endpoint and SHA-256 pin.
 - [x] Reject endpoint host outside certificate SAN and invalid/insecure endpoint forms.
 - [x] Enforce QR expiry at no more than 180 seconds.
-- [x] Daemon runtime now starts an explicit IP-bound listener, opens a status-only Pairing v2 transaction, and returns a short-lived v2 QR descriptor containing the pairing ID; runtime tests are included in Companion Security CI.
-- [x] Integrate v2 descriptor display/copy and pending approval/rejection into the React CompanionPanel (renderer CI #44659155014: passed). [ ] Chat/session UI dispatch remains limited to the existing scoped read-only host operations.
-
+- [x] Daemon runtime starts an explicit IP-bound listener, opens a status-only Pairing v2 transaction, and returns a short-lived v2 QR descriptor containing the pairing ID; runtime tests are included in Companion Security CI.
+- [x] Integrate v2 descriptor display/copy and pending approval/rejection into React CompanionPanel (renderer CI #44659155014: passed).
 
 ## Companion listener safety primitives
-
 - [x] Host Companion defaults disabled; explicit enable gate protects pairing and auth entry points, and disable invalidates outstanding pairing transactions.
 - [x] Listener configuration validation rejects hostname/DNS inputs, wildcard binds, multicast/reserved addresses, privileged/out-of-range ports, and unbounded resource/timeout settings.
 - [x] Dedicated opt-in WSS listener binds only after explicit host enable; TLS context loads before bind, frame/connection/timeouts bounded, authentication required as first frame, stop closes clients, concurrent starts are rejected, and disable/stop during asynchronous bind closes the late server instead of resurrecting it.
 - [x] Host-service disable lifecycle observer stops the listener, closes active WSS clients and invalidates pending pairings; transport tests cover auth + scoped status and disable shutdown.
 - [x] Read-only `sessions.list` WSS dispatch uses the approved credential's stored workspace path (never a client-supplied cwd), requires the `sessions.list` scope and returns correlated, allowlisted metadata (max 200 records; bounded text and message counts); tests cover workspace binding, data redaction and unauthorized dispatch.
 - [x] Local pairing transaction bounds workspace/device/secret inputs, rejects malformed UTF-8 and invalid scope collections, and validates approval/cancellation IDs and strict boolean decisions; regression tests cover malformed inputs and one-time approval.
-- [ ] Chat dispatch into daemon runtime, authenticated Android status/session UI, and full end-to-end remain open.
-
-- [x] Active WSS device sessions revalidate the authenticated device's current registry authorization before each request; revocation and credential rotation invalidate existing connections, and registry read failures fail closed. Regression tests cover credential rotation on an already-open socket.
+- [x] Active WSS device sessions revalidate the authenticated device's current registry authorization before each request; revocation and credential rotation invalidate already-open connections, and registry read failures fail closed. Regression tests cover credential rotation on an already-open socket.
 - [x] WSS session listing returns only bounded, allowlisted metadata; local cwd, transcripts, and arbitrary meta fields are excluded.
 
-
 ## Trusted local Companion control bridge
-
 - [x] Daemon owns a disabled-by-default `CompanionHostService` and an allow-listed `CompanionLocalControl` facade; credential registry path is daemon-owned.
-- [x] Authenticated daemon command routes only `status`, `pairing.pending.list`, `pairing.decide`, and `pairing.cancel`; unknown operations and malformed payloads fail closed.
+- [x] Authenticated daemon command routes only status, pending pairing list, pairing decision and cancellation; unknown operations and malformed payloads fail closed.
 - [x] Electron Main exposes fixed status/pending/decision IPC handlers and validates primary BrowserWindow, top-level frame, and local `file://` origin.
 - [x] Preload exposes only named Companion methods; preload API contract test updated.
 - [x] Daemon owns explicit listener start/stop, TLS identity provisioning, and v2 QR descriptor generation; Electron Main/Preload expose fixed guarded lifecycle IPC methods.
 - [x] React renderer CompanionPanel implements explicit host start/stop, QR descriptor display/copy, pending approval list and approve/reject interactions (renderer CI #44659155014: passed).
-- [x] Static Electron IPC tests cover the primary top-level local renderer guard for status, approval, and listener lifecycle handlers; daemon tests cover listener start/stop routing.
-- [ ] Full Electron↔daemon runtime tests, registered-device revoke UI, physical Android Keystore checks, and live Android-to-Windows pairing remain open. This is not yet a completed end-to-end pairing implementation.
+- [x] Android Devices screen lists/revokes registered devices using the `devices.manage` scope and two-step confirmation; host rejects self-revoke and audit-logs decisions.
+- [ ] Full Electron↔daemon runtime tests, Windows device-registry UI, physical Android Keystore checks and live Android-to-Windows pairing remain open. This is not yet a completed end-to-end pairing implementation.
 
 ## Pairing v2 host transaction core
-
-- [x] Host trusted-local pending v2 approval listing is bounded to display/decision metadata and SHA-256 public-key fingerprint; tests assert raw public key, client nonce, challenge bytes, and issued credential are not exposed, and redeemed transactions leave the pending queue. Companion security CI #182: passed on Ubuntu and Windows.
-
+- [x] Host trusted-local pending v2 approval listing is bounded to display/decision metadata and SHA-256 public-key fingerprint; tests assert raw public key, client nonce, challenge bytes, and issued credential are not exposed, and redeemed transactions leave the pending queue.
 - [x] Transport-independent Ed25519 device-key-bound pairing transaction with host-local approval, signed challenge fields, one-time redemption, bounded lifetime and host-service lifecycle hooks.
 - [x] Unit tests cover approval gating, device/key proof binding, wrong-device and wrong-signature rejection, duplicate request/approval, expiry, cancellation and credential scope issuance.
-- [x] Added `tests/test_companion_pairing_v2.py` to the companion-security workflow's explicit pytest invocation; CI run [#111](https://github.com/herbalblitz/emrg/actions/runs/44447348538) passed with the initial five v2 tests, then CI run [#112](https://github.com/herbalblitz/emrg/actions/runs/44447421797) passed with all seven tests, including concurrent one-time redemption and the 32-entry pending-cap/cancel-all regression.
-- [x] Android WSS request/redeem flow, device-key proof, coordinator validation, and encrypted credential persistence are integrated in the Android pairing path. The host trusted-local approval UI and cross-platform end-to-end validation remain open.
-
+- [x] Pairing v2 tests run explicitly in Companion Security CI #112; the run passed all seven tests including concurrent one-time redemption and pending-cap/cancel-all regression.
 
 ## Android encrypted credential envelope
-
-- [x] Replaced permissive envelope parsing with strict canonical standard-Base64 validation; exact separator count, 12-byte IV and minimum 16-byte AES-GCM ciphertext are enforced.
-- [x] Added platform-independent JVM regression tests for canonical round-trip, malformed separators/whitespace, invalid lengths and noncanonical Base64.
-- [x] Android Companion CI #206: passed APK assembly, unit tests, lint and artifact upload.
-- [ ] Validate actual Android Keystore encryption/decryption and key deletion on supported physical Android devices; JVM CI does not exercise the platform Keystore provider.
-
-
-### Android credential issuance and persistence bounds
-
-- [x] Enforce the host registry's 512-byte UTF-8 credential maximum at the Android coordinator and encrypted store boundary.
-- [x] Explicitly require randomized AES-GCM encryption in the Android Keystore key specification.
-- [x] Add JVM boundary tests for blank, exact-limit, oversized ASCII, multibyte UTF-8, and no-persistence-on-rejection cases.
-- [ ] Await Android CI for source/test commits `f137081b` through `69ca6a82`; the queued latest run must pass before this slice is CI-verified.
-- [ ] Exercise real Android Keystore put/get/delete on supported physical devices.
-
-
-## Pairing v2 Android WSS transport status (2026-11-19)
-
-- [x] One-shot Android WSS exchange primitive uses the QR-pinned TLS leaf certificate before sending the Pairing v2 request or redeem frame.
-- [x] Response envelope is size-bounded and correlated to pairing ID, expected response type, and device ID for credential issuance.
-- [x] JVM regression tests and Android CI #267: passed on commit `2fbdf7d0d92c` (APK assembly, unit tests, lint, artifact upload).
-- [x] Production Android-side integration with `PairingV2Client`, `SecurePairingCoordinator`, host challenge/redeem lifecycle, and QR UI is present in source. This does not establish a completed end-to-end pairing.
-- [ ] Physical-device Android Keystore validation and full Android-to-Windows host integration remain open.
-
-## Pairing v2 Android integration status (2026-11-19)
-
-Implemented in source:
-- `PairingV2Flow` composes the signed Pairing v2 client with the pinned WSS exchange and exposes immutable transport identity metadata.
-- `PairingV2SessionController` validates that QR/session metadata (WSS endpoint, TLS fingerprint, pairing ID, device ID, and scopes) exactly matches the transport that created the signed request.
-- Host-local approval remains the only approval authority. A generic unavailable response leaves Android in `AWAITING_HOST_APPROVAL`; retry reuses the exact signed redeem frame.
-- A credential is reported as paired only after a valid host credential response is accepted by the coordinator and secure credential storage succeeds.
-- The current QR panel requests only the read-only `status` scope. `chat.send` is intentionally not enabled.
-
-Not yet complete:
-- QR scanner/panel is wired to `PairingV2SessionController` with explicit fingerprint confirmation and lifecycle-safe cancellation/retry.
-- No physical-device Android Keystore validation or Android ↔ Windows end-to-end pairing has been completed.
-- The panel currently requests only read-only `status`; authenticated status/session-list UI operations and remote chat/tool execution remain unavailable.
-
-
-## Pairing v2 UI integration status (2026-11-19)
-
-`SecurePairingPanel.kt` now connects the QR camera/paste flow to the v2 descriptor parser and `PairingV2SessionController`. It presents the endpoint and host SHA-256 fingerprint for explicit confirmation, then drives the challenge, signed proof, manual retry, and paired callback lifecycle. The active exchange is cancelled when the panel leaves composition. The host's trusted-local approval remains authoritative.
-
-Verification: Android CI run `44503538472` on commit `7df4eeb924e7a36e55b653e4ab77ddefa4a7c6de` passed APK assembly, JVM unit tests, lint, and APK artifact upload.
-
-Still not verified: physical-device Android Keystore behavior, a real Windows-host QR/approval/WSS/credential end-to-end flow, and live status/session-list UI operations. The current panel requests only `status`; chat sending and tool execution are not enabled by this work. A successful CI build is not evidence of device or cross-platform runtime validation.
-
-
-### Android pairing retry and callback lifecycle hardening (2026-11-19)
-
-- Pairing challenge retries now retransmit the exact original request frame and client nonce; the host returns the original challenge only for an exact match.
-- The pairing panel ignores callbacks queued by an older QR transaction after reset or rescan, preventing stale network responses from replacing the current UI state.
-- Android workflow run `44508660928` passed APK assembly, unit tests, lint, and artifact upload for the retry-frame change. Run `44509690853` also passed APK assembly, unit tests, lint, and artifact upload for stale-callback isolation (`0a587371540cb8c49072cd1b063fad160605712e`).
-- Remaining validation: physical Android Keystore/device test and live Windows-host pairing end-to-end test.
-
-
-### Pairing state concurrency regression follow-up (2026-11-19)
-
-- [x] Synchronize coordinator state reads with reducer/store writes.
-- [x] Read pairing retry eligibility and failure code from one immutable coordinator snapshot.
-- [x] Add concurrent duplicate-credential callback regression coverage; CI verification is pending for the test-only follow-up commit.
-- [ ] Physical Android Keystore validation and real Windows-host pairing end-to-end validation.
+- [x] Strict canonical standard-Base64 validation, exact separator count, 12-byte IV and minimum 16-byte AES-GCM ciphertext.
+- [x] JVM regression tests cover canonical round-trip, malformed separators/whitespace, invalid lengths and noncanonical Base64.
+- [ ] Validate actual Android Keystore encryption/decryption and key deletion on supported physical devices.

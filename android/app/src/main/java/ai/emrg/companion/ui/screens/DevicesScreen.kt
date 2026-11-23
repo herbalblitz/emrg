@@ -66,33 +66,44 @@ internal fun DevicesScreen(connection: CompanionConnection, navController: NavHo
         pendingRevoke = null
         loading = true
         scope.launch {
-            val requestId = UUID.randomUUID().toString()
-            val frame = connection.request(requestId) { connection.sendDevicesList(requestId) }
-            loading = false
-            when {
-                frame == null -> error = "Could not reach the host (not connected, or devices.manage not granted)."
-                frame.type == "error" -> error = frame.userErrorMessage()
-                else -> {
-                    val daemonError = frame.raw.optString("error").takeIf { it.isNotBlank() }
-                    if (daemonError != null) {
-                        error = daemonError
-                    } else {
-                        devices = frame.resultObjects("entries", "devices").mapNotNull { row ->
-                            val id = row.optNonBlank("device_id") ?: return@mapNotNull null
-                            val scopesArray = row.optJSONArray("scopes")
-                            RemoteDevice(
-                                deviceId = id,
-                                workspaceId = row.optNonBlank("workspace_id").orEmpty(),
-                                scopes = scopesArray?.let { array ->
-                                    (0 until array.length()).mapNotNull {
-                                        array.optString(it).takeIf { s -> s.isNotBlank() }
+            try {
+                val requestId = UUID.randomUUID().toString()
+                when (val outcome = runDeviceRequest {
+                    connection.request(requestId) { connection.sendDevicesList(requestId) }
+                }) {
+                    is DeviceRequestResult.Success -> {
+                        val frame = outcome.value
+                        when {
+                            frame == null -> error = "Could not reach the host (not connected, or devices.manage not granted)."
+                            frame.type == "error" -> error = frame.userErrorMessage()
+                            else -> {
+                                val daemonError = frame.raw.optString("error").takeIf { it.isNotBlank() }
+                                if (daemonError != null) {
+                                    error = daemonError
+                                } else {
+                                    devices = frame.resultObjects("entries", "devices").mapNotNull { row ->
+                                        val id = row.optNonBlank("device_id") ?: return@mapNotNull null
+                                        val scopesArray = row.optJSONArray("scopes")
+                                        RemoteDevice(
+                                            deviceId = id,
+                                            workspaceId = row.optNonBlank("workspace_id").orEmpty(),
+                                            scopes = scopesArray?.let { array ->
+                                                (0 until array.length()).mapNotNull {
+                                                    array.optString(it).takeIf { s -> s.isNotBlank() }
+                                                }
+                                            }.orEmpty(),
+                                            revoked = row.optBoolean("revoked"),
+                                        )
                                     }
-                                }.orEmpty(),
-                                revoked = row.optBoolean("revoked"),
-                            )
+                                }
+                            }
                         }
                     }
+                    DeviceRequestResult.Failed -> error = DEVICE_REQUEST_FAILURE_MESSAGE
                 }
+            } finally {
+                // Also runs when the screen's coroutine is cancelled.
+                loading = false
             }
         }
     }
@@ -103,16 +114,23 @@ internal fun DevicesScreen(connection: CompanionConnection, navController: NavHo
         result = null
         scope.launch {
             val requestId = UUID.randomUUID().toString()
-            val frame = connection.request(requestId) { connection.sendDevicesRevoke(requestId, deviceId) }
-            when {
-                frame == null -> error = "Could not reach the host (not connected, or devices.manage not granted)."
-                frame.type == "error" -> error = frame.userErrorMessage()
-                else -> {
-                    val revoked = frame.optResultBoolean("revoked") == true
-                    result = if (revoked) "Revoked device $deviceId."
-                    else "Host did not confirm the revocation of $deviceId."
-                    refresh()
+            when (val outcome = runDeviceRequest {
+                connection.request(requestId) { connection.sendDevicesRevoke(requestId, deviceId) }
+            }) {
+                is DeviceRequestResult.Success -> {
+                    val frame = outcome.value
+                    when {
+                        frame == null -> error = "Could not reach the host (not connected, or devices.manage not granted)."
+                        frame.type == "error" -> error = frame.userErrorMessage()
+                        else -> {
+                            val revoked = frame.optResultBoolean("revoked") == true
+                            result = if (revoked) "Revoked device $deviceId."
+                            else "Host did not confirm the revocation of $deviceId."
+                            refresh()
+                        }
+                    }
                 }
+                DeviceRequestResult.Failed -> error = DEVICE_REQUEST_FAILURE_MESSAGE
             }
         }
     }
