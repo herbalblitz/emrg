@@ -1,17 +1,12 @@
 package ai.emrg.companion
 
 import android.content.Context
-import kotlinx.coroutines.async
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 /**
@@ -107,21 +102,7 @@ internal class CompanionConnection(context: Context) {
         requestId: String,
         timeoutMs: Long = 30_000,
         send: () -> Boolean,
-    ): ProtocolFrame? = coroutineScope {
-        val waiting = async(start = CoroutineStart.UNDISPATCHED) {
-            withTimeoutOrNull(timeoutMs) {
-                frames.first {
-                    it.requestId == requestId &&
-                        (it.type?.endsWith(".result") == true || it.type == "error")
-                }
-            }
-        }
-        if (!send()) {
-            waiting.cancel()
-            return@coroutineScope null
-        }
-        waiting.await()
-    }
+    ): ProtocolFrame? = awaitCompanionReply(frames, requestId, timeoutMs, send)
 
     // ── Typed sends, one per frozen-contract frame. Each delegates to the socket,
     // which enforces authentication + its scope gate before anything is sent. ──
