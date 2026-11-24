@@ -4,7 +4,7 @@ Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-
 
 Target: preserve all original EMRG features while delivering robust Android and Windows experiences.
 
-## Verified implementation status (2026-11-23; supersedes older historical notes below)
+## Verified implementation status (2026-11-24; supersedes older historical notes below)
 - Android has a native Compose companion UI, QR/manual pairing descriptor flow, Android Keystore-backed device credentials, pinned WSS host authentication, and reconnect/refresh/disconnect state handling.
 - The Windows daemon has an opt-in dedicated WSS companion listener, local pairing approval UI/IPC, TLS identity provisioning, and QR descriptor display.
 - The currently implemented remote WSS operations are scope-gated per paired device: status, session listing/management, live chat (with approval round-trip), tool-activity monitoring, files read/write, terminal exec (capped at workspace-write unless the host opts a device into danger), sandbox management, and device listing/revocation. Pairing approval remains local to Windows.
