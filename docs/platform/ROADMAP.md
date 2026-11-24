@@ -11,14 +11,19 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - Android chat/session and device-management screens use the live companion transport only when paired with the corresponding granted scopes; DemoTransport remains for previews/tests.
 - Fresh Android pairing defaults to the read-only `status` scope; additional capabilities require explicit selection, and the host-configured scope ceiling plus host-local approval remain authoritative. Re-pair preselects existing grants and any explicitly requested additional scope.
 - Electron CompanionPanel exposes a host-selected scope ceiling for the pairing code created by each listener start (default remains `status`, `sessions.list`, and `chat.send`) and per-device approval narrowing. The Python runtime/local-control validators remain authoritative for canonical scopes and requested-set containment.
-- Latest verified Android workflow remains [#44857531977](https://github.com/herbalblitz/emrg/actions/runs/44857531977), which passed APK assembly, shared debug-signature verification, JVM unit tests, lint and artifact upload on commit `a150e6a53314ac3993ca1ac131b66fd4dc74fb47`. This is CI evidence only, not physical-device or Android-to-Windows end-to-end validation.
+- Latest verified Android workflow is [#45102656004](https://github.com/herbalblitz/emrg/actions/runs/45102656004), which passed APK assembly, shared debug-signature verification, JVM unit tests, lint and artifact upload on commit `b76cfcb5f7a470cc5f57533649eb66c07e90f7db`. This includes the device-request safety tests. The newer request-correlation/cancellation test increment on `c99b2b3bb19cc0f8742056762f56bfb12361e0b7` is awaiting its own CI run. CI evidence is not physical-device or Android-to-Windows end-to-end validation.
 - Remaining release gates include physical Android↔Windows pairing/reconnect validation, Android Keystore device validation, Windows clean-machine install/upgrade/uninstall and lifecycle smoke tests, Gradle wrapper/reproducible builds, and parity work for chat/tools/providers/settings/memory/skills/scheduling/evolution/diagnostics.
 - Older notes later in this file describe earlier milestones and may say that the listener or transport was not yet implemented. Treat those statements as historical snapshots, not the current state.
 
-## Android device-management request reliability (2026-11-23; CI verification pending)
+## Android device-management request reliability (2026-11-23; CI #45102656004 passed)
 - Source review found that `DevicesScreen` awaited `CompanionConnection.request` without an exception boundary. An ordinary transport/request exception could escape the Compose coroutine and leave the refresh indicator stuck.
 - Added a small request-outcome helper that converts ordinary exceptions into a generic recoverable UI failure, without displaying raw exception details. `CancellationException` is deliberately rethrown so navigation/lifecycle cancellation is not misreported as a host failure.
-- Added JVM tests for success, ordinary transport failure and cancellation propagation. The wire protocol, device authorization and host-side revocation semantics are unchanged.
+- Added JVM tests for success, ordinary transport failure and cancellation propagation. GitHub Actions #45102656004 passed APK assembly, shared-signature verification, JVM unit tests, lint and artifact upload on `b76cfcb5f7a470cc5f57533649eb66c07e90f7db`. The wire protocol, device authorization and host-side revocation semantics are unchanged.
+
+## Android request correlation and lifecycle test seam (2026-11-24; CI pending)
+- Extracted the shared request/reply wait from `CompanionConnection.request` into `awaitCompanionReply`, retaining subscribe-before-send behavior and the existing request-ID plus terminal-frame matching rule.
+- Added JVM tests for unrelated/progress-frame filtering, matching result/error replies, send refusal, timeout, parent cancellation and send-exception cleanup.
+- This is a transport-neutral test seam only: it does not change WSS frames, authorization, retry policy or remote operations. CI for commit `c99b2b3bb19cc0f8742056762f56bfb12361e0b7` is pending; no local Gradle run is available.
 
 ## Host scope configuration and approval UI (2026-11-22; CI #44979031932 passed)
 
