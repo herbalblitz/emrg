@@ -22,6 +22,8 @@ internal class CompanionConnection(context: Context) {
     private val credentialStore = AndroidKeystoreCredentialStore(context.applicationContext)
 
     private val _state = MutableStateFlow(RemoteSocketState.CLOSED)
+    // Monotonic request epoch invalidates in-flight replies on disconnect/reconnect.
+    private val _requestEpoch = MutableStateFlow(0L)
     val state: StateFlow<RemoteSocketState> = _state.asStateFlow()
 
     private val _pairedHost = MutableStateFlow<PairedHost?>(null)
@@ -49,6 +51,9 @@ internal class CompanionConnection(context: Context) {
         credentialStore = credentialStore,
         listener = object : RemoteSocketListener {
             override fun onState(state: RemoteSocketState, safeMessage: String?) {
+                if (_state.value == RemoteSocketState.AUTHENTICATED && state != RemoteSocketState.AUTHENTICATED) {
+                    _requestEpoch.value += 1
+                }
                 _state.value = state
                 if (state == RemoteSocketState.AUTHENTICATED) {
                     refreshStatusAndSessions()
@@ -73,11 +78,14 @@ internal class CompanionConnection(context: Context) {
 
     /** Open (or re-open) the pinned socket for an already-paired host. */
     fun connect(host: PairedHost) {
+        // Invalidate requests from the previous socket before opening a new attempt.
+        _requestEpoch.value += 1
         _pairedHost.value = host
         socket.connect(host)
     }
 
     fun disconnect() {
+        _requestEpoch.value += 1
         socket.close()
         _state.value = RemoteSocketState.CLOSED
     }
@@ -102,7 +110,10 @@ internal class CompanionConnection(context: Context) {
         requestId: String,
         timeoutMs: Long = 30_000,
         send: () -> Boolean,
-    ): ProtocolFrame? = awaitCompanionReply(frames, requestId, timeoutMs, send)
+    ): ProtocolFrame? {
+        val expectedEpoch = _requestEpoch.value
+        return awaitCompanionReply(frames, requestId, timeoutMs, _requestEpoch, expectedEpoch, send)
+    }
 
     // ── Typed sends, one per frozen-contract frame. Each delegates to the socket,
     // which enforces authentication + its scope gate before anything is sent. ──
