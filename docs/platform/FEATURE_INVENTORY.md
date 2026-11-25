@@ -142,3 +142,10 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Strict canonical standard-Base64 validation, exact separator count, 12-byte IV and minimum 16-byte AES-GCM ciphertext.
 - [x] JVM regression tests cover canonical round-trip, malformed separators/whitespace, invalid lengths and noncanonical Base64.
 - [ ] Validate actual Android Keystore encryption/decryption and key deletion on supported physical devices.
+
+## Android request lifecycle reliability (2026-11-25)
+
+- [x] `CompanionConnection` tracks a request epoch and invalidates in-flight reply waits when the authenticated socket disconnects, is explicitly closed, or is replaced by a reconnect attempt.
+- [x] Correlated request helper cancels and joins reply/epoch collectors on all exit paths; late replies from an invalidated connection cannot complete the pending request after the epoch change.
+- [x] JVM regression coverage includes connection-epoch invalidation and late reply rejection, plus existing matching request ID, terminal error/result, refusal, timeout, parent cancellation and send-exception cleanup cases.
+- [ ] Verification of these newest changes is pending Android CI run [#45536141997](https://github.com/herbalblitz/emrg/actions/runs/45536141997). The preceding run [#45315108466](https://github.com/herbalblitz/emrg/actions/runs/45315108466) passed APK assembly/signature verification but had 1 failing unit test; lint did not run. No local Gradle build was available in this execution environment.
