@@ -31,6 +31,7 @@ internal suspend fun awaitCompanionReply(
     send: () -> Boolean,
 ): ProtocolFrame? = coroutineScope {
     require(timeoutMs > 0) { "timeout must be positive" }
+    if (connectionEpoch.value != expectedEpoch) return@coroutineScope null
 
     val waiting = async(start = CoroutineStart.UNDISPATCHED) {
         withTimeoutOrNull(timeoutMs) {
@@ -45,7 +46,7 @@ internal suspend fun awaitCompanionReply(
     }
 
     try {
-        if (!send()) return@coroutineScope null
+        if (connectionEpoch.value != expectedEpoch || !send()) return@coroutineScope null
         select<ProtocolFrame?> {
             // Prefer invalidation if a disconnect and a late frame become ready together.
             invalidated.onAwait { null }
