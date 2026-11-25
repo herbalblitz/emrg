@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -100,6 +101,22 @@ class CompanionRequestTest {
         assertTrue(frames.tryEmit(frame("status.result", "disconnected")))
 
         assertNull(request.await())
+        assertEquals(0, frames.subscriptionCount.value)
+    }
+
+    @Test
+    fun alreadyInvalidatedEpochDoesNotSend() = runTest {
+        val frames = MutableSharedFlow<ProtocolFrame>(extraBufferCapacity = 1)
+        val epoch = MutableStateFlow(2L)
+        var sendCalled = false
+
+        val reply = awaitCompanionReply(frames, "stale", 1_000, epoch, 1L) {
+            sendCalled = true
+            true
+        }
+
+        assertNull(reply)
+        assertFalse(sendCalled)
         assertEquals(0, frames.subscriptionCount.value)
     }
 
