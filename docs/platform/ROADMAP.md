@@ -84,3 +84,10 @@ Implementation decision: do not enable or dispatch `chat.send` until the submiss
 - [x] Record protocol/documentation transport mismatch.
 - [x] Correct protocol.py module documentation to state that it models JSON payloads, not transport framing.
 - [x] Android protocol JSON fixtures + Kotlin frame parser tests for malformed/optional/unknown frames, streaming, tool lifecycle and terminal events (CI passed run 44239121243).
+
+## Android request invalidation on connection changes (2026-11-25)
+
+- `CompanionConnection` now maintains a monotonic request epoch. Explicit connect/disconnect and a transition from authenticated to a non-authenticated socket state invalidate requests that were started on the previous connection.
+- `awaitCompanionReply` subscribes to the correlated reply stream and epoch before sending. It returns `null` when the epoch changes, prefers invalidation over a late reply if both become ready together, and cancels/joins both collectors on success, refusal, timeout, send exception, or parent cancellation.
+- JVM tests cover disconnect/reconnect invalidation and a late same-request-ID reply, in addition to request correlation, timeout, refusal, cancellation and send-exception cleanup.
+- CI run [#45315108466](https://github.com/herbalblitz/emrg/actions/runs/45315108466) on the preceding request-test commit completed with APK assembly and signature verification passed, but 1 of 193 unit tests failed in the send-exception cleanup case; lint was skipped. The fix and epoch tests are in the latest code commits. Android CI rerun [#45536141997](https://github.com/herbalblitz/emrg/actions/runs/45536141997) was still running when this snapshot was written; do not mark the new tests as passed until it completes.
