@@ -51,10 +51,12 @@ internal class CompanionConnection(context: Context) {
         credentialStore = credentialStore,
         listener = object : RemoteSocketListener {
             override fun onState(state: RemoteSocketState, safeMessage: String?) {
-                if (_state.value == RemoteSocketState.AUTHENTICATED && state != RemoteSocketState.AUTHENTICATED) {
-                    _requestEpoch.value += 1
+                synchronized(this@CompanionConnection) {
+                    if (_state.value == RemoteSocketState.AUTHENTICATED && state != RemoteSocketState.AUTHENTICATED) {
+                        _requestEpoch.value += 1
+                    }
+                    _state.value = state
                 }
-                _state.value = state
                 if (state == RemoteSocketState.AUTHENTICATED) {
                     refreshStatusAndSessions()
                 }
@@ -77,6 +79,7 @@ internal class CompanionConnection(context: Context) {
     )
 
     /** Open (or re-open) the pinned socket for an already-paired host. */
+    @Synchronized
     fun connect(host: PairedHost) {
         // Invalidate requests from the previous socket before opening a new attempt.
         _requestEpoch.value += 1
@@ -84,6 +87,7 @@ internal class CompanionConnection(context: Context) {
         socket.connect(host)
     }
 
+    @Synchronized
     fun disconnect() {
         _requestEpoch.value += 1
         socket.close()
@@ -112,7 +116,13 @@ internal class CompanionConnection(context: Context) {
         send: () -> Boolean,
     ): ProtocolFrame? {
         val expectedEpoch = _requestEpoch.value
-        return awaitCompanionReply(frames, requestId, timeoutMs, _requestEpoch, expectedEpoch, send)
+        return awaitCompanionReply(frames, requestId, timeoutMs, _requestEpoch, expectedEpoch) {
+            // Serialize the epoch check + send with connect/disconnect. A request
+            // captured on an old socket must never be sent through a newly paired one.
+            synchronized(this) {
+                _requestEpoch.value == expectedEpoch && send()
+            }
+        }
     }
 
     // ── Typed sends, one per frozen-contract frame. Each delegates to the socket,
