@@ -8,7 +8,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.selects.onAwait
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -48,7 +47,7 @@ internal suspend fun awaitCompanionReply(
     try {
         if (connectionEpoch.value != expectedEpoch || !send()) return@coroutineScope null
         select<ProtocolFrame?> {
-            // Prefer invalidation if a disconnect and a late frame become ready together.
+            // Deferred exposes onAwait directly; no separate extension import is needed.
             invalidated.onAwait { null }
             waiting.onAwait { reply ->
                 if (connectionEpoch.value == expectedEpoch) reply else null
