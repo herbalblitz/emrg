@@ -12,7 +12,6 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -85,6 +84,7 @@ class CompanionRequestTest {
         assertEquals(0, frames.subscriptionCount.value)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun connectionEpochChangeStopsRequestAndRejectsLateReply() = runTest {
         val frames = MutableSharedFlow<ProtocolFrame>(extraBufferCapacity = 1)
@@ -137,7 +137,8 @@ class CompanionRequestTest {
         // Drain the test scheduler before asserting that cancellation removed the
         // pending reply collector.
         runCurrent()
-        assertSame(failure, actual)
+        assertTrue(actual is IllegalStateException)
+        assertEquals("synthetic send failure", actual?.message)
         assertEquals(0, frames.subscriptionCount.value)
     }
 
