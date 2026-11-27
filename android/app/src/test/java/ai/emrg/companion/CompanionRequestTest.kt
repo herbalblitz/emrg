@@ -120,6 +120,7 @@ class CompanionRequestTest {
         assertEquals(0, frames.subscriptionCount.value)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun sendExceptionPropagatesAndCancelsThePendingCollector() = runTest {
         val frames = MutableSharedFlow<ProtocolFrame>(extraBufferCapacity = 1)
@@ -132,6 +133,10 @@ class CompanionRequestTest {
             error
         }
 
+        // SharedFlow publishes subscription-count changes through its StateFlow.
+        // Drain the test scheduler before asserting that cancellation removed the
+        // pending reply collector.
+        runCurrent()
         assertSame(failure, actual)
         assertEquals(0, frames.subscriptionCount.value)
     }
