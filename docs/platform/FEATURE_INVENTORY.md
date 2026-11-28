@@ -2,7 +2,7 @@
 
 - [x] Host-service observers fire after successful v1/v2 credential issuance or reissue and revocation, outside the lifecycle lock.
 - [x] WSS listener tracks authenticated sockets by device ID and closes all sockets for a changed credential with policy close code 1008; request-time identity checks remain enabled.
-- [x] Regression coverage includes v1 redemption/revocation callbacks, v2 redemption callback and immediate closure of an idle authenticated socket after revocation. GitHub Actions #46097140748 passed the host tests on Ubuntu (429 passed) and Windows (422 passed, 7 skipped); the GUI test/typecheck/build steps passed, with the final Node suite-count guard still in progress at last check.
+- [x] Regression coverage includes v1 redemption/revocation callbacks, v2 redemption callback and immediate closure of an idle authenticated socket after revocation. GitHub Actions [#46097140748](https://github.com/song-nguyet/emrg/actions/runs/46097140748) completed successfully: host tests Ubuntu 429 passed; Windows 422 passed, 7 skipped; Electron main/preload 189 passed, 9 skipped; renderer 785 passed across 49 files; TypeScript, production build and Node suite-count guard passed. The renderer build reports a >500 KB chunk warning.
 - [ ] Verify on a physical Android/Windows pair. Already-dispatched host operations are not rolled back by socket closure; Android does not replay the request.
 
 # EMRG Feature Inventory
