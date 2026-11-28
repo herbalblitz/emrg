@@ -3,7 +3,7 @@
 - `CompanionHostService` now emits device-change notifications after successful v1/v2 credential issuance or reissue and after revocation; callbacks run outside the host lifecycle lock.
 - `CompanionWssListener` tracks authenticated sockets by device ID and closes matching sockets with policy code 1008 when that device credential changes, without waiting for another client request. Request-time registry checks remain as defense in depth.
 - Added host-service tests for v1 redemption/revocation notifications, v2 redemption notification, and a WSS regression test proving an idle authenticated socket closes immediately after revocation.
-- This closes the transport and invalidates Android's connection epoch, but it cannot roll back a host operation that was already dispatched before the credential change. No automatic request replay is introduced. CI is triggered by this commit; no local pytest run was available.
+- This closes the transport and invalidates Android's connection epoch, but it cannot roll back a host operation that was already dispatched before the credential change. No automatic request replay is introduced. GitHub Actions #46097140748 passed the host suite on Ubuntu (429 passed) and Windows (422 passed, 7 skipped); the new callback and idle-socket tests passed on both. Electron main/preload tests, renderer tests, TypeScript check and production build also passed; the final documented Node suite-count guard was still running at the last check. No local pytest run was available.
 
 # Android + Windows Implementation Roadmap
 
