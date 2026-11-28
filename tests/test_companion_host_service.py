@@ -61,6 +61,27 @@ def test_host_service_composes_local_pairing_and_auth(tmp_path):
     assert host.registered_devices()[0]["device_id"] == "android-1"
 
 
+def test_device_change_callbacks_cover_pairing_redemption_and_revoke(tmp_path):
+    host = CompanionHostService(tmp_path / "registry-callbacks.json")
+    host.enable()
+    changed = []
+    callback = changed.append
+    host.add_device_change_callback(callback)
+
+    pending = host.begin_pairing(workspace_id="ws", cwd="/work", scopes={"status"})
+    assert host.decide_pairing(pending["pairing_id"], approved=True)
+    host.redeem_pairing(
+        pairing_id=pending["pairing_id"],
+        pairing_secret=pending["pairing_secret"],
+        device_id="phone",
+    )
+    assert changed == ["phone"]
+
+    assert host.revoke_device("phone")
+    assert changed == ["phone", "phone"]
+    host.remove_device_change_callback(callback)
+
+
 def test_host_service_reject_and_revoke(tmp_path):
     host = CompanionHostService(tmp_path / "registry.json")
     host.enable()
@@ -102,6 +123,8 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
 
     host = CompanionHostService(tmp_path / "registry-v2.json")
     host.enable()
+    device_changes = []
+    host.add_device_change_callback(device_changes.append)
     tx = host.begin_pairing_v2(
         host_identity="tls-fingerprint", workspace_id="ws",
         cwd="/safe/work", scopes={"status"})
@@ -135,6 +158,7 @@ def test_host_service_pairing_v2_is_device_bound_and_disabled_cancels(tmp_path):
     token = host.redeem_pairing_v2(
         pairing_id=tx["pairing_id"], device_id="android-v2",
         challenge_id=challenge["challenge_id"], signature=signature)
+    assert device_changes == ["android-v2"]
     assert host.registry.verify(device_id="android-v2", credential=token)["scopes"] == frozenset({"status"})
     # Redeemed transactions must disappear from the approval queue and the
     # listing must never surface the issued bearer credential.

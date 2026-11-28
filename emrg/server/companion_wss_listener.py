@@ -248,8 +248,10 @@ class CompanionWssListener:
         self._disposed = False
         self._loop: asyncio.AbstractEventLoop | None = None
         self._clients: set[Any] = set()
+        self._authenticated_clients: dict[Any, str] = {}
         self._pairing_attempts: dict[str, list[float]] = {}
         self._host.add_state_callback(self._on_host_state)
+        self._host.add_device_change_callback(self._on_device_identity_changed)
 
     @property
     def running(self) -> bool:
@@ -310,6 +312,7 @@ class CompanionWssListener:
             await self.stop()
         finally:
             self._host.remove_state_callback(self._on_host_state)
+            self._host.remove_device_change_callback(self._on_device_identity_changed)
 
     async def _shutdown(self, *, code: int, reason: str) -> None:
         server, self._server = self._server, None
@@ -335,6 +338,31 @@ class CompanionWssListener:
             self._loop.call_soon_threadsafe(shutdown_if_still_disabled)
         except RuntimeError:
             pass
+
+    def _on_device_identity_changed(self, device_id: str) -> None:
+        """Close every live socket whose credential was issued, rotated, or revoked."""
+        if self._loop is None or not self._loop.is_running():
+            return
+
+        def close_changed_device() -> None:
+            clients = tuple(
+                websocket for websocket, active_device_id in self._authenticated_clients.items()
+                if active_device_id == device_id
+            )
+            if clients:
+                asyncio.create_task(self._close_device_clients(clients))
+
+        try:
+            self._loop.call_soon_threadsafe(close_changed_device)
+        except RuntimeError:
+            pass
+
+    async def _close_device_clients(self, clients: tuple[Any, ...]) -> None:
+        await asyncio.gather(
+            *(client.close(code=1008, reason="Device authorization changed")
+              for client in clients),
+            return_exceptions=True,
+        )
 
     async def _close_clients(self, *, code: int, reason: str) -> None:
         clients = tuple(self._clients)
@@ -459,19 +487,26 @@ class CompanionWssListener:
             return
 
         identity = self._host.authenticate(first)
-        # Validate envelope again to guarantee exact auth-frame shape.
-        validate_client_frame(first, authenticated=False)
-        await websocket.send(_encode_wss_text_frame({
-            "type": "auth.ok", "protocol": "1.0",
-            "workspace_id": identity["workspace_id"],
-            "scopes": sorted(identity["scopes"]),
-        }))
+        # Track the authenticated device before checking current authorization.
+        # If a credential change races authentication, either this check observes
+        # it or the already-registered observer closes the socket.
+        self._authenticated_clients[websocket] = identity["device_id"]
         try:
+            if not self._host.is_identity_current(identity):
+                await websocket.close(code=1008, reason="Device authorization changed")
+                return
+            # Validate envelope again to guarantee exact auth-frame shape.
+            validate_client_frame(first, authenticated=False)
+            await websocket.send(_encode_wss_text_frame({
+                "type": "auth.ok", "protocol": "1.0",
+                "workspace_id": identity["workspace_id"],
+                "scopes": sorted(identity["scopes"]),
+            }))
             while self._host.enabled and not self._closing:
                 frame_data = await asyncio.wait_for(
                     websocket.recv(), timeout=self._config.idle_timeout_seconds)
-                # Re-check local device policy for every request. Revocation, credential
-                # rotation, or workspace/scope changes terminate already-open sockets.
+                # Retain request-time revalidation as defense in depth if an
+                # observer cannot be scheduled or the registry changes externally.
                 if not self._host.is_identity_current(identity):
                     await websocket.close(code=1008, reason="Device authorization changed")
                     return
@@ -483,6 +518,7 @@ class CompanionWssListener:
                 if response is not None:
                     await websocket.send(_encode_wss_text_frame(response))
         finally:
+            self._authenticated_clients.pop(websocket, None)
             await self._hub.unsubscribe(websocket, daemon=self._daemon())
         await websocket.close(code=1001, reason="Companion disabled")
 

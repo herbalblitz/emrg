@@ -26,6 +26,7 @@ class CompanionHostService:
         self.authenticator = CompanionAuthenticator(self.registry)
         self._enabled = False
         self._state_callbacks: set[Any] = set()
+        self._device_change_callbacks: set[Any] = set()
         # Serialize lifecycle transitions with pairing/auth operations. Without
         # this lock, disable() could clear pending transactions just before a
         # concurrent begin/request creates a new transaction on the disabled host.
@@ -55,6 +56,26 @@ class CompanionHostService:
                 callback(enabled)
             except Exception:
                 # Observers cannot prevent local enable/disable policy changes.
+                continue
+
+    def add_device_change_callback(self, callback) -> None:
+        """Register an observer for credential issue, rotation, and revocation."""
+        if not callable(callback):
+            raise TypeError("callback must be callable")
+        with self._lifecycle_lock:
+            self._device_change_callbacks.add(callback)
+
+    def remove_device_change_callback(self, callback) -> None:
+        with self._lifecycle_lock:
+            self._device_change_callbacks.discard(callback)
+
+    @staticmethod
+    def _notify_device_changed(device_id: str, callbacks: tuple[Any, ...]) -> None:
+        # Credential changes are already committed; observers must not roll them back.
+        for callback in callbacks:
+            try:
+                callback(device_id)
+            except Exception:
                 continue
 
     def enable(self) -> None:
@@ -118,7 +139,11 @@ class CompanionHostService:
         # the service cannot return a newly authenticated identity concurrently
         # with a local revoke operation.
         with self._lifecycle_lock:
-            return self.registry.revoke(device_id)
+            revoked = self.registry.revoke(device_id)
+            callbacks = tuple(self._device_change_callbacks) if revoked else ()
+        if revoked:
+            self._notify_device_changed(device_id, callbacks)
+        return revoked
 
     # Pairing v2 host-local approval and transport-adapter operations.
     def begin_pairing_v2(self, *, host_identity: str, workspace_id: str,
@@ -170,18 +195,24 @@ class CompanionHostService:
             self._require_enabled()
             if self._pairings_v2 is None:
                 raise PairingV2Error("pairing unavailable")
-            return self._pairings_v2.redeem(
+            credential = self._pairings_v2.redeem(
                 pairing_id=pairing_id, device_id=device_id,
                 challenge_id=challenge_id, signature=signature)
+            callbacks = tuple(self._device_change_callbacks)
+        self._notify_device_changed(device_id, callbacks)
+        return credential
 
     # Future WSS adapter operations; still transport-independent.
     def redeem_pairing(self, *, pairing_id: str, pairing_secret: str,
                        device_id: str) -> str:
         with self._lifecycle_lock:
             self._require_enabled()
-            return self.pairings.redeem(pairing_id=pairing_id,
-                                        pairing_secret=pairing_secret,
-                                        device_id=device_id)
+            credential = self.pairings.redeem(pairing_id=pairing_id,
+                                               pairing_secret=pairing_secret,
+                                               device_id=device_id)
+            callbacks = tuple(self._device_change_callbacks)
+        self._notify_device_changed(device_id, callbacks)
+        return credential
 
     def is_identity_current(self, identity: dict[str, Any]) -> bool:
         """Return whether an authenticated device remains approved and unchanged."""

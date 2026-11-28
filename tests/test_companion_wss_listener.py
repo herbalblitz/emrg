@@ -1620,3 +1620,60 @@ def test_batch_c_settings_get_and_set(tmp_path, monkeypatch, caplog):
     assert result["code"] == "invalid_patch"
     assert result["error"] == "settings key not allowed"
     assert cfg.read_text(encoding="utf-8") == before
+
+
+
+def test_wss_revocation_closes_authenticated_idle_socket_immediately(tmp_path):
+    async def run():
+        host = CompanionHostService(tmp_path / "registry-revoke-idle.json")
+        host.enable()
+        credential = host.registry.issue(
+            device_id="phone-idle", workspace_id="ws-idle",
+            cwd=str(tmp_path), scopes={"status"})
+        listener = _listener(tmp_path, host)
+        listener._loop = asyncio.get_running_loop()
+        auth = {
+            "type": "auth", "protocol": "1.0", "device_id": "phone-idle",
+            "credential": credential, "client_nonce": "nonce-idle-revoke-1234",
+        }
+
+        class Socket:
+            def __init__(self):
+                self.calls = 0
+                self.sent = []
+                self.closed = []
+                self.authenticated = asyncio.Event()
+                self.close_event = asyncio.Event()
+
+            async def recv(self):
+                self.calls += 1
+                if self.calls == 1:
+                    return json.dumps(auth)
+                await self.close_event.wait()
+                raise asyncio.TimeoutError()
+
+            async def send(self, data):
+                assert isinstance(data, str)
+                self.sent.append(json.loads(data))
+                self.authenticated.set()
+
+            async def close(self, *, code, reason):
+                self.closed.append((code, reason))
+                self.close_event.set()
+
+        ws = Socket()
+        handler = asyncio.create_task(listener._handle(ws))
+        await asyncio.wait_for(ws.authenticated.wait(), timeout=1)
+        assert listener.active_connections == 1
+        assert [frame["type"] for frame in ws.sent] == ["auth.ok"]
+
+        assert host.revoke_device("phone-idle") is True
+        await asyncio.wait_for(handler, timeout=1)
+
+        assert ws.closed == [(1008, "Device authorization changed")]
+        assert [frame["type"] for frame in ws.sent] == ["auth.ok"]
+        assert listener.active_connections == 0
+        assert listener._authenticated_clients == {}
+        await listener.close()
+
+    asyncio.run(run())

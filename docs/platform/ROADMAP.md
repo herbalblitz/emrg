@@ -1,3 +1,10 @@
+## Immediate WSS credential-change invalidation (2026-11-28)
+
+- `CompanionHostService` now emits device-change notifications after successful v1/v2 credential issuance or reissue and after revocation; callbacks run outside the host lifecycle lock.
+- `CompanionWssListener` tracks authenticated sockets by device ID and closes matching sockets with policy code 1008 when that device credential changes, without waiting for another client request. Request-time registry checks remain as defense in depth.
+- Added host-service tests for v1 redemption/revocation notifications, v2 redemption notification, and a WSS regression test proving an idle authenticated socket closes immediately after revocation.
+- This closes the transport and invalidates Android's connection epoch, but it cannot roll back a host operation that was already dispatched before the credential change. No automatic request replay is introduced. CI is triggered by this commit; no local pytest run was available.
+
 # Android + Windows Implementation Roadmap
 
 Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-doc-count.py --measure`.
@@ -8,6 +15,7 @@ Target: preserve all original EMRG features while delivering robust Android and 
 - Android has a native Compose companion UI, QR/manual pairing descriptor flow, Android Keystore-backed device credentials, pinned WSS host authentication, and reconnect/refresh/disconnect state handling.
 - The Windows daemon has an opt-in dedicated WSS companion listener, local pairing approval UI/IPC, TLS identity provisioning, and QR descriptor display.
 - The currently implemented remote WSS operations are scope-gated per paired device: status, session listing/management, live chat (with approval round-trip), tool-activity monitoring, files read/write, terminal exec (capped at workspace-write unless the host opts a device into danger), sandbox management, and device listing/revocation. Pairing approval remains local to Windows.
+- Host-service credential issue/reissue and revocation now notify the WSS listener; matching authenticated sockets are closed immediately, including idle sockets. Per-request registry revalidation remains defense in depth. A host operation already dispatched before revocation is not rolled back; the client connection is closed and pending reply waits are invalidated rather than automatically retried.
 - Android chat/session and device-management screens use the live companion transport only when paired with the corresponding granted scopes; DemoTransport remains for previews/tests.
 - Fresh Android pairing defaults to the read-only `status` scope; additional capabilities require explicit selection, and the host-configured scope ceiling plus host-local approval remain authoritative. Re-pair preselects existing grants and any explicitly requested additional scope.
 - Electron CompanionPanel exposes a host-selected scope ceiling for the pairing code created by each listener start (default remains `status`, `sessions.list`, and `chat.send`) and per-device approval narrowing. The Python runtime/local-control validators remain authoritative for canonical scopes and requested-set containment.

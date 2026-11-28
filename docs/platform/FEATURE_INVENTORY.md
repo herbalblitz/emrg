@@ -1,3 +1,10 @@
+## Immediate WSS credential-change invalidation (2026-11-28)
+
+- [x] Host-service observers fire after successful v1/v2 credential issuance or reissue and revocation, outside the lifecycle lock.
+- [x] WSS listener tracks authenticated sockets by device ID and closes all sockets for a changed credential with policy close code 1008; request-time identity checks remain enabled.
+- [x] Regression coverage includes v1 redemption/revocation callbacks, v2 redemption callback and immediate closure of an idle authenticated socket after revocation.
+- [ ] Verify on a physical Android/Windows pair. Already-dispatched host operations are not rolled back by socket closure; Android does not replay the request.
+
 # EMRG Feature Inventory
 
 Test counts are measured, never stored: `uv run --no-sync python3 scripts/check-doc-count.py --measure`.
@@ -119,7 +126,7 @@ Status: **Source-inspected** = checked code; **Implemented** = code exists; **Te
 - [x] Host-service disable lifecycle observer stops the listener, closes active WSS clients and invalidates pending pairings; transport tests cover auth + scoped status and disable shutdown.
 - [x] Read-only `sessions.list` WSS dispatch uses the approved credential's stored workspace path (never a client-supplied cwd), requires the `sessions.list` scope and returns correlated, allowlisted metadata (max 200 records; bounded text and message counts); tests cover workspace binding, data redaction and unauthorized dispatch.
 - [x] Local pairing transaction bounds workspace/device/secret inputs, rejects malformed UTF-8 and invalid scope collections, and validates approval/cancellation IDs and strict boolean decisions; regression tests cover malformed inputs and one-time approval.
-- [x] Active WSS device sessions revalidate the authenticated device's current registry authorization before each request; revocation and credential rotation invalidate already-open connections, and registry read failures fail closed. Regression tests cover credential rotation on an already-open socket.
+- [x] Active WSS device sessions revalidate the authenticated device's current registry authorization before each request; host-service credential issue/reissue and revocation also notify the listener to close matching authenticated sockets immediately, including idle sockets. Registry read failures fail closed; tests cover service notifications and idle-socket revocation.
 - [x] WSS session listing returns only bounded, allowlisted metadata; local cwd, transcripts, and arbitrary meta fields are excluded.
 
 ## Trusted local Companion control bridge
